@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'الإعدادات' if session.get('lang') == 'ar' else 'Settings' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-gear"></i>
+                {{ 'إعدادات التطبيق' if session.get('lang') == 'ar' else 'Application Settings' }}
+            </h2>
+            <p class="text-muted mb-0">
+                {{ 'تخصيص إعدادات وقواعد النظام' if session.get('lang') == 'ar' else 'Configure system settings and rules' }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Settings Cards -->
+    <div class="row">
+        <!-- Element Rules -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-sliders display-4 text-primary"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'قواعد العناصر الكيميائية' if session.get('lang') == 'ar' else 'Chemical Element Rules' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'تكوين نطاقات القرارات لكل عنصر كيميائي' if session.get('lang') == 'ar' else 'Configure decision ranges for each chemical element' }}
+                    </p>
+                    <a href="{{ url_for('admin.element_rules') }}" class="btn btn-primary">
+                        <i class="bi bi-arrow-{{ 'left' if session.get('lang') == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة القواعد' if session.get('lang') == 'ar' else 'Manage Rules' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Management -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-people display-4 text-success"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'إدارة المستخدمين' if session.get('lang') == 'ar' else 'User Management' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'إضافة وتعديل وحذف المستخدمين والصلاحيات' if session.get('lang') == 'ar' else 'Add, edit, and manage users and permissions' }}
+                    </p>
+                    <a href="{{ url_for('admin.users') }}" class="btn btn-success">
+                        <i class="bi bi-arrow-{{ 'left' if session.get('lang') == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة المستخدمين' if session.get('lang') == 'ar' else 'Manage Users' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage Defect Types -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-bug display-4 text-danger"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'أنواع العيوب للمراحل' if session.get('lang') == 'ar' else 'Stage Defect Types' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'إدارة أنواع العيوب لكل مرحلة إنتاج' if session.get('lang') == 'ar' else 'Manage defect types for each production stage' }}
+                    </p>
+                    <a href="{{ url_for('admin.defect_types') }}" class="btn btn-danger">
+                        <i class="bi bi-arrow-{{ 'left' if session.get('lang') == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة العيوب' if session.get('lang') == 'ar' else 'Manage Defects' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage Decision Types -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-lightbulb display-4 text-warning"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'أنواع القرارات للمراحل' if session.get('lang') == 'ar' else 'Stage Decision Types' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'إدارة أنواع القرارات لكل مرحلة إنتاج' if session.get('lang') == 'ar' else 'Manage decision types for each production stage' }}
+                    </p>
+                    <a href="{{ url_for('admin.decision_types') }}" class="btn btn-warning">
+                        <i class="bi bi-arrow-{{ 'left' if session.get('lang') == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة القرارات' if session.get('lang') == 'ar' else 'Manage Decisions' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Decision Types Info -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-info-circle display-4 text-info"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'أنواع القرارات' if session.get('lang') == 'ar' else 'Decision Types' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'معلومات حول أنواع القرارات المستخدمة' if session.get('lang') == 'ar' else 'Information about decision types used' }}
+                    </p>
+                    <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#decisionInfoModal">
+                        <i class="bi bi-eye"></i>
+                        {{ 'عرض التفاصيل' if session.get('lang') == 'ar' else 'View Details' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Machines -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-gear-fill display-4 text-secondary"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'إدارة الماكينات' if session.get('lang') == 'ar' else 'Machine Management' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'إدارة الماكينات لمراحل الإنتاج' if session.get('lang') == 'ar' else 'Manage machines for production stages' }}
+                    </p>
+                    <a href="{{ url_for('admin.machines') }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-{{ 'left' if session.get('lang') == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة الماكينات' if session.get('lang') == 'ar' else 'Manage Machines' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="bi bi-bar-chart"></i>
+                {{ 'ملخص النظام' if session.get('lang') == 'ar' else 'System Summary' }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-3 mb-3">
+                    <div class="border rounded p-3">
+                        <h3 class="text-primary" id="totalElements">-</h3>
+                        <small class="text-muted">{{ 'عناصر كيميائية' if session.get('lang') == 'ar' else 'Chemical Elements' }}</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="border rounded p-3">
+                        <h3 class="text-success" id="totalUsers">-</h3>
+                        <small class="text-muted">{{ 'مستخدمين' if session.get('lang') == 'ar' else 'Users' }}</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="border rounded p-3">
+                        <h3 class="text-info" id="totalAnalyses">-</h3>
+                        <small class="text-muted">{{ 'تحليلات' if session.get('lang') == 'ar' else 'Analyses' }}</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="border rounded p-3">
+                        <h3 class="text-warning" id="totalPipes">-</h3>
+                        <small class="text-muted">{{ 'أنابيب مسجلة' if session.get('lang') == 'ar' else 'Registered Pipes' }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Decision Info Modal -->
+<div class="modal fade" id="decisionInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-info-circle"></i>
+                    {{ 'أنواع القرارات' if session.get('lang') == 'ar' else 'Decision Types' }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                                <th>{{ 'الوصف' if session.get('lang') == 'ar' else 'Description' }}</th>
+                                <th>{{ 'الإجراء' if session.get('lang') == 'ar' else 'Action' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-success fs-6">فحص أخيرة فقط</span></td>
+                                <td>
+                                    {{ 'القيمة ضمن النطاق المثالي' if session.get('lang') == 'ar' else 'Value within ideal range' }}
+                                </td>
+                                <td>
+                                    {{ 'فحص الأنبوب الأخير من الدفعة فقط' if session.get('lang') == 'ar' else 'Only inspect the last pipe of the batch' }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-info fs-6">فحص أولى وأخيرة</span></td>
+                                <td>
+                                    {{ 'القيمة مقبولة لكن قريبة من الحدود' if session.get('lang') == 'ar' else 'Value acceptable but near limits' }}
+                                </td>
+                                <td>
+                                    {{ 'فحص الأنبوب الأول والأخير من الدفعة' if session.get('lang') == 'ar' else 'Inspect first and last pipe of the batch' }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-warning text-dark fs-6">فحص الشحنة 100%</span></td>
+                                <td>
+                                    {{ 'القيمة تتطلب مراجعة شاملة' if session.get('lang') == 'ar' else 'Value requires comprehensive review' }}
+                                </td>
+                                <td>
+                                    {{ 'فحص جميع الأنابيب في الشحنة' if session.get('lang') == 'ar' else 'Inspect all pipes in the shipment' }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-danger fs-6">تالف</span></td>
+                                <td>
+                                    {{ 'القيمة خارج النطاق المقبول' if session.get('lang') == 'ar' else 'Value outside acceptable range' }}
+                                </td>
+                                <td>
+                                    {{ 'رفض الدفعة بالكامل' if session.get('lang') == 'ar' else 'Reject the entire batch' }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {{ 'إغلاق' if session.get('lang') == 'ar' else 'Close' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load stats on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Load element rules count
+    fetch('/admin/api/element-rules')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('totalElements').textContent = data.rules ? data.rules.length : 0;
+        })
+        .catch(() => {
+            document.getElementById('totalElements').textContent = '-';
+        });
+
+    // Load summary stats from API
+    fetch('/api/ai-summary')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('totalAnalyses').textContent = data.total_analyses || 0;
+            document.getElementById('totalPipes').textContent = data.total_pipes || 0;
+        })
+        .catch(() => {
+            document.getElementById('totalAnalyses').textContent = '-';
+            document.getElementById('totalPipes').textContent = '-';
+        });
+
+    // Note: User count would need a separate API endpoint
+    document.getElementById('totalUsers').textContent = '-';
+});
+</script>
+{% endblock %}

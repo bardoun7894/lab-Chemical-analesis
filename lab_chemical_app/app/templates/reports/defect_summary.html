@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+
+{% block title %}Defect Summary Report{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-exclamation-triangle"></i>
+                {{ 'تقرير ملخص العيوب' if session.get('lang') == 'ar' else 'Defect Summary Report' }}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('reports.index') }}">{{ 'التقارير' if session.get('lang') == 'ar' else 'Reports' }}</a></li>
+                    <li class="breadcrumb-item active">{{ 'ملخص العيوب' if session.get('lang') == 'ar' else 'Defect Summary' }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">{{ 'من تاريخ' if session.get('lang') == 'ar' else 'From Date' }}</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ 'إلى تاريخ' if session.get('lang') == 'ar' else 'To Date' }}</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i>
+                        {{ 'بحث' if session.get('lang') == 'ar' else 'Search' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- AI Analysis Card -->
+    <div class="card border-0 shadow-sm mb-4" id="aiDefectCard">
+        <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-robot"></i>
+                {{ 'تحليل العيوب بالذكاء الاصطناعي' if session.get('lang') == 'ar' else 'AI Defect Analysis' }}
+            </h5>
+            <button type="button" class="btn btn-sm btn-light" id="aiDefectRefresh">
+                <i class="bi bi-magic"></i>
+                {{ 'تحليل' if session.get('lang') == 'ar' else 'Analyze' }}
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="aiDefectInitial" class="text-center py-2">
+                <i class="bi bi-robot text-muted"></i>
+                <small class="text-muted ms-2">{{ 'انقر على زر التحليل' if session.get('lang') == 'ar' else 'Click Analyze button' }}</small>
+            </div>
+            <div id="aiDefectLoading" class="text-center py-2" style="display: none;">
+                <div class="spinner-border spinner-border-sm text-danger" role="status"></div>
+                <small class="text-muted ms-2">{{ 'جاري التحليل...' if session.get('lang') == 'ar' else 'Analyzing defects...' }}</small>
+            </div>
+            <div id="aiDefectContent" style="display: none;">
+                <p id="aiDefectSummary" class="mb-2 fw-bold"></p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <small class="text-muted"><i class="bi bi-search"></i> {{ 'الأسباب المحتملة' if session.get('lang') == 'ar' else 'Possible Causes' }}:</small>
+                        <ul id="aiDefectInsights" class="small mb-0"></ul>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted"><i class="bi bi-tools"></i> {{ 'الحلول المقترحة' if session.get('lang') == 'ar' else 'Suggested Solutions' }}:</small>
+                        <ul id="aiDefectRecommendations" class="small mb-0"></ul>
+                    </div>
+                </div>
+            </div>
+            <div id="aiDefectError" class="alert alert-warning py-1 mb-0" style="display: none;">
+                <small id="aiDefectErrorText"></small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm bg-danger text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ chem_defects|length }}</h3>
+                    <small>{{ 'عيوب التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis Defects' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ stage_defects|length }}</h3>
+                    <small>{{ 'عيوب مراحل الإنتاج' if session.get('lang') == 'ar' else 'Production Stage Defects' }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Defects by Stage Chart -->
+    {% if defects_by_stage %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="bi bi-bar-chart"></i>
+                {{ 'العيوب حسب المرحلة' if session.get('lang') == 'ar' else 'Defects by Stage' }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for stage, count in defects_by_stage.items() %}
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="border rounded p-3 text-center">
+                        <h4 class="text-danger mb-1">{{ count }}</h4>
+                        <small class="text-muted">{{ stage }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Chemical Defects -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-flask"></i>
+                        {{ 'عيوب التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis Defects' }}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if chem_defects %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                                    <th>{{ 'المغرفة' if session.get('lang') == 'ar' else 'Ladle' }}</th>
+                                    <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for defect in chem_defects %}
+                                <tr>
+                                    <td>{{ defect.test_date }}</td>
+                                    <td>
+                                        <a href="{{ url_for('chemical.detail', id=defect.id) }}">{{ defect.ladle_no }}</a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-danger">{{ defect.decision or 'Defect' }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-check-circle text-success display-4"></i>
+                        <p class="text-muted mt-2">{{ 'لا توجد عيوب' if session.get('lang') == 'ar' else 'No defects found' }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage Defects -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-diagram-3"></i>
+                        {{ 'عيوب مراحل الإنتاج' if session.get('lang') == 'ar' else 'Production Stage Defects' }}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if stage_defects %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>{{ 'الأنبوب' if session.get('lang') == 'ar' else 'Pipe' }}</th>
+                                    <th>{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }}</th>
+                                    <th>{{ 'السبب' if session.get('lang') == 'ar' else 'Reason' }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for defect in stage_defects %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('pipes.detail', id=defect.pipe_id) }}">{{ defect.pipe.no_code if defect.pipe else defect.pipe_id }}</a>
+                                    </td>
+                                    <td>{{ defect.stage_name }}</td>
+                                    <td>
+                                        <small class="text-muted">{{ defect.defect_reason or '-' }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-check-circle text-success display-4"></i>
+                        <p class="text-muted mt-2">{{ 'لا توجد عيوب' if session.get('lang') == 'ar' else 'No defects found' }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const aiDefectLoading = document.getElementById('aiDefectLoading');
+    const aiDefectContent = document.getElementById('aiDefectContent');
+    const aiDefectError = document.getElementById('aiDefectError');
+    const aiDefectErrorText = document.getElementById('aiDefectErrorText');
+    const aiDefectSummary = document.getElementById('aiDefectSummary');
+    const aiDefectInsights = document.getElementById('aiDefectInsights');
+    const aiDefectRecommendations = document.getElementById('aiDefectRecommendations');
+    const aiDefectRefresh = document.getElementById('aiDefectRefresh');
+    const aiDefectInitial = document.getElementById('aiDefectInitial');
+
+    function loadAiAnalysis() {
+        aiDefectInitial.style.display = 'none';
+        aiDefectLoading.style.display = 'block';
+        aiDefectContent.style.display = 'none';
+        aiDefectError.style.display = 'none';
+
+        const params = new URLSearchParams({
+            date_from: '{{ date_from }}',
+            date_to: '{{ date_to }}'
+        });
+
+        fetch('{{ url_for("reports.api_ai_summary", report_type="defect") }}?' + params)
+            .then(response => response.json())
+            .then(data => {
+                aiDefectLoading.style.display = 'none';
+
+                if (data.error) {
+                    aiDefectError.style.display = 'block';
+                    aiDefectErrorText.textContent = data.error;
+                    return;
+                }
+
+                aiDefectContent.style.display = 'block';
+                aiDefectSummary.textContent = data.summary || '';
+
+                aiDefectInsights.innerHTML = '';
+                (data.insights || []).forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    aiDefectInsights.appendChild(li);
+                });
+
+                aiDefectRecommendations.innerHTML = '';
+                (data.recommendations || []).forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    aiDefectRecommendations.appendChild(li);
+                });
+            })
+            .catch(error => {
+                aiDefectLoading.style.display = 'none';
+                aiDefectError.style.display = 'block';
+                aiDefectErrorText.textContent = error.message;
+            });
+    }
+
+    // Only load when button is clicked
+    aiDefectRefresh.addEventListener('click', loadAiAnalysis);
+});
+</script>
+{% endblock %}

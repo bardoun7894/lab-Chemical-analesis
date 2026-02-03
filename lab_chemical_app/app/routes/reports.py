@@ -1,7 +1,7 @@
 """
 Reports Routes
 """
-from flask import Blueprint, render_template, request, send_file, make_response
+from flask import Blueprint, render_template, request, send_file, make_response, jsonify
 from flask_login import login_required
 from datetime import date, timedelta
 from io import BytesIO
@@ -9,6 +9,7 @@ from app import db
 from app.models.chemical import ChemicalAnalysis, Furnace
 from app.models.pipe import Pipe, PipeStage
 from app.models.mechanical import MechanicalTest
+from app.services.ai_service import generate_report_summary
 
 reports_bp = Blueprint('reports', __name__)
 
@@ -176,3 +177,77 @@ def export_chemical_excel():
         as_attachment=True,
         download_name=f'chemical_report_{date_from}_to_{date_to}.xlsx'
     )
+
+
+@reports_bp.route('/api/ai-summary/<report_type>')
+@login_required
+def api_ai_summary(report_type):
+    """API endpoint for AI report summary"""
+    date_from = request.args.get('date_from', (date.today() - timedelta(days=7)).isoformat())
+    date_to = request.args.get('date_to', date.today().isoformat())
+
+    if report_type == 'chemical':
+        analyses = ChemicalAnalysis.query.filter(
+            ChemicalAnalysis.test_date >= date_from,
+            ChemicalAnalysis.test_date <= date_to
+        ).all()
+
+        total = len(analyses)
+        accepted = sum(1 for a in analyses if a.decision == 'ACCEPT')
+        rejected = sum(1 for a in analyses if a.decision == 'REJECT')
+        defects = sum(1 for a in analyses if a.has_defect)
+
+        data = {
+            'date_from': date_from,
+            'date_to': date_to,
+            'total': total,
+            'accepted': accepted,
+            'rejected': rejected,
+            'defects': defects,
+            'rate': round(accepted/total*100, 1) if total > 0 else 0
+        }
+
+    elif report_type == 'defect':
+        chem_defects = ChemicalAnalysis.query.filter(
+            ChemicalAnalysis.test_date >= date_from,
+            ChemicalAnalysis.test_date <= date_to,
+            ChemicalAnalysis.has_defect == True
+        ).count()
+
+        stage_defects = db.session.query(PipeStage)\
+            .join(Pipe)\
+            .filter(
+                Pipe.production_date >= date_from,
+                Pipe.production_date <= date_to,
+                PipeStage.has_defect == True
+            ).all()
+
+        defects_by_stage = {}
+        for stage in stage_defects:
+            name = stage.stage_name
+            defects_by_stage[name] = defects_by_stage.get(name, 0) + 1
+
+        data = {
+            'date_from': date_from,
+            'date_to': date_to,
+            'chem_defects_count': chem_defects,
+            'defects_by_stage': defects_by_stage
+        }
+
+    else:  # production
+        report_date = request.args.get('date', date.today().isoformat())
+        pipes = Pipe.query.filter_by(production_date=report_date).all()
+
+        by_diameter = {}
+        for pipe in pipes:
+            dn = pipe.diameter or 'Unknown'
+            by_diameter[dn] = by_diameter.get(dn, 0) + 1
+
+        data = {
+            'date': report_date,
+            'total': len(pipes),
+            'by_diameter': by_diameter
+        }
+
+    result = generate_report_summary(report_type, data)
+    return jsonify(result)

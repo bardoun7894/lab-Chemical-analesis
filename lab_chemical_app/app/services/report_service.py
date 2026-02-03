@@ -321,7 +321,7 @@ def generate_daily_production_pdf(pipes, report_date, by_shift, by_diameter):
                 pipe.no_code or '',
                 pipe.ladle_id or '',
                 str(pipe.diameter) if pipe.diameter else '',
-                pipe.pipe_type or '',
+                pipe.pipe_class or '',
                 pipe.machine.machine_code if pipe.machine else '',
                 f"{pipe.actual_weight:.1f}" if pipe.actual_weight else ''
             ]

@@ -6,6 +6,14 @@ from flask_login import login_required, current_user
 from datetime import date
 from app import db
 from app.models.chemical import ChemicalAnalysis, Furnace, ElementSpecification
+from app.services.decision_service import (
+    calculate_auto_decision,
+    get_all_decisions,
+    ELEMENT_MAP
+)
+from flask import Response
+from app.services.ai_service import generate_analysis_notes, generate_analysis_stream
+from app.services.decision_service import calculate_auto_decision as calc_decision
 
 chemical_bp = Blueprint('chemical', __name__)
 
@@ -211,6 +219,109 @@ def api_validate():
             }
 
     return jsonify(results)
+
+
+@chemical_bp.route('/api/auto-decision', methods=['POST'])
+@login_required
+def api_auto_decision():
+    """
+    API endpoint to calculate automatic decision based on element values.
+    Returns the worst-case decision across all provided elements.
+    """
+    data = request.get_json()
+
+    # Extract element values from the request
+    element_values = {}
+    for field_name in ELEMENT_MAP.keys():
+        if field_name in data and data[field_name] is not None and data[field_name] != '':
+            try:
+                element_values[field_name] = float(data[field_name])
+            except (TypeError, ValueError):
+                pass
+
+    # Calculate auto decision
+    result = calculate_auto_decision(element_values)
+
+    return jsonify(result)
+
+
+@chemical_bp.route('/api/ai-analysis', methods=['POST'])
+@login_required
+def api_ai_analysis():
+    """
+    API endpoint to generate AI-powered analysis notes using GLM.
+    Returns reason, has_defect, and notes based on element values.
+    """
+    data = request.get_json()
+
+    # Extract element values from the request
+    element_values = {}
+    for field_name in ELEMENT_MAP.keys():
+        if field_name in data and data[field_name] is not None and data[field_name] != '':
+            try:
+                element_values[field_name] = float(data[field_name])
+            except (TypeError, ValueError):
+                pass
+
+    # Also include equivalents if provided
+    for equiv in ['carbon_equivalent', 'manganese_equivalent', 'magnesium_equivalent']:
+        if equiv in data and data[equiv]:
+            try:
+                element_values[equiv] = float(data[equiv])
+            except (TypeError, ValueError):
+                pass
+
+    # First calculate auto decision
+    auto_decision = calculate_auto_decision(element_values)
+
+    # Then generate AI analysis
+    ai_result = generate_analysis_notes(element_values, auto_decision)
+
+    return jsonify(ai_result)
+
+
+@chemical_bp.route('/api/ai-analysis-stream', methods=['POST'])
+@login_required
+def api_ai_analysis_stream():
+    """
+    Streaming API endpoint for AI analysis - returns Server-Sent Events.
+    Text appears progressively like ChatGPT.
+    """
+    data = request.get_json()
+
+    # Extract element values from the request
+    element_values = {}
+    for field_name in ELEMENT_MAP.keys():
+        if field_name in data and data[field_name] is not None and data[field_name] != '':
+            try:
+                element_values[field_name] = float(data[field_name])
+            except (TypeError, ValueError):
+                pass
+
+    # Also include equivalents if provided
+    for equiv in ['carbon_equivalent', 'manganese_equivalent', 'magnesium_equivalent']:
+        if equiv in data and data[equiv]:
+            try:
+                element_values[equiv] = float(data[equiv])
+            except (TypeError, ValueError):
+                pass
+
+    # Calculate auto decision
+    auto_decision = calc_decision(element_values)
+
+    def generate():
+        for chunk in generate_analysis_stream(element_values, auto_decision):
+            yield chunk
+
+    return Response(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        }
+    )
 
 
 def validate_against_specs(analysis):

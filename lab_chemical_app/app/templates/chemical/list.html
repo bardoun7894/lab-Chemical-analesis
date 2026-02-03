@@ -17,7 +17,7 @@
                         {{ 'قائمة جميع التحليلات الكيميائية' if session.get('lang') == 'ar' else 'List of all chemical analyses' }}
                     </p>
                 </div>
-                <a href="{{ url_for('chemical.create') }}" class="btn btn-primary">
+                <a href="{{ url_for('chemical.add') }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i>
                     {{ 'إضافة جديد' if session.get('lang') == 'ar' else 'Add New' }}
                 </a>
@@ -64,7 +64,7 @@
                     </button>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
-                    <a href="{{ url_for('chemical.index') }}" class="btn btn-outline-secondary w-100">
+                    <a href="{{ url_for('chemical.list') }}" class="btn btn-outline-secondary w-100">
                         <i class="bi bi-x-circle"></i>
                         {{ 'مسح' if session.get('lang') == 'ar' else 'Clear' }}
                     </a>
@@ -126,7 +126,7 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('chemical.view', id=analysis.id) }}" class="btn btn-outline-info" title="View">
+                                    <a href="{{ url_for('chemical.detail', id=analysis.id) }}" class="btn btn-outline-info" title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     <a href="{{ url_for('chemical.edit', id=analysis.id) }}" class="btn btn-outline-primary" title="Edit">
@@ -150,10 +150,10 @@
                 </table>
             </div>
         </div>
-        {% if analyses %}
+        {% if analyses.total > 0 %}
         <div class="card-footer bg-white">
             <small class="text-muted">
-                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ analyses|length }}
+                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ analyses.total }}
                 {{ 'تحليل' if session.get('lang') == 'ar' else 'analyses' }}
             </small>
         </div>

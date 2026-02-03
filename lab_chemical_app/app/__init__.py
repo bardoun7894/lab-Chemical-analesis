@@ -58,6 +58,7 @@ def create_app(config_name='default'):
     from .routes.reports import reports_bp
     from .routes.stickers import stickers_bp
     from .routes.admin import admin_bp
+    from .routes.production_orders import production_orders_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -67,6 +68,7 @@ def create_app(config_name='default'):
     app.register_blueprint(reports_bp, url_prefix='/reports')
     app.register_blueprint(stickers_bp, url_prefix='/stickers')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(production_orders_bp, url_prefix='/orders')
 
     # Context processors
     @app.context_processor

@@ -91,7 +91,7 @@
                     <p class="text-muted small">
                         {{ 'تتبع الأنابيب خلال مراحل الإنتاج' if session.get('lang') == 'ar' else 'Track pipes through production stages' }}
                     </p>
-                    <a href="{{ url_for('stages.tracking') }}" class="btn btn-info">
+                    <a href="{{ url_for('stages.list') }}" class="btn btn-info">
                         <i class="bi bi-eye"></i>
                         {{ 'عرض' if session.get('lang') == 'ar' else 'View' }}
                     </a>
@@ -111,7 +111,7 @@
                     <p class="text-muted small">
                         {{ 'تقرير نتائج الاختبارات الميكانيكية' if session.get('lang') == 'ar' else 'Mechanical test results report' }}
                     </p>
-                    <a href="{{ url_for('mechanical.index') }}" class="btn btn-success">
+                    <a href="{{ url_for('mechanical.list') }}" class="btn btn-success">
                         <i class="bi bi-eye"></i>
                         {{ 'عرض' if session.get('lang') == 'ar' else 'View' }}
                     </a>

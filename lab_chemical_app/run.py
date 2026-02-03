@@ -9,9 +9,27 @@ import sys
 # Add the app directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("Environment variables loaded from .env")
+except ImportError:
+    # If python-dotenv is not installed, load .env manually
+    env_path = os.path.join(os.path.dirname(__file__), '.env')
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+        print("Environment variables loaded from .env (manual)")
+
 from app import create_app, db
 from app.models.user import User
 from app.models.chemical import Furnace, Machine, DefectType, DecisionType, ElementSpecification, Shift, Engineer
+from app.models.production_order import ProductionOrder
 
 
 def create_default_admin():
@@ -122,6 +140,38 @@ def seed_reference_data():
         ]
         db.session.add_all(shifts)
         print("Seeded shifts")
+
+    # Sample Production Orders
+    if ProductionOrder.query.count() == 0:
+        from datetime import date, timedelta
+        today = date.today()
+        orders = [
+            ProductionOrder(
+                order_number='PO-20260201-001',
+                customer_name='Egyptian Steel Co.',
+                customer_code='ESC001',
+                target_quantity=100,
+                diameter=500,
+                pipe_type='K9',
+                order_date=today - timedelta(days=5),
+                start_date=today - timedelta(days=3),
+                status='in_progress',
+                priority='high'
+            ),
+            ProductionOrder(
+                order_number='PO-20260201-002',
+                customer_name='Cairo Water Authority',
+                customer_code='CWA002',
+                target_quantity=50,
+                diameter=300,
+                pipe_type='C25',
+                order_date=today - timedelta(days=2),
+                status='pending',
+                priority='normal'
+            ),
+        ]
+        db.session.add_all(orders)
+        print("Seeded sample production orders")
 
     db.session.commit()
 

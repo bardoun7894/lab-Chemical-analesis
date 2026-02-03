@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="{{ session.get('lang', 'en') }}" dir="{{ 'rtl' if session.get('lang') == 'ar' else 'ltr' }}">
+<html lang="{{ current_locale }}" dir="{{ 'rtl' if current_locale == 'ar' else 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Lab Chemical Analysis{% endblock %}</title>
 
     <!-- Bootstrap 5 CSS (RTL support) -->
-    {% if session.get('lang') == 'ar' %}
+    {% if current_locale == 'ar' %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     {% else %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -26,7 +26,7 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('main.index') }}">
                 <i class="bi bi-flask"></i>
-                {% if session.get('lang') == 'ar' %}
+                {% if current_locale == 'ar' %}
                 مختبر التحليل الكيميائي
                 {% else %}
                 Lab Chemical Analysis
@@ -44,7 +44,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.index') }}">
                             <i class="bi bi-house"></i>
-                            {{ 'الرئيسية' if session.get('lang') == 'ar' else 'Dashboard' }}
+                            {{ 'الرئيسية' if current_locale == 'ar' else 'Dashboard' }}
                         </a>
                     </li>
 
@@ -52,14 +52,30 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-flask"></i>
-                            {{ 'التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical' }}
+                            {{ 'التحليل الكيميائي' if current_locale == 'ar' else 'Chemical' }}
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('chemical.index') }}">
-                                {{ 'القائمة' if session.get('lang') == 'ar' else 'List' }}
+                            <li><a class="dropdown-item" href="{{ url_for('chemical.list') }}">
+                                {{ 'القائمة' if current_locale == 'ar' else 'List' }}
                             </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('chemical.create') }}">
-                                {{ 'إضافة جديد' if session.get('lang') == 'ar' else 'Add New' }}
+                            <li><a class="dropdown-item" href="{{ url_for('chemical.add') }}">
+                                {{ 'إضافة جديد' if current_locale == 'ar' else 'Add New' }}
+                            </a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Production Orders -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-clipboard-check"></i>
+                            {{ 'أوامر الإنتاج' if current_locale == 'ar' else 'Orders' }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('production_orders.index') }}">
+                                {{ 'قائمة الأوامر' if current_locale == 'ar' else 'Orders List' }}
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('production_orders.add') }}">
+                                {{ 'أمر إنتاج جديد' if current_locale == 'ar' else 'New Order' }}
                             </a></li>
                         </ul>
                     </li>
@@ -68,17 +84,14 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-diagram-3"></i>
-                            {{ 'مراحل الإنتاج' if session.get('lang') == 'ar' else 'Stages' }}
+                            {{ 'مراحل الإنتاج' if current_locale == 'ar' else 'Stages' }}
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('stages.index') }}">
-                                {{ 'قائمة الأنابيب' if session.get('lang') == 'ar' else 'Pipes List' }}
+                            <li><a class="dropdown-item" href="{{ url_for('stages.list') }}">
+                                {{ 'قائمة الأنابيب' if current_locale == 'ar' else 'Pipes List' }}
                             </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('stages.create_pipe') }}">
-                                {{ 'تسجيل أنبوب' if session.get('lang') == 'ar' else 'Register Pipe' }}
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('stages.tracking') }}">
-                                {{ 'متابعة المراحل' if session.get('lang') == 'ar' else 'Track Stages' }}
+                            <li><a class="dropdown-item" href="{{ url_for('stages.add') }}">
+                                {{ 'تسجيل أنبوب' if current_locale == 'ar' else 'Register Pipe' }}
                             </a></li>
                         </ul>
                     </li>
@@ -87,14 +100,14 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-gear"></i>
-                            {{ 'الاختبارات الميكانيكية' if session.get('lang') == 'ar' else 'Mechanical' }}
+                            {{ 'الاختبارات الميكانيكية' if current_locale == 'ar' else 'Mechanical' }}
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('mechanical.index') }}">
-                                {{ 'القائمة' if session.get('lang') == 'ar' else 'List' }}
+                            <li><a class="dropdown-item" href="{{ url_for('mechanical.list') }}">
+                                {{ 'القائمة' if current_locale == 'ar' else 'List' }}
                             </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('mechanical.create') }}">
-                                {{ 'إضافة اختبار' if session.get('lang') == 'ar' else 'Add Test' }}
+                            <li><a class="dropdown-item" href="{{ url_for('mechanical.add') }}">
+                                {{ 'إضافة اختبار' if current_locale == 'ar' else 'Add Test' }}
                             </a></li>
                         </ul>
                     </li>
@@ -103,20 +116,20 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-file-earmark-bar-graph"></i>
-                            {{ 'التقارير' if session.get('lang') == 'ar' else 'Reports' }}
+                            {{ 'التقارير' if current_locale == 'ar' else 'Reports' }}
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ url_for('reports.index') }}">
-                                {{ 'لوحة التقارير' if session.get('lang') == 'ar' else 'Reports Dashboard' }}
+                                {{ 'لوحة التقارير' if current_locale == 'ar' else 'Reports Dashboard' }}
                             </a></li>
                             <li><a class="dropdown-item" href="{{ url_for('reports.daily_production') }}">
-                                {{ 'الإنتاج اليومي' if session.get('lang') == 'ar' else 'Daily Production' }}
+                                {{ 'الإنتاج اليومي' if current_locale == 'ar' else 'Daily Production' }}
                             </a></li>
                             <li><a class="dropdown-item" href="{{ url_for('reports.chemical_analysis') }}">
-                                {{ 'تقرير التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Report' }}
+                                {{ 'تقرير التحليل الكيميائي' if current_locale == 'ar' else 'Chemical Report' }}
                             </a></li>
                             <li><a class="dropdown-item" href="{{ url_for('reports.defect_summary') }}">
-                                {{ 'ملخص العيوب' if session.get('lang') == 'ar' else 'Defect Summary' }}
+                                {{ 'ملخص العيوب' if current_locale == 'ar' else 'Defect Summary' }}
                             </a></li>
                         </ul>
                     </li>
@@ -125,7 +138,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('stickers.index') }}">
                             <i class="bi bi-qr-code"></i>
-                            {{ 'الملصقات' if session.get('lang') == 'ar' else 'Stickers' }}
+                            {{ 'الملصقات' if current_locale == 'ar' else 'Stickers' }}
                         </a>
                     </li>
 
@@ -134,14 +147,14 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-shield-lock"></i>
-                            {{ 'الإدارة' if session.get('lang') == 'ar' else 'Admin' }}
+                            {{ 'الإدارة' if current_locale == 'ar' else 'Admin' }}
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ url_for('admin.users') }}">
-                                {{ 'المستخدمين' if session.get('lang') == 'ar' else 'Users' }}
+                                {{ 'المستخدمين' if current_locale == 'ar' else 'Users' }}
                             </a></li>
                             <li><a class="dropdown-item" href="{{ url_for('admin.settings') }}">
-                                {{ 'الإعدادات' if session.get('lang') == 'ar' else 'Settings' }}
+                                {{ 'الإعدادات' if current_locale == 'ar' else 'Settings' }}
                             </a></li>
                         </ul>
                     </li>
@@ -154,7 +167,7 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-globe"></i>
-                            {{ 'العربية' if session.get('lang') == 'ar' else 'English' }}
+                            {{ 'العربية' if current_locale == 'ar' else 'English' }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{{ url_for('auth.set_language', lang='en') }}">
@@ -179,7 +192,7 @@
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
                                 <i class="bi bi-box-arrow-right"></i>
-                                {{ 'تسجيل الخروج' if session.get('lang') == 'ar' else 'Logout' }}
+                                {{ 'تسجيل الخروج' if current_locale == 'ar' else 'Logout' }}
                             </a></li>
                         </ul>
                     </li>
@@ -212,7 +225,7 @@
     <footer class="footer mt-auto py-3 bg-light">
         <div class="container text-center">
             <span class="text-muted">
-                {{ 'مختبر التحليل الكيميائي' if session.get('lang') == 'ar' else 'Lab Chemical Analysis App' }}
+                {{ 'مختبر التحليل الكيميائي' if current_locale == 'ar' else 'Lab Chemical Analysis App' }}
                 &copy; 2025
             </span>
         </div>

@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'تتبع الإنتاج' if session.get('lang') == 'ar' else 'Production Progress' }} - {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-graph-up"></i>
+                {{ 'تتبع تقدم الإنتاج' if session.get('lang') == 'ar' else 'Production Progress Tracking' }}
+            </h2>
+            <p class="text-muted mb-0">
+                {{ 'أمر الإنتاج' if session.get('lang') == 'ar' else 'Production Order' }}:
+                <strong>{{ order.order_number }}</strong>
+                {% if order.customer_name %}
+                - {{ order.customer_name }}
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('production_orders.view', id=order.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-{{ 'left' if session.get('lang') != 'ar' else 'right' }}"></i>
+                {{ 'رجوع' if session.get('lang') == 'ar' else 'Back' }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Overall Progress -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-3">{{ 'التقدم الكلي' if session.get('lang') == 'ar' else 'Overall Progress' }}</h5>
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar bg-success" role="progressbar"
+                                     style="width: {{ order.progress_percentage }}%">
+                                    {{ order.progress_percentage }}%
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2 text-muted">
+                                <span>{{ 'المكتمل' if session.get('lang') == 'ar' else 'Completed' }}: {{ order.completed_quantity }}</span>
+                                <span>{{ 'المنتج' if session.get('lang') == 'ar' else 'Produced' }}: {{ order.produced_quantity }}</span>
+                                <span>{{ 'الهدف' if session.get('lang') == 'ar' else 'Target' }}: {{ order.target_quantity }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="text-success display-6">{{ order.completed_quantity }}</div>
+                                    <small class="text-muted">{{ 'مكتمل' if session.get('lang') == 'ar' else 'Done' }}</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-warning display-6">{{ order.produced_quantity - order.completed_quantity - order.rejected_quantity }}</div>
+                                    <small class="text-muted">{{ 'جاري' if session.get('lang') == 'ar' else 'In Progress' }}</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-danger display-6">{{ order.rejected_quantity }}</div>
+                                    <small class="text-muted">{{ 'مرفوض' if session.get('lang') == 'ar' else 'Rejected' }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Flow -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-diagram-3"></i>
+                {{ 'مراحل الإنتاج' if session.get('lang') == 'ar' else 'Production Stages' }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <!-- Stage Flow Visualization -->
+            <div class="d-flex flex-wrap justify-content-between align-items-start mb-4">
+                {% for stage in stages %}
+                <div class="text-center stage-box flex-fill mx-1" style="min-width: 100px;">
+                    <div class="card {% if stages_data[stage]['accept'] > 0 %}border-success{% elif stages_data[stage]['reject'] > 0 %}border-danger{% else %}border-secondary{% endif %}">
+                        <div class="card-body p-2">
+                            <h6 class="card-title mb-1">{{ stage }}</h6>
+                            <div class="d-flex justify-content-center gap-1">
+                                <span class="badge bg-success" title="{{ 'قبول' if session.get('lang') == 'ar' else 'Accept' }}">{{ stages_data[stage]['accept'] }}</span>
+                                <span class="badge bg-danger" title="{{ 'رفض' if session.get('lang') == 'ar' else 'Reject' }}">{{ stages_data[stage]['reject'] }}</span>
+                                <span class="badge bg-secondary" title="{{ 'انتظار' if session.get('lang') == 'ar' else 'Pending' }}">{{ stages_data[stage]['pending'] }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% if not loop.last %}
+                    <i class="bi bi-arrow-{{ 'left' if session.get('lang') == 'ar' else 'right' }} text-muted mt-2"></i>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Stage Progress Bars -->
+            <div class="row">
+                {% for stage in stages %}
+                <div class="col-md-3 mb-3">
+                    <label class="form-label small">{{ stage }}</label>
+                    {% set total = stages_data[stage]['accept'] + stages_data[stage]['reject'] + stages_data[stage]['pending'] %}
+                    {% set accept_pct = (stages_data[stage]['accept'] / total * 100) if total > 0 else 0 %}
+                    {% set reject_pct = (stages_data[stage]['reject'] / total * 100) if total > 0 else 0 %}
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-success" style="width: {{ accept_pct }}%">{{ stages_data[stage]['accept'] }}</div>
+                        <div class="progress-bar bg-danger" style="width: {{ reject_pct }}%">{{ stages_data[stage]['reject'] }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Chemical Analyses -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-flask"></i>
+                {{ 'التحاليل الكيميائية' if session.get('lang') == 'ar' else 'Chemical Analyses' }}
+            </h5>
+            <a href="{{ url_for('chemical.add') }}?order_id={{ order.id }}" class="btn btn-light btn-sm">
+                <i class="bi bi-plus"></i>
+                {{ 'إضافة تحليل' if session.get('lang') == 'ar' else 'Add Analysis' }}
+            </a>
+        </div>
+        <div class="card-body">
+            {% if chemical_analyses %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                            <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                            <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                            <th>{{ 'الأنابيب المرتبطة' if session.get('lang') == 'ar' else 'Linked Pipes' }}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for analysis in chemical_analyses %}
+                        <tr>
+                            <td><strong>{{ analysis.ladle_id }}</strong></td>
+                            <td>{{ analysis.test_date }}</td>
+                            <td>
+                                {% if analysis.decision == 'فحص أخيرة فقط' %}
+                                <span class="badge bg-success">{{ analysis.decision }}</span>
+                                {% elif analysis.decision == 'فحص أولى وأخيرة' %}
+                                <span class="badge bg-info">{{ analysis.decision }}</span>
+                                {% elif analysis.decision == 'فحص الشحنة 100%' %}
+                                <span class="badge bg-warning text-dark">{{ analysis.decision }}</span>
+                                {% elif analysis.decision == 'تالف' %}
+                                <span class="badge bg-danger">{{ analysis.decision }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ analysis.decision or '-' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ analysis.pipes.count() }}</td>
+                            <td>
+                                <a href="{{ url_for('chemical.detail', id=analysis.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-3">
+                <i class="bi bi-flask display-6"></i>
+                <p>{{ 'لا توجد تحاليل كيميائية مرتبطة بهذا الأمر' if session.get('lang') == 'ar' else 'No chemical analyses linked to this order' }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Pipes List -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-list-ul"></i>
+                {{ 'الأنابيب' if session.get('lang') == 'ar' else 'Pipes' }} ({{ pipes|length }})
+            </h5>
+            <a href="{{ url_for('stages.add') }}?order_id={{ order.id }}" class="btn btn-light btn-sm">
+                <i class="bi bi-plus"></i>
+                {{ 'إضافة أنبوب' if session.get('lang') == 'ar' else 'Add Pipe' }}
+            </a>
+        </div>
+        <div class="card-body p-0">
+            {% if pipes %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ 'الكود' if session.get('lang') == 'ar' else 'Code' }}</th>
+                            <th>{{ 'المغرفة' if session.get('lang') == 'ar' else 'Ladle' }}</th>
+                            <th>{{ 'التحليل' if session.get('lang') == 'ar' else 'Analysis' }}</th>
+                            {% for stage in stages %}
+                            <th class="text-center" style="font-size: 0.75rem;">{{ stage[:3] }}</th>
+                            {% endfor %}
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pipe in pipes %}
+                        <tr>
+                            <td><strong>{{ pipe.no_code }}</strong></td>
+                            <td>{{ pipe.ladle_id }}</td>
+                            <td>
+                                {% if pipe.ladle_id and pipe.ladle_id in chemical_by_ladle %}
+                                {% set chem = chemical_by_ladle[pipe.ladle_id] %}
+                                {% if chem.decision == 'فحص أخيرة فقط' %}
+                                <span class="badge bg-success" title="{{ chem.decision }}">OK</span>
+                                {% elif chem.decision == 'تالف' %}
+                                <span class="badge bg-danger" title="{{ chem.decision }}">X</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark" title="{{ chem.decision }}">!</span>
+                                {% endif %}
+                                {% else %}
+                                <span class="badge bg-secondary">-</span>
+                                {% endif %}
+                            </td>
+                            {% for stage_name in stages %}
+                            {% set stage = pipe.get_stage(stage_name) %}
+                            <td class="text-center">
+                                {% if stage and stage.decision %}
+                                    {% if stage.decision == 'ACCEPT' %}
+                                    <span class="badge bg-success rounded-pill">✓</span>
+                                    {% elif stage.decision == 'REJECT' %}
+                                    <span class="badge bg-danger rounded-pill">✗</span>
+                                    {% else %}
+                                    <span class="badge bg-warning rounded-pill">?</span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="badge bg-light text-muted rounded-pill">-</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                            <td>
+                                <a href="{{ url_for('stages.view', id=pipe.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-inbox display-4"></i>
+                <p>{{ 'لا توجد أنابيب في هذا الأمر' if session.get('lang') == 'ar' else 'No pipes in this order yet' }}</p>
+                <a href="{{ url_for('stages.add') }}?order_id={{ order.id }}" class="btn btn-primary">
+                    <i class="bi bi-plus"></i>
+                    {{ 'إضافة أنبوب' if session.get('lang') == 'ar' else 'Add Pipe' }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh every 30 seconds
+setTimeout(function() {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

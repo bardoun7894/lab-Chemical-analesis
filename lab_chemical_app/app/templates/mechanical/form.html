@@ -17,18 +17,18 @@
             </h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('mechanical.index') }}">Mechanical</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('mechanical.list') }}">Mechanical</a></li>
                     <li class="breadcrumb-item active">{{ 'Edit' if test else 'New' }}</li>
                 </ol>
             </nav>
         </div>
     </div>
 
-    <form method="POST">
+    <form method="POST" id="mechanicalForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="row">
-            <!-- Left Column - Basic Info -->
+            <!-- Left Column - Basic Info & Decision -->
             <div class="col-lg-4">
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-warning">
@@ -38,19 +38,37 @@
                         </h5>
                     </div>
                     <div class="card-body">
+                        <!-- Pipe Code at top with search -->
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'Pipe Code' }} *</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" id="pipeSearchInput"
+                                       placeholder="{{ 'ابحث عن كود الأنبوب...' if session.get('lang') == 'ar' else 'Search pipe code...' }}"
+                                       autocomplete="off">
+                            </div>
+                            <select name="pipe_id" class="form-select mt-2" id="pipeSelect" required size="5" style="height: auto;">
+                                <option value="">-- {{ 'اختر كود الأنبوب' if session.get('lang') == 'ar' else 'Select Pipe Code' }} --</option>
+                                {% for pipe in pipes %}
+                                <option value="{{ pipe.id }}"
+                                    {{ 'selected' if test and test.pipe_id == pipe.id }}
+                                    data-ladle="{{ pipe.ladle_id }}"
+                                    data-diameter="{{ pipe.diameter }}"
+                                    data-pipecode="{{ pipe.pipe_code or (pipe.no_code ~ '-' ~ (pipe.arrange_pipe or 1) ~ '-' ~ (pipe.ladle_id or '')) }}">
+                                    {{ pipe.pipe_code or (pipe.no_code ~ '-' ~ (pipe.arrange_pipe or 1) ~ '-' ~ (pipe.ladle_id or '')) }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <input type="hidden" name="pipe_code" id="pipeCodeHidden" value="{{ test.pipe_code if test else '' }}">
+                        </div>
                         <div class="mb-3">
                             <label class="form-label">{{ 'تاريخ الاختبار' if session.get('lang') == 'ar' else 'Test Date' }} *</label>
                             <input type="date" name="test_date" class="form-control" required
                                    value="{{ test.test_date if test else today }}">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">{{ 'الكود' if session.get('lang') == 'ar' else 'Code' }}</label>
-                            <input type="text" name="code" class="form-control" placeholder="A2989"
-                                   value="{{ test.code if test else '' }}">
-                        </div>
-                        <div class="mb-3">
                             <label class="form-label">{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter (DN)' }}</label>
-                            <select name="diameter" class="form-select">
+                            <select name="diameter" class="form-select" id="diameterSelect">
                                 <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
                                 <option value="300" {{ 'selected' if test and test.diameter == 300 }}>DN300</option>
                                 <option value="400" {{ 'selected' if test and test.diameter == 400 }}>DN400</option>
@@ -61,15 +79,70 @@
                         <div class="mb-3">
                             <label class="form-label">{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</label>
                             <input type="text" name="ladle_id" class="form-control" placeholder="4713012025"
-                                   value="{{ test.ladle_id if test else '' }}">
+                                   value="{{ test.ladle_id if test else '' }}" id="ladleIdInput" readonly>
+                            <small class="text-muted">{{ 'يتم تعبئته تلقائياً من كود الأنبوب' if session.get('lang') == 'ar' else 'Auto-filled from pipe code' }}</small>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Decision Card with AI -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-check-circle"></i>
+                            {{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}
+                        </h5>
+                        <span id="aiModeBadge" class="badge bg-light text-dark" style="display: none;">
+                            <i class="bi bi-robot"></i> AI
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <!-- AI Refresh Button -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="aiRefreshBtn">
+                                    <i class="bi bi-robot"></i>
+                                    <span id="aiRefreshBtnIcon"><i class="bi bi-arrow-clockwise"></i></span>
+                                    <span id="aiCooldownTimer" style="display: none; font-size: 0.8em;"></span>
+                                </button>
+                                <div id="aiLoadingSpinner" style="display: none;">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <small class="text-muted ms-2">{{ 'جاري التحليل...' if session.get('lang') == 'ar' else 'Analyzing...' }}</small>
+                                </div>
+                                <small id="aiStatusText" class="text-muted"></small>
+                            </div>
+                            <div id="aiErrorAlert" class="alert alert-warning py-1 mb-0 mt-2" style="display: none;">
+                                <small id="aiErrorMessage"></small>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
-                            <select name="decision" class="form-select">
+                            <select name="decision" class="form-select" id="decisionSelect">
                                 <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
-                                <option value="ACCEPT" {{ 'selected' if test and test.decision == 'ACCEPT' }}>Accept</option>
-                                <option value="REJECT" {{ 'selected' if test and test.decision == 'REJECT' }}>Reject</option>
+                                <option value="ACCEPT" {{ 'selected' if test and test.decision == 'ACCEPT' }}>Accept / قبول</option>
+                                <option value="REJECT" {{ 'selected' if test and test.decision == 'REJECT' }}>Reject / رفض</option>
                             </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label d-flex justify-content-between">
+                                <span>{{ 'السبب' if session.get('lang') == 'ar' else 'Reason' }}</span>
+                                <span id="aiReasonBadge" class="badge bg-info" style="display: none;">
+                                    <i class="bi bi-robot"></i> AI
+                                </span>
+                            </label>
+                            <textarea name="reason" class="form-control" rows="2" id="reasonField">{{ test.reason if test else '' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label d-flex justify-content-between">
+                                <span>{{ 'التعليقات' if session.get('lang') == 'ar' else 'Comments' }}</span>
+                                <span id="aiCommentsBadge" class="badge bg-info" style="display: none;">
+                                    <i class="bi bi-robot"></i> AI
+                                </span>
+                            </label>
+                            <textarea name="comments" class="form-control" rows="2" id="commentsField">{{ test.comments if test else '' }}</textarea>
                         </div>
                     </div>
                 </div>
@@ -85,25 +158,33 @@
                         </h5>
                     </div>
                     <div class="card-body">
+                        <!-- Specifications Alert -->
+                        <div class="alert alert-info py-2 mb-3">
+                            <small>
+                                <strong>{{ 'المواصفات:' if session.get('lang') == 'ar' else 'Specs:' }}</strong>
+                                Tensile ≥420 MPa | Elongation ≥10% | Hardness 130-230 HB
+                            </small>
+                        </div>
+
                         <div class="row g-3">
                             <div class="col-6">
                                 <label class="form-label">{{ 'السُمك' if session.get('lang') == 'ar' else 'Thickness' }}</label>
-                                <input type="number" name="sample_thickness" class="form-control" step="0.001"
+                                <input type="number" name="sample_thickness" class="form-control test-input" step="0.001"
                                        value="{{ test.sample_thickness if test else '' }}">
                             </div>
                             <div class="col-6">
                                 <label class="form-label">D1</label>
-                                <input type="number" name="d1" class="form-control" step="0.001"
+                                <input type="number" name="d1" class="form-control test-input" step="0.001"
                                        value="{{ test.d1 if test else '' }}">
                             </div>
                             <div class="col-6">
                                 <label class="form-label">D2</label>
-                                <input type="number" name="d2" class="form-control" step="0.001"
+                                <input type="number" name="d2" class="form-control test-input" step="0.001"
                                        value="{{ test.d2 if test else '' }}">
                             </div>
                             <div class="col-6">
                                 <label class="form-label">D3</label>
-                                <input type="number" name="d3" class="form-control" step="0.001"
+                                <input type="number" name="d3" class="form-control test-input" step="0.001"
                                        value="{{ test.d3 if test else '' }}">
                             </div>
                         </div>
@@ -111,17 +192,25 @@
                         <div class="row g-3">
                             <div class="col-6">
                                 <label class="form-label">{{ 'القوة (kgf)' if session.get('lang') == 'ar' else 'Force (kgf)' }}</label>
-                                <input type="number" name="force_kgf" class="form-control" step="0.1"
+                                <input type="number" name="force_kgf" class="form-control test-input" step="0.1"
                                        value="{{ test.force_kgf if test else '' }}">
                             </div>
                             <div class="col-6">
-                                <label class="form-label">{{ 'قوة الشد (MPa)' if session.get('lang') == 'ar' else 'Tensile (MPa)' }}</label>
-                                <input type="number" name="tensile_strength" class="form-control" step="0.1"
+                                <label class="form-label d-flex justify-content-between">
+                                    <span>{{ 'قوة الشد' if session.get('lang') == 'ar' else 'Tensile (MPa)' }}</span>
+                                    <span class="result-badge badge" id="tensileBadge" style="display: none;"></span>
+                                </label>
+                                <input type="number" name="tensile_strength" class="form-control test-input" step="0.1"
+                                       id="tensileField" data-min="420"
                                        value="{{ test.tensile_strength if test else '' }}">
                             </div>
                             <div class="col-12">
-                                <label class="form-label">{{ 'الاستطالة (%)' if session.get('lang') == 'ar' else 'Elongation (%)' }}</label>
-                                <input type="number" name="elongation" class="form-control" step="0.1"
+                                <label class="form-label d-flex justify-content-between">
+                                    <span>{{ 'الاستطالة (%)' if session.get('lang') == 'ar' else 'Elongation (%)' }}</span>
+                                    <span class="result-badge badge" id="elongationBadge" style="display: none;"></span>
+                                </label>
+                                <input type="number" name="elongation" class="form-control test-input" step="0.1"
+                                       id="elongationField" data-min="10"
                                        value="{{ test.elongation if test else '' }}">
                             </div>
                         </div>
@@ -132,39 +221,54 @@
             <!-- Right Column - Microstructure -->
             <div class="col-lg-4">
                 <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-success text-white">
+                    <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-eye"></i>
                             {{ 'البنية المجهرية' if session.get('lang') == 'ar' else 'Microstructure' }}
                         </h5>
                     </div>
                     <div class="card-body">
+                        <!-- Specifications Alert -->
+                        <div class="alert alert-info py-2 mb-3">
+                            <small>
+                                <strong>{{ 'المواصفات:' if session.get('lang') == 'ar' else 'Specs:' }}</strong>
+                                Nodularity ≥80% | Carbides &lt;2%
+                            </small>
+                        </div>
+
                         <div class="row g-3">
                             <div class="col-6">
-                                <label class="form-label">{{ 'النودولارية (%)' if session.get('lang') == 'ar' else 'Nodularity (%)' }}</label>
-                                <input type="number" name="nodularity_percent" class="form-control" step="0.1"
+                                <label class="form-label d-flex justify-content-between">
+                                    <span>{{ 'النودولارية (%)' if session.get('lang') == 'ar' else 'Nodularity (%)' }}</span>
+                                    <span class="result-badge badge" id="nodularityBadge" style="display: none;"></span>
+                                </label>
+                                <input type="number" name="nodularity_percent" class="form-control test-input" step="0.1"
+                                       id="nodularityField" data-min="80"
                                        value="{{ test.nodularity_percent if test else '' }}">
                             </div>
                             <div class="col-6">
                                 <label class="form-label">{{ 'عدد العقد' if session.get('lang') == 'ar' else 'Nodule Count' }}</label>
-                                <input type="number" name="nodule_count" class="form-control"
+                                <input type="number" name="nodule_count" class="form-control test-input"
                                        value="{{ test.nodule_count if test else '' }}">
                             </div>
                             <div class="col-6">
-                                <label class="form-label">{{ 'الصلادة (HB)' if session.get('lang') == 'ar' else 'Hardness (HB)' }}</label>
-                                <input type="number" name="hardness" class="form-control" step="0.1"
+                                <label class="form-label d-flex justify-content-between">
+                                    <span>{{ 'الصلادة (HB)' if session.get('lang') == 'ar' else 'Hardness (HB)' }}</span>
+                                    <span class="result-badge badge" id="hardnessBadge" style="display: none;"></span>
+                                </label>
+                                <input type="number" name="hardness" class="form-control test-input" step="0.1"
+                                       id="hardnessField" data-min="130" data-max="230"
                                        value="{{ test.hardness if test else '' }}">
                             </div>
                             <div class="col-6">
-                                <label class="form-label">{{ 'الكربيدات (%)' if session.get('lang') == 'ar' else 'Carbides (%)' }}</label>
-                                <input type="number" name="carbides" class="form-control" step="0.01"
+                                <label class="form-label d-flex justify-content-between">
+                                    <span>{{ 'الكربيدات (%)' if session.get('lang') == 'ar' else 'Carbides (%)' }}</span>
+                                    <span class="result-badge badge" id="carbidesBadge" style="display: none;"></span>
+                                </label>
+                                <input type="number" name="carbides" class="form-control test-input" step="0.01"
+                                       id="carbidesField" data-max="2"
                                        value="{{ test.carbides if test else '' }}">
                             </div>
-                        </div>
-                        <hr>
-                        <div class="mb-3">
-                            <label class="form-label">{{ 'التعليقات' if session.get('lang') == 'ar' else 'Comments' }}</label>
-                            <textarea name="comments" class="form-control" rows="3">{{ test.comments if test else '' }}</textarea>
                         </div>
                     </div>
                 </div>
@@ -173,7 +277,7 @@
 
         <!-- Submit Buttons -->
         <div class="d-flex gap-2 justify-content-end mb-4">
-            <a href="{{ url_for('mechanical.index') }}" class="btn btn-outline-secondary">
+            <a href="{{ url_for('mechanical.list') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-x-circle"></i>
                 {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
             </a>
@@ -184,4 +288,415 @@
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const testInputs = document.querySelectorAll('.test-input');
+    const decisionSelect = document.getElementById('decisionSelect');
+    const reasonField = document.getElementById('reasonField');
+    const commentsField = document.getElementById('commentsField');
+    const aiRefreshBtn = document.getElementById('aiRefreshBtn');
+    const aiRefreshBtnIcon = document.getElementById('aiRefreshBtnIcon');
+    const aiCooldownTimer = document.getElementById('aiCooldownTimer');
+    const aiLoadingSpinner = document.getElementById('aiLoadingSpinner');
+    const aiStatusText = document.getElementById('aiStatusText');
+    const aiErrorAlert = document.getElementById('aiErrorAlert');
+    const aiErrorMessage = document.getElementById('aiErrorMessage');
+    const aiModeBadge = document.getElementById('aiModeBadge');
+    const aiReasonBadge = document.getElementById('aiReasonBadge');
+    const aiCommentsBadge = document.getElementById('aiCommentsBadge');
+
+    // State
+    let lastAiCallTime = 0;
+    let cooldownInterval = null;
+    const AI_COOLDOWN = 5000;
+
+    // Validate inputs and show badges
+    testInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            validateInput(this);
+            updateAiStatus();
+        });
+        validateInput(input);
+    });
+
+    function validateInput(input) {
+        const value = parseFloat(input.value);
+        const min = parseFloat(input.dataset.min);
+        const max = parseFloat(input.dataset.max);
+
+        input.classList.remove('is-valid', 'is-invalid');
+
+        if (isNaN(value)) return;
+
+        let isValid = true;
+        if (!isNaN(min) && value < min) isValid = false;
+        if (!isNaN(max) && value > max) isValid = false;
+
+        input.classList.add(isValid ? 'is-valid' : 'is-invalid');
+
+        // Update badge
+        const badgeId = input.id.replace('Field', 'Badge');
+        const badge = document.getElementById(badgeId);
+        if (badge) {
+            badge.style.display = 'inline-block';
+            badge.textContent = isValid ? 'OK' : 'Out';
+            badge.className = 'result-badge badge ' + (isValid ? 'bg-success' : 'bg-danger');
+        }
+    }
+
+    // Cooldown display
+    function updateCooldownDisplay() {
+        const now = Date.now();
+        const remaining = Math.ceil((AI_COOLDOWN - (now - lastAiCallTime)) / 1000);
+
+        if (remaining > 0) {
+            aiRefreshBtnIcon.style.display = 'none';
+            aiCooldownTimer.style.display = 'inline';
+            aiCooldownTimer.textContent = remaining + 's';
+            aiRefreshBtn.classList.add('disabled');
+        } else {
+            aiRefreshBtnIcon.style.display = 'inline';
+            aiCooldownTimer.style.display = 'none';
+            aiRefreshBtn.classList.remove('disabled');
+            if (cooldownInterval) {
+                clearInterval(cooldownInterval);
+                cooldownInterval = null;
+                updateAiStatus();
+            }
+        }
+    }
+
+    function startCooldownTimer() {
+        updateCooldownDisplay();
+        if (!cooldownInterval) {
+            cooldownInterval = setInterval(updateCooldownDisplay, 1000);
+        }
+    }
+
+    // Check if required fields are filled
+    function checkAiReadiness() {
+        const requiredFields = ['tensile_strength', 'elongation'];
+        for (const name of requiredFields) {
+            const input = document.querySelector(`input[name="${name}"]`);
+            if (!input || !input.value) return false;
+        }
+        return true;
+    }
+
+    function updateAiStatus() {
+        const isReady = checkAiReadiness();
+        const now = Date.now();
+        const inCooldown = (now - lastAiCallTime) < AI_COOLDOWN;
+
+        if (isReady && !inCooldown) {
+            aiStatusText.textContent = '{{ "جاهز للتحليل" if session.get("lang") == "ar" else "Ready to analyze" }}';
+            aiStatusText.className = 'text-success small';
+            aiRefreshBtn.classList.add('btn-pulse');
+        } else if (isReady && inCooldown) {
+            aiStatusText.textContent = '{{ "انتظر..." if session.get("lang") == "ar" else "Waiting..." }}';
+            aiStatusText.className = 'text-muted small';
+            aiRefreshBtn.classList.remove('btn-pulse');
+        } else {
+            aiStatusText.textContent = '{{ "أدخل قوة الشد والاستطالة" if session.get("lang") == "ar" else "Enter tensile & elongation" }}';
+            aiStatusText.className = 'text-muted small';
+            aiRefreshBtn.classList.remove('btn-pulse');
+        }
+    }
+
+    // AI Analysis
+    function triggerAiAnalysis() {
+        if (!checkAiReadiness()) return;
+
+        const now = Date.now();
+        if ((now - lastAiCallTime) < AI_COOLDOWN) {
+            startCooldownTimer();
+            return;
+        }
+
+        lastAiCallTime = now;
+        startCooldownTimer();
+
+        // Collect values
+        const testValues = {};
+        const fields = ['tensile_strength', 'elongation', 'hardness', 'nodularity_percent',
+                       'carbides', 'nodule_count', 'd1', 'd2', 'd3', 'force_kgf'];
+        fields.forEach(name => {
+            const input = document.querySelector(`input[name="${name}"]`);
+            if (input && input.value) {
+                testValues[name] = parseFloat(input.value);
+            }
+        });
+
+        // Show loading
+        aiLoadingSpinner.style.display = 'block';
+        aiErrorAlert.style.display = 'none';
+        aiStatusText.textContent = '{{ "جاري التحليل..." if session.get("lang") == "ar" else "Analyzing..." }}';
+        aiRefreshBtn.classList.remove('btn-pulse');
+
+        // Clear fields
+        reasonField.value = '';
+        commentsField.value = '';
+        aiReasonBadge.style.display = 'inline-block';
+        aiCommentsBadge.style.display = 'inline-block';
+
+        // Call streaming API
+        fetch('{{ url_for("mechanical.api_ai_analysis_stream") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(testValues)
+        })
+        .then(response => {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            function readStream() {
+                reader.read().then(({ done, value }) => {
+                    if (done) {
+                        aiLoadingSpinner.style.display = 'none';
+                        return;
+                    }
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+
+                                if (data.error) {
+                                    aiLoadingSpinner.style.display = 'none';
+                                    aiErrorAlert.style.display = 'block';
+                                    aiErrorMessage.textContent = data.error;
+                                    return;
+                                }
+
+                                if (data.done && data.result) {
+                                    aiLoadingSpinner.style.display = 'none';
+                                    aiErrorAlert.style.display = 'none';
+
+                                    // Set decision
+                                    if (data.result.decision) {
+                                        decisionSelect.value = data.result.decision;
+                                        aiModeBadge.style.display = 'inline-block';
+                                    }
+
+                                    // Type out reason and comments
+                                    typeText(reasonField, data.result.reason || '', 20);
+                                    const reasonDelay = (data.result.reason || '').length * 20 + 100;
+                                    setTimeout(() => {
+                                        typeText(commentsField, data.result.comments || '', 20);
+                                    }, reasonDelay);
+
+                                    // Update status
+                                    const totalDelay = reasonDelay + (data.result.comments || '').length * 20 + 200;
+                                    setTimeout(() => {
+                                        aiStatusText.textContent = '{{ "تم التحليل ✓" if session.get("lang") == "ar" else "Analysis complete ✓" }}';
+                                        aiStatusText.className = 'text-success small';
+                                    }, totalDelay);
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                    readStream();
+                });
+            }
+            readStream();
+        })
+        .catch(error => {
+            aiLoadingSpinner.style.display = 'none';
+            aiErrorAlert.style.display = 'block';
+            aiErrorMessage.textContent = error.message;
+        });
+    }
+
+    // Typing effect
+    function typeText(element, text, speed = 30) {
+        if (!text) return;
+        element.value = '';
+        element.classList.add('border-success');
+        let index = 0;
+        function type() {
+            if (index < text.length) {
+                element.value += text.charAt(index);
+                index++;
+                setTimeout(type, speed);
+            } else {
+                setTimeout(() => element.classList.remove('border-success'), 1000);
+            }
+        }
+        type();
+    }
+
+    // Event listeners
+    aiRefreshBtn.addEventListener('click', triggerAiAnalysis);
+
+    // Initial status
+    updateAiStatus();
+
+    // Pipe Code Search functionality
+    const pipeSearchInput = document.getElementById('pipeSearchInput');
+    const pipeSelect = document.getElementById('pipeSelect');
+    let allOptions = [];
+
+    if (pipeSelect && pipeSearchInput) {
+        // Store all options for filtering
+        for (let i = 0; i < pipeSelect.options.length; i++) {
+            allOptions.push({
+                value: pipeSelect.options[i].value,
+                text: pipeSelect.options[i].text,
+                html: pipeSelect.options[i].outerHTML
+            });
+        }
+
+        // Real-time search/filter functionality
+        function filterPipeOptions() {
+            const searchTerm = pipeSearchInput.value.toLowerCase().trim();
+
+            // Clear current options
+            pipeSelect.innerHTML = '';
+
+            let firstMatch = null;
+            let matchCount = 0;
+
+            // Filter and add matching options
+            allOptions.forEach(function(opt) {
+                if (opt.text.toLowerCase().includes(searchTerm) || opt.value === '') {
+                    const option = document.createElement('option');
+                    option.value = opt.value;
+                    option.innerHTML = opt.text;
+                    // Copy data attributes
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = opt.html;
+                    const origOption = tempDiv.firstChild;
+                    if (origOption.dataset) {
+                        option.dataset.ladle = origOption.dataset.ladle || '';
+                        option.dataset.diameter = origOption.dataset.diameter || '';
+                        option.dataset.pipecode = origOption.dataset.pipecode || '';
+                    }
+                    pipeSelect.appendChild(option);
+
+                    // Track first real match (not empty option)
+                    if (opt.value !== '') {
+                        matchCount++;
+                        if (!firstMatch && searchTerm.length > 0) {
+                            firstMatch = option;
+                        }
+                    }
+                }
+            });
+
+            // Update search input styling based on results
+            if (searchTerm.length > 0) {
+                if (matchCount > 0) {
+                    pipeSearchInput.classList.remove('is-invalid');
+                    pipeSearchInput.classList.add('is-valid');
+                } else {
+                    pipeSearchInput.classList.remove('is-valid');
+                    pipeSearchInput.classList.add('is-invalid');
+                }
+            } else {
+                pipeSearchInput.classList.remove('is-valid', 'is-invalid');
+            }
+
+            // Auto-select first match if search term exists
+            if (firstMatch && searchTerm.length > 0) {
+                firstMatch.selected = true;
+                // Trigger auto-fill
+                pipeSelect.dispatchEvent(new Event('change'));
+            }
+        }
+
+        // Immediate filtering on any input (including alphabetic)
+        pipeSearchInput.addEventListener('input', filterPipeOptions);
+        pipeSearchInput.addEventListener('keyup', filterPipeOptions);
+        pipeSearchInput.addEventListener('paste', function() {
+            setTimeout(filterPipeOptions, 0);
+        });
+
+        // Keyboard navigation in search
+        pipeSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                pipeSelect.focus();
+                if (pipeSelect.options.length > 1) {
+                    pipeSelect.selectedIndex = 1; // Skip empty option
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (pipeSelect.selectedIndex >= 0) {
+                    pipeSelect.dispatchEvent(new Event('change'));
+                }
+            }
+        });
+
+        // Return to search on Escape
+        pipeSelect.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                pipeSearchInput.focus();
+                pipeSearchInput.select();
+            }
+        });
+
+        // Auto-fill data when pipe code is selected
+        pipeSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                const ladleId = selectedOption.dataset.ladle;
+                const diameter = selectedOption.dataset.diameter;
+                const pipeCode = selectedOption.dataset.pipecode;
+
+                // Auto-fill ladle ID
+                const ladleInput = document.getElementById('ladleIdInput');
+                if (ladleInput && ladleId) {
+                    ladleInput.value = ladleId;
+                }
+
+                // Auto-fill diameter
+                const diameterSelect = document.getElementById('diameterSelect');
+                if (diameterSelect && diameter) {
+                    diameterSelect.value = diameter;
+                }
+
+                // Set pipe_code hidden field
+                const pipeCodeHidden = document.getElementById('pipeCodeHidden');
+                if (pipeCodeHidden && pipeCode) {
+                    pipeCodeHidden.value = pipeCode;
+                }
+
+                // Update search input to show selected value
+                pipeSearchInput.value = selectedOption.text;
+            }
+        });
+
+        // Trigger on page load if pipe already selected
+        if (pipeSelect.value) {
+            pipeSelect.dispatchEvent(new Event('change'));
+        }
+    }
+});
+</script>
+<style>
+.btn-pulse {
+    animation: pulse-animation 2s infinite;
+}
+@keyframes pulse-animation {
+    0% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(13, 110, 253, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
+}
+.border-success {
+    border-color: #198754 !important;
+    box-shadow: 0 0 5px rgba(25, 135, 84, 0.5);
+}
+</style>
 {% endblock %}

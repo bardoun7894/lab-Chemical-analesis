@@ -51,6 +51,7 @@ def generate_qr_code(data: str, size: int = 200, border: int = 2) -> Image.Image
 def create_pipe_qr_data(pipe_info: Dict) -> str:
     """
     Create QR code data string for a pipe.
+    Includes production order and all stages info.
 
     Args:
         pipe_info: Dict with pipe information
@@ -62,10 +63,13 @@ def create_pipe_qr_data(pipe_info: Dict) -> str:
         f"NC:{pipe_info.get('no_code', '')}",
         f"L:{pipe_info.get('ladle_id', '')}",
         f"DN:{pipe_info.get('diameter', '')}",
-        f"T:{pipe_info.get('pipe_type', '')}",
+        f"T:{pipe_info.get('pipe_class', '')}",
         f"D:{pipe_info.get('production_date', '')}",
         f"W:{pipe_info.get('weight', '')}kg",
-        f"DEC:{pipe_info.get('decision', '')}"
+        f"DEC:{pipe_info.get('decision', '')}",
+        f"ORD:{pipe_info.get('order_number', '')}",
+        f"CUST:{pipe_info.get('customer', '')}",
+        f"STG:{pipe_info.get('stages', '')}"
     ]
     return '|'.join(fields)
 
@@ -77,7 +81,7 @@ def create_sticker_image(
     custom_height: Optional[int] = None
 ) -> BytesIO:
     """
-    Create sticker image with pipe info and QR code.
+    Create sticker image with pipe info, production order, stages, and QR code.
 
     Args:
         pipe_info: Dict with pipe information
@@ -104,22 +108,24 @@ def create_sticker_image(
 
     # Try to load fonts
     try:
-        font_large = ImageFont.truetype("arial.ttf", int(height_px * 0.10))
+        font_large = ImageFont.truetype("arial.ttf", int(height_px * 0.09))
         font_medium = ImageFont.truetype("arial.ttf", int(height_px * 0.07))
-        font_small = ImageFont.truetype("arial.ttf", int(height_px * 0.055))
+        font_small = ImageFont.truetype("arial.ttf", int(height_px * 0.05))
+        font_tiny = ImageFont.truetype("arial.ttf", int(height_px * 0.04))
     except:
         font_large = ImageFont.load_default()
         font_medium = font_large
         font_small = font_large
+        font_tiny = font_large
 
-    # Generate QR code
+    # Generate QR code with enhanced data
     qr_data = create_pipe_qr_data(pipe_info)
-    qr_size = int(min(width_px, height_px) * 0.45)
+    qr_size = int(min(width_px, height_px) * 0.42)
     qr_image = generate_qr_code(qr_data, qr_size)
 
     # Place QR code on right side
     qr_x = width_px - qr_size - int(width_px * 0.03)
-    qr_y = int(height_px * 0.20)
+    qr_y = int(height_px * 0.15)
     img.paste(qr_image, (qr_x, qr_y))
 
     # Draw border
@@ -127,29 +133,33 @@ def create_sticker_image(
 
     # Draw text on left side
     x_offset = int(width_px * 0.03)
-    y_offset = int(height_px * 0.05)
-    line_height = int(height_px * 0.11)
+    y_offset = int(height_px * 0.03)
+    line_height = int(height_px * 0.10)
 
-    # Title
-    draw.text((x_offset, y_offset), "PIPE LABEL", font=font_large, fill='black')
-    y_offset += line_height
+    # Title with order number if available
+    order_number = pipe_info.get('order_number', '')
+    if order_number:
+        draw.text((x_offset, y_offset), f"Order: {order_number}", font=font_medium, fill='black')
+    else:
+        draw.text((x_offset, y_offset), "PIPE LABEL", font=font_medium, fill='black')
+    y_offset += int(line_height * 0.8)
 
     # Separator line
     draw.line([(x_offset, y_offset), (qr_x - 10, y_offset)], fill='black', width=1)
-    y_offset += int(line_height * 0.3)
+    y_offset += int(line_height * 0.2)
 
     # Pipe info lines
     info_lines = [
-        f"No. Code: {pipe_info.get('no_code', 'N/A')}",
-        f"Ladle#: {pipe_info.get('ladle_id', 'N/A')}",
-        f"DN: {pipe_info.get('diameter', 'N/A')}  Type: {pipe_info.get('pipe_type', 'N/A')}",
+        f"Code: {pipe_info.get('no_code', 'N/A')}",
+        f"Ladle: {pipe_info.get('ladle_id', 'N/A')}",
+        f"DN{pipe_info.get('diameter', 'N/A')} {pipe_info.get('pipe_class', '')}",
         f"Date: {pipe_info.get('production_date', 'N/A')}",
         f"Weight: {pipe_info.get('weight', 'N/A')} kg",
     ]
 
     for line in info_lines:
         draw.text((x_offset, y_offset), line, font=font_small, fill='black')
-        y_offset += int(line_height * 0.65)
+        y_offset += int(line_height * 0.55)
 
     # Decision with color
     decision = pipe_info.get('decision', 'N/A')
@@ -160,8 +170,19 @@ def create_sticker_image(
     else:
         decision_color = 'orange'
 
-    y_offset += int(line_height * 0.2)
     draw.text((x_offset, y_offset), f"Decision: {decision}", font=font_medium, fill=decision_color)
+    y_offset += int(line_height * 0.7)
+
+    # Stages summary at bottom (for larger stickers)
+    stages = pipe_info.get('stages', '')
+    if stages and height_px > 400:
+        draw.text((x_offset, y_offset), f"Stages: {stages}", font=font_tiny, fill='gray')
+
+    # Customer name at very bottom if available
+    customer = pipe_info.get('customer', '')
+    if customer and height_px > 500:
+        y_offset += int(line_height * 0.5)
+        draw.text((x_offset, y_offset), f"Customer: {customer[:20]}", font=font_tiny, fill='gray')
 
     # Save to buffer
     buffer = BytesIO()
@@ -253,6 +274,7 @@ def create_batch_stickers(
 def parse_qr_data(qr_string: str) -> Dict:
     """
     Parse QR code data back to dict.
+    Handles enhanced QR data with order and stages info.
 
     Args:
         qr_string: QR code data string
@@ -273,12 +295,18 @@ def parse_qr_data(qr_string: str) -> Dict:
             elif key == 'DN':
                 result['diameter'] = value
             elif key == 'T':
-                result['pipe_type'] = value
+                result['pipe_class'] = value
             elif key == 'D':
                 result['production_date'] = value
             elif key == 'W':
                 result['weight'] = value.replace('kg', '')
             elif key == 'DEC':
                 result['decision'] = value
+            elif key == 'ORD':
+                result['order_number'] = value
+            elif key == 'CUST':
+                result['customer'] = value
+            elif key == 'STG':
+                result['stages'] = value
 
     return result

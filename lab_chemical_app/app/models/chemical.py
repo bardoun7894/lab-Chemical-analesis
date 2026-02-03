@@ -51,7 +51,7 @@ class DefectType(db.Model):
     is_active = db.Column(db.Boolean, default=True)
 
     # Relationships
-    pipe_stages = db.relationship('PipeStage', back_populates='defect_type', lazy='dynamic')
+    pipe_stages = db.relationship('PipeStage', back_populates='defect_type_obj', lazy='dynamic')
 
     @property
     def display_name(self):
@@ -169,23 +169,40 @@ class ChemicalAnalysis(db.Model):
     defect_reason = db.Column(db.Text)
     notes = db.Column(db.Text)
 
+    # Link to Production Order (امر الانتاج)
+    production_order_id = db.Column(db.Integer, db.ForeignKey('production_orders.id'), index=True)
+
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
     # Relationships
     furnace = db.relationship('Furnace', back_populates='chemical_analyses')
-    pipes = db.relationship('Pipe', back_populates='chemical_analysis', lazy='dynamic')
-    mechanical_tests = db.relationship('MechanicalTest', back_populates='chemical_analysis', lazy='dynamic')
+    pipes = db.relationship('Pipe', backref='chemical_analysis', lazy='dynamic')
+    mechanical_tests = db.relationship('MechanicalTest', backref='chemical_analysis', lazy='dynamic')
+    # production_order relationship defined via backref in ProductionOrder
 
     def calculate_equivalents(self):
         """Calculate CE, MnE, MgE values"""
-        if self.carbon and self.silicon:
-            self.carbon_equivalent = self.carbon + (self.silicon / 3)
-        if self.manganese and self.sulfur:
-            self.manganese_equivalent = self.manganese - (1.7 * self.sulfur)
-        if self.magnesium and self.sulfur:
-            self.magnesium_equivalent = self.magnesium - (0.76 * self.sulfur)
+        # CE = C + Si/3 + P/2
+        c = self.carbon or 0
+        si = self.silicon or 0
+        p = self.phosphorus or 0
+        if c > 0 or si > 0 or p > 0:
+            self.carbon_equivalent = c + (si / 3) + (p / 2)
+
+        # MnE = 3*Cr + Cu + Mn + P
+        cr = self.chromium or 0
+        cu = self.copper or 0
+        mn = self.manganese or 0
+        if cr > 0 or cu > 0 or mn > 0 or p > 0:
+            self.manganese_equivalent = (3 * cr) + cu + mn + p
+
+        # MgE = Mg - S
+        mg = self.magnesium or 0
+        s = self.sulfur or 0
+        if mg > 0:
+            self.magnesium_equivalent = mg - s
 
     def get_element_values(self):
         """Get dict of element values for validation"""

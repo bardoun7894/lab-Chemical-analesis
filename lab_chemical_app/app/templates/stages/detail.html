@@ -15,7 +15,7 @@
                     </h2>
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="{{ url_for('stages.index') }}">Pipes</a></li>
+                            <li class="breadcrumb-item"><a href="{{ url_for('stages.list') }}">Pipes</a></li>
                             <li class="breadcrumb-item active">{{ pipe.no_code }}</li>
                         </ol>
                     </nav>
@@ -58,7 +58,7 @@
                             <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
                             <td>
                                 {% if pipe.ladle_id %}
-                                <a href="{{ url_for('chemical.index') }}?ladle_id={{ pipe.ladle_id }}">
+                                <a href="{{ url_for('chemical.list') }}?ladle_id={{ pipe.ladle_id }}">
                                     {{ pipe.ladle_id }}
                                 </a>
                                 {% else %}-{% endif %}
@@ -70,7 +70,7 @@
                         </tr>
                         <tr>
                             <th>{{ 'النوع' if session.get('lang') == 'ar' else 'Type' }}</th>
-                            <td>{{ pipe.pipe_type or '-' }}</td>
+                            <td>{{ pipe.pipe_class or '-' }}</td>
                         </tr>
                         <tr>
                             <th>{{ 'الوزن' if session.get('lang') == 'ar' else 'Weight' }}</th>
@@ -96,9 +96,65 @@
                             <th>{{ 'رقم القالب' if session.get('lang') == 'ar' else 'Mold' }}</th>
                             <td>{{ pipe.mold_number or '-' }}</td>
                         </tr>
+                        {% if pipe.production_order %}
+                        <tr>
+                            <th>{{ 'أمر الإنتاج' if session.get('lang') == 'ar' else 'Order' }}</th>
+                            <td>
+                                <a href="{{ url_for('production_orders.view', id=pipe.production_order.id) }}">
+                                    {{ pipe.production_order.order_number }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'العميل' if session.get('lang') == 'ar' else 'Customer' }}</th>
+                            <td>{{ pipe.production_order.customer_name or '-' }}</td>
+                        </tr>
+                        {% endif %}
                     </table>
                 </div>
             </div>
+
+            <!-- Production Order Info -->
+            {% if pipe.production_order %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clipboard-check"></i>
+                        {{ 'أمر الإنتاج' if session.get('lang') == 'ar' else 'Production Order' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless mb-0">
+                        <tr>
+                            <th>{{ 'رقم الأمر' if session.get('lang') == 'ar' else 'Order #' }}</th>
+                            <td>
+                                <a href="{{ url_for('production_orders.view', id=pipe.production_order.id) }}">
+                                    {{ pipe.production_order.order_number }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'العميل' if session.get('lang') == 'ar' else 'Customer' }}</th>
+                            <td>{{ pipe.production_order.customer_name or '-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'التقدم' if session.get('lang') == 'ar' else 'Progress' }}</th>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar"
+                                         style="width: {{ pipe.production_order.progress_percentage }}%">
+                                        {{ pipe.production_order.progress_percentage }}%
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    {{ pipe.production_order.produced_quantity }}/{{ pipe.production_order.target_quantity }}
+                                </small>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Chemical Analysis Link -->
             {% if chemical_analysis %}
@@ -120,7 +176,7 @@
                         <span class="badge bg-secondary">{{ chemical_analysis.decision or 'N/A' }}</span>
                         {% endif %}
                     </div>
-                    <a href="{{ url_for('chemical.view', id=chemical_analysis.id) }}" class="btn btn-sm btn-outline-warning w-100">
+                    <a href="{{ url_for('chemical.detail', id=chemical_analysis.id) }}" class="btn btn-sm btn-outline-warning w-100">
                         <i class="bi bi-eye"></i>
                         {{ 'عرض التفاصيل' if session.get('lang') == 'ar' else 'View Details' }}
                     </a>
@@ -139,7 +195,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% set stage_names = ['CCM', 'Annealing', 'Zinc', 'Cutting', 'Hydrotest', 'Cement', 'Coating', 'Finish'] %}
+                    {% set stage_names = ['Melting Ladle', 'CCM', 'Annealing', 'Lab', 'Zinc', 'Cutting', 'Hydrotest', 'Cement', 'Coating', 'Finish'] %}
                     {% set stage_map = {} %}
                     {% for stage in pipe.stages %}
                         {% set _ = stage_map.update({stage.stage_name: stage}) %}
@@ -192,6 +248,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }}</th>
+                                    <th>{{ 'الماكينة' if session.get('lang') == 'ar' else 'Machine' }}</th>
                                     <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
                                     <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
                                     <th>{{ 'القياس' if session.get('lang') == 'ar' else 'Measurement' }}</th>
@@ -206,25 +263,45 @@
                                 <tr class="{{ 'table-danger' if stage and stage.decision == 'REJECT' else 'table-success' if stage and stage.decision == 'ACCEPT' }}">
                                     <td><strong>{{ stage_name }}</strong></td>
                                     <td>
+                                        {% if stage and stage.machine %}
+                                        <span class="badge bg-secondary">{{ stage.machine.machine_code }}</span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         {% if stage %}
                                             {% if stage.decision == 'ACCEPT' %}
-                                            <span class="badge bg-success">ACCEPT</span>
+                                            <span class="badge bg-success">{{ 'مقبول' if session.get('lang') == 'ar' else 'ACCEPT' }}</span>
                                             {% elif stage.decision == 'REJECT' %}
-                                            <span class="badge bg-danger">REJECT</span>
+                                            <span class="badge bg-danger">{{ 'مرفوض' if session.get('lang') == 'ar' else 'REJECT' }}</span>
+                                            {% elif stage.decision == 'HOLD' %}
+                                            <span class="badge bg-warning text-dark">{{ 'انتظار' if session.get('lang') == 'ar' else 'HOLD' }}</span>
+                                            {% elif stage.decision == 'REWORK' %}
+                                            <span class="badge bg-info">{{ 'إعادة تشغيل' if session.get('lang') == 'ar' else 'REWORK' }}</span>
                                             {% elif stage.decision %}
                                             <span class="badge bg-secondary">{{ stage.decision }}</span>
                                             {% else %}
-                                            <span class="badge bg-info">In Progress</span>
+                                            <span class="badge bg-info">{{ 'جاري' if session.get('lang') == 'ar' else 'In Progress' }}</span>
                                             {% endif %}
                                         {% else %}
                                         <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ stage.stage_date if stage and stage.stage_date else '-' }}</td>
+                                    <td>
+                                        {% if stage and stage.stage_date %}
+                                        {{ stage.stage_date }}
+                                        {% if stage.stage_time %}<br><small class="text-muted">{{ stage.stage_time }}</small>{% endif %}
+                                        {% else %}-{% endif %}
+                                    </td>
                                     <td>
                                         {% if stage and stage.measurement_value %}
                                         {{ stage.measurement_value }}
-                                        {% if stage.measurement_type %}({{ stage.measurement_type }}){% endif %}
+                                        {% if stage_name == 'Finish' %}
+                                        <small class="text-muted">m (Length)</small>
+                                        {% elif stage.measurement_type %}
+                                        <small class="text-muted">({{ stage.measurement_type }})</small>
+                                        {% endif %}
                                         {% else %}-{% endif %}
                                     </td>
                                     <td>
@@ -237,12 +314,19 @@
                                         <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ stage.notes if stage else '-' }}</td>
+                                    <td>{{ stage.notes if stage and stage.notes else '-' }}</td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-outline-primary"
-                                                onclick="openStageModal('{{ stage_name }}', {{ stage.id if stage else 'null' }}, '{{ stage.decision if stage else '' }}', {{ 'true' if stage and stage.has_defect else 'false' }}, '{{ stage.notes if stage else '' }}')">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-primary"
+                                                    onclick="openStageModal('{{ stage_name }}', {{ stage.id if stage else 'null' }}, '{{ stage.decision if stage else '' }}', {{ 'true' if stage and stage.has_defect else 'false' }}, '{{ stage.notes if stage else '' }}', '{{ stage.defect_type if stage and stage.defect_type else '' }}', '{{ stage.defect_reason if stage and stage.defect_reason else '' }}', {{ stage.machine_id if stage and stage.machine_id else 'null' }}, '{{ stage.stage_date if stage and stage.stage_date else '' }}', '{{ stage.stage_time if stage and stage.stage_time else '' }}', {{ stage.measurement_value if stage and stage.measurement_value else 'null' }})">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info"
+                                                    onclick="viewStageHistory('{{ stage_name }}')"
+                                                    title="{{ 'سجل التغييرات' if session.get('lang') == 'ar' else 'View History' }}">
+                                                <i class="bi bi-clock-history"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -259,7 +343,7 @@
 <div class="modal fade" id="stageModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{{ url_for('stages.update_stage', pipe_id=pipe.id) }}">
+            <form method="POST" id="stageForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="stage_name" id="modalStageName">
 
@@ -276,14 +360,33 @@
                         <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
                         <select name="decision" class="form-select" id="modalDecision">
                             <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
-                            <option value="ACCEPT">Accept / قبول</option>
-                            <option value="REJECT">Reject / رفض</option>
-                            <option value="HOLD">Hold / انتظار</option>
-                            <option value="REWORK">Rework / إعادة تشغيل</option>
-                            <option value="INSPECT_100">Inspect 100%</option>
+                            <!-- Options will be populated dynamically by JavaScript -->
                         </select>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" id="machineDiv" style="display: none;">
+                        <label class="form-label">{{ 'الماكينة' if session.get('lang') == 'ar' else 'Machine' }}</label>
+                        <select name="machine_id" class="form-select" id="modalMachine">
+                            <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                            <!-- Options will be populated dynamically by JavaScript -->
+                        </select>
+                    </div>
+                    <!-- Date and Time fields (shown for Annealing) -->
+                    <div class="row" id="dateTimeDiv" style="display: none;">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</label>
+                            <input type="date" name="stage_date" class="form-control" id="modalStageDate">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">{{ 'الوقت' if session.get('lang') == 'ar' else 'Time' }}</label>
+                            <input type="time" name="stage_time" class="form-control" id="modalStageTime">
+                        </div>
+                    </div>
+                    <!-- Length field (shown for Finish) -->
+                    <div class="mb-3" id="lengthDiv" style="display: none;">
+                        <label class="form-label">{{ 'الطول (متر)' if session.get('lang') == 'ar' else 'Length (meters)' }}</label>
+                        <input type="number" name="length_value" class="form-control" step="0.01" id="modalLength" placeholder="6.0">
+                    </div>
+                    <div class="mb-3" id="measurementDiv">
                         <label class="form-label">{{ 'القياس' if session.get('lang') == 'ar' else 'Measurement' }}</label>
                         <input type="number" name="measurement_value" class="form-control" step="0.001" id="modalMeasurement">
                     </div>
@@ -292,6 +395,17 @@
                         <label class="form-check-label" for="modalHasDefect">
                             {{ 'يوجد عيب' if session.get('lang') == 'ar' else 'Has Defect' }}
                         </label>
+                    </div>
+                    <div class="mb-3" id="defectTypeDiv" style="display: none;">
+                        <label class="form-label">{{ 'نوع العيب' if session.get('lang') == 'ar' else 'Defect Type' }}</label>
+                        <select name="defect_type" class="form-select" id="modalDefectType">
+                            <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                            <!-- Options will be populated dynamically by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="mb-3" id="defectReasonDiv" style="display: none;">
+                        <label class="form-label">{{ 'سبب العيب' if session.get('lang') == 'ar' else 'Defect Reason' }}</label>
+                        <textarea name="defect_reason" class="form-control" rows="2" id="modalDefectReason"></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}</label>
@@ -310,18 +424,311 @@
         </div>
     </div>
 </div>
+
+<!-- Stage History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-clock-history"></i>
+                    {{ 'سجل التغييرات' if session.get('lang') == 'ar' else 'Change History' }}:
+                    <span id="historyStageTitle"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="historyLoading" class="text-center py-4">
+                    <div class="spinner-border text-info" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="historyContent" style="display: none;">
+                    <div id="historyEmpty" class="text-center py-4 text-muted" style="display: none;">
+                        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                        <p class="mt-2">{{ 'لا يوجد سجل تغييرات' if session.get('lang') == 'ar' else 'No history found' }}</p>
+                    </div>
+                    <div class="table-responsive" id="historyTable" style="display: none;">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                                    <th>{{ 'المستخدم' if session.get('lang') == 'ar' else 'User' }}</th>
+                                    <th>{{ 'الإجراء' if session.get('lang') == 'ar' else 'Action' }}</th>
+                                    <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                                    <th>{{ 'الماكينة' if session.get('lang') == 'ar' else 'Machine' }}</th>
+                                    <th>{{ 'العيب' if session.get('lang') == 'ar' else 'Defect' }}</th>
+                                    <th>{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {{ 'إغلاق' if session.get('lang') == 'ar' else 'Close' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function openStageModal(stageName, stageId, decision, hasDefect, notes) {
+// Stage-specific decisions
+const stageDecisions = {
+    {% for stage_name, decisions in stage_decisions.items() %}
+    '{{ stage_name }}': [
+        {% for decision_en, decision_ar in decisions %}
+        ['{{ decision_en }}', '{{ decision_ar }}'],
+        {% endfor %}
+    ],
+    {% endfor %}
+};
+
+// Stage-specific defects
+const stageDefects = {
+    {% for stage_name, defects in stage_defects.items() %}
+    '{{ stage_name }}': [
+        {% for defect_en, defect_ar in defects %}
+        ['{{ defect_en }}', '{{ defect_ar }}'],
+        {% endfor %}
+    ],
+    {% endfor %}
+};
+
+// Stage-specific machines
+const stageMachines = {
+    {% for stage_name, machines in stage_machines.items() %}
+    '{{ stage_name }}': [
+        {% for machine in machines %}
+        {id: {{ machine.id }}, code: '{{ machine.code }}', name: '{{ machine.name }}'},
+        {% endfor %}
+    ],
+    {% endfor %}
+};
+
+function openStageModal(stageName, stageId, decision, hasDefect, notes, defectType, defectReason, machineId, stageDate, stageTime, measurementValue) {
     document.getElementById('modalStageName').value = stageName;
     document.getElementById('modalStageTitle').textContent = stageName;
-    document.getElementById('modalDecision').value = decision || '';
     document.getElementById('modalHasDefect').checked = hasDefect;
     document.getElementById('modalNotes').value = notes || '';
+    document.getElementById('modalDefectReason').value = defectReason || '';
+
+    // Populate decision dropdown based on stage
+    const decisionSelect = document.getElementById('modalDecision');
+    decisionSelect.innerHTML = '<option value="">-- {{ "اختر" if session.get("lang") == "ar" else "Select" }} --</option>';
+
+    const decisions = stageDecisions[stageName] || [];
+    decisions.forEach(function(d) {
+        const option = document.createElement('option');
+        option.value = d[0];
+        option.textContent = d[0] + ' / ' + d[1];
+        decisionSelect.appendChild(option);
+    });
+
+    // Set the current decision
+    decisionSelect.value = decision || '';
+
+    // Populate defect dropdown based on stage
+    const defectSelect = document.getElementById('modalDefectType');
+    defectSelect.innerHTML = '<option value="">-- {{ "اختر" if session.get("lang") == "ar" else "Select" }} --</option>';
+
+    const defects = stageDefects[stageName] || [];
+    defects.forEach(function(defect) {
+        const option = document.createElement('option');
+        option.value = defect[0];
+        option.textContent = defect[0] + ' / ' + defect[1];
+        defectSelect.appendChild(option);
+    });
+
+    // Set the current defect type
+    defectSelect.value = defectType || '';
+
+    // Populate machine dropdown based on stage
+    const machineSelect = document.getElementById('modalMachine');
+    const machineDiv = document.getElementById('machineDiv');
+    machineSelect.innerHTML = '<option value="">-- {{ "اختر" if session.get("lang") == "ar" else "Select" }} --</option>';
+
+    const machines = stageMachines[stageName] || [];
+    if (machines.length > 0) {
+        machines.forEach(function(machine) {
+            const option = document.createElement('option');
+            option.value = machine.id;
+            option.textContent = machine.code + ' - ' + machine.name;
+            machineSelect.appendChild(option);
+        });
+        machineDiv.style.display = 'block';
+        machineSelect.value = machineId || '';
+    } else {
+        machineDiv.style.display = 'none';
+    }
+
+    // Show/hide Date/Time fields for Annealing stage
+    const dateTimeDiv = document.getElementById('dateTimeDiv');
+    const stageDateInput = document.getElementById('modalStageDate');
+    const stageTimeInput = document.getElementById('modalStageTime');
+    if (stageName === 'Annealing') {
+        dateTimeDiv.style.display = 'flex';
+        stageDateInput.value = stageDate || '';
+        stageTimeInput.value = stageTime || '';
+    } else {
+        dateTimeDiv.style.display = 'none';
+        stageDateInput.value = '';
+        stageTimeInput.value = '';
+    }
+
+    // Show/hide Length field for Finish stage
+    const lengthDiv = document.getElementById('lengthDiv');
+    const measurementDiv = document.getElementById('measurementDiv');
+    const lengthInput = document.getElementById('modalLength');
+    const measurementInput = document.getElementById('modalMeasurement');
+
+    if (stageName === 'Finish') {
+        lengthDiv.style.display = 'block';
+        measurementDiv.style.display = 'none';
+        lengthInput.value = measurementValue || '';
+    } else {
+        lengthDiv.style.display = 'none';
+        measurementDiv.style.display = 'block';
+        measurementInput.value = measurementValue || '';
+    }
+
+    // Show/hide defect fields based on hasDefect
+    toggleDefectFields(hasDefect);
+
+    // Set the form action URL dynamically
+    document.getElementById('stageForm').action = '/stages/{{ pipe.id }}/stage/' + stageName;
 
     new bootstrap.Modal(document.getElementById('stageModal')).show();
+}
+
+// Toggle defect fields visibility
+function toggleDefectFields(show) {
+    const defectTypeDiv = document.getElementById('defectTypeDiv');
+    const defectReasonDiv = document.getElementById('defectReasonDiv');
+
+    if (show) {
+        defectTypeDiv.style.display = 'block';
+        defectReasonDiv.style.display = 'block';
+    } else {
+        defectTypeDiv.style.display = 'none';
+        defectReasonDiv.style.display = 'none';
+    }
+}
+
+// Add event listener for has_defect checkbox
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('modalHasDefect').addEventListener('change', function() {
+        toggleDefectFields(this.checked);
+    });
+});
+
+// Handle form submission with AJAX
+document.getElementById('stageForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const stageName = document.getElementById('modalStageName').value;
+
+    // Determine measurement value - use length_value for Finish stage
+    let measurementVal = formData.get('measurement_value');
+    if (stageName === 'Finish') {
+        measurementVal = formData.get('length_value');
+    }
+
+    fetch('/stages/{{ pipe.id }}/stage/' + stageName, {
+        method: 'POST',
+        body: JSON.stringify({
+            decision: formData.get('decision'),
+            machine_id: formData.get('machine_id'),
+            measurement_value: measurementVal,
+            stage_date: formData.get('stage_date'),
+            stage_time: formData.get('stage_time'),
+            has_defect: formData.get('has_defect') === 'on',
+            defect_type: formData.get('defect_type'),
+            defect_reason: formData.get('defect_reason'),
+            notes: formData.get('notes')
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': formData.get('csrf_token')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal and reload page
+            bootstrap.Modal.getInstance(document.getElementById('stageModal')).hide();
+            location.reload();
+        } else {
+            alert('{{ "خطأ: " if session.get("lang") == "ar" else "Error: " }}' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('{{ "حدث خطأ" if session.get("lang") == "ar" else "An error occurred" }}');
+        console.error(error);
+    });
+});
+
+// View stage history
+function viewStageHistory(stageName) {
+    document.getElementById('historyStageTitle').textContent = stageName;
+    document.getElementById('historyLoading').style.display = 'block';
+    document.getElementById('historyContent').style.display = 'none';
+    document.getElementById('historyEmpty').style.display = 'none';
+    document.getElementById('historyTable').style.display = 'none';
+
+    // Open modal
+    new bootstrap.Modal(document.getElementById('historyModal')).show();
+
+    // Fetch history
+    fetch('/stages/{{ pipe.id }}/stage/' + encodeURIComponent(stageName) + '/history')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('historyLoading').style.display = 'none';
+            document.getElementById('historyContent').style.display = 'block';
+
+            if (data.history && data.history.length > 0) {
+                document.getElementById('historyTable').style.display = 'block';
+                const tbody = document.getElementById('historyTableBody');
+                tbody.innerHTML = '';
+
+                data.history.forEach(function(h) {
+                    const actionBadge = h.action === 'create'
+                        ? '<span class="badge bg-success">{{ "إنشاء" if session.get("lang") == "ar" else "Create" }}</span>'
+                        : '<span class="badge bg-warning text-dark">{{ "تحديث" if session.get("lang") == "ar" else "Update" }}</span>';
+
+                    const defectBadge = h.has_defect
+                        ? '<span class="badge bg-danger">' + (h.defect_type || 'Yes') + '</span>'
+                        : '<span class="text-muted">-</span>';
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><small>${h.changed_at}</small></td>
+                        <td><small>${h.changed_by}</small></td>
+                        <td>${actionBadge}</td>
+                        <td>${h.decision || '-'}</td>
+                        <td>${h.machine_code || '-'}</td>
+                        <td>${defectBadge}</td>
+                        <td><small>${h.notes || '-'}</small></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                document.getElementById('historyEmpty').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            document.getElementById('historyLoading').style.display = 'none';
+            document.getElementById('historyContent').style.display = 'block';
+            document.getElementById('historyEmpty').style.display = 'block';
+            console.error('Error loading history:', error);
+        });
 }
 </script>
 {% endblock %}

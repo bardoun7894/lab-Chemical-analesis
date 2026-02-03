@@ -42,7 +42,7 @@
                             <i class="bi bi-flask text-primary fs-3"></i>
                         </div>
                     </div>
-                    <a href="{{ url_for('chemical.index') }}" class="text-decoration-none small">
+                    <a href="{{ url_for('chemical.list') }}" class="text-decoration-none small">
                         {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View all' }} →
                     </a>
                 </div>
@@ -64,7 +64,7 @@
                             <i class="bi bi-diagram-3 text-success fs-3"></i>
                         </div>
                     </div>
-                    <a href="{{ url_for('stages.index') }}" class="text-decoration-none small">
+                    <a href="{{ url_for('stages.list') }}" class="text-decoration-none small">
                         {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View all' }} →
                     </a>
                 </div>
@@ -86,7 +86,7 @@
                             <i class="bi bi-gear text-warning fs-3"></i>
                         </div>
                     </div>
-                    <a href="{{ url_for('mechanical.index') }}" class="text-decoration-none small">
+                    <a href="{{ url_for('mechanical.list') }}" class="text-decoration-none small">
                         {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View all' }} →
                     </a>
                 </div>
@@ -116,6 +116,54 @@
         </div>
     </div>
 
+    <!-- AI Summary Card -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" id="aiSummaryCard">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-robot"></i>
+                        {{ 'ملخص الذكاء الاصطناعي' if session.get('lang') == 'ar' else 'AI Daily Summary' }}
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-light" id="aiSummaryRefresh">
+                        <i class="bi bi-magic"></i>
+                        {{ 'تحليل' if session.get('lang') == 'ar' else 'Analyze' }}
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="aiSummaryInitial" class="text-center py-3">
+                        <i class="bi bi-robot display-4 text-muted"></i>
+                        <p class="text-muted mt-2 mb-0">{{ 'انقر على زر التحليل للحصول على ملخص الذكاء الاصطناعي' if session.get('lang') == 'ar' else 'Click Analyze button to get AI summary' }}</p>
+                    </div>
+                    <div id="aiSummaryLoading" class="text-center py-3" style="display: none;">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted mt-2 mb-0">{{ 'جاري تحليل البيانات...' if session.get('lang') == 'ar' else 'Analyzing data...' }}</p>
+                    </div>
+                    <div id="aiSummaryContent" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="bi bi-chat-text text-primary"></i> {{ 'الملخص' if session.get('lang') == 'ar' else 'Summary' }}</h6>
+                                <p id="aiSummaryText" class="mb-3"></p>
+
+                                <div id="aiAlertsSection">
+                                    <h6><i class="bi bi-exclamation-triangle text-warning"></i> {{ 'التنبيهات' if session.get('lang') == 'ar' else 'Alerts' }}</h6>
+                                    <ul id="aiAlertsList" class="list-unstyled mb-0"></ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="bi bi-lightbulb text-success"></i> {{ 'التوصيات' if session.get('lang') == 'ar' else 'Recommendations' }}</h6>
+                                <ul id="aiRecommendationsList" class="list-unstyled mb-0"></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="aiSummaryError" class="alert alert-warning mb-0" style="display: none;">
+                        <small id="aiSummaryErrorText"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Actions -->
     <div class="row g-4 mb-4">
         <div class="col-12">
@@ -129,19 +177,19 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-3 col-6">
-                            <a href="{{ url_for('chemical.create') }}" class="btn btn-outline-primary w-100 py-3">
+                            <a href="{{ url_for('chemical.add') }}" class="btn btn-outline-primary w-100 py-3">
                                 <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
                                 {{ 'تحليل كيميائي جديد' if session.get('lang') == 'ar' else 'New Chemical Analysis' }}
                             </a>
                         </div>
                         <div class="col-md-3 col-6">
-                            <a href="{{ url_for('stages.create_pipe') }}" class="btn btn-outline-success w-100 py-3">
+                            <a href="{{ url_for('stages.add') }}" class="btn btn-outline-success w-100 py-3">
                                 <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
                                 {{ 'تسجيل أنبوب جديد' if session.get('lang') == 'ar' else 'Register New Pipe' }}
                             </a>
                         </div>
                         <div class="col-md-3 col-6">
-                            <a href="{{ url_for('mechanical.create') }}" class="btn btn-outline-warning w-100 py-3">
+                            <a href="{{ url_for('mechanical.add') }}" class="btn btn-outline-warning w-100 py-3">
                                 <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
                                 {{ 'اختبار ميكانيكي جديد' if session.get('lang') == 'ar' else 'New Mechanical Test' }}
                             </a>
@@ -168,7 +216,7 @@
                         <i class="bi bi-flask"></i>
                         {{ 'آخر التحليلات الكيميائية' if session.get('lang') == 'ar' else 'Recent Chemical Analyses' }}
                     </h5>
-                    <a href="{{ url_for('chemical.index') }}" class="btn btn-sm btn-outline-primary">
+                    <a href="{{ url_for('chemical.list') }}" class="btn btn-sm btn-outline-primary">
                         {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View All' }}
                     </a>
                 </div>
@@ -185,7 +233,7 @@
                             </thead>
                             <tbody>
                                 {% for analysis in recent_analyses %}
-                                <tr onclick="window.location='{{ url_for('chemical.view', id=analysis.id) }}';" style="cursor: pointer;">
+                                <tr onclick="window.location='{{ url_for('chemical.detail', id=analysis.id) }}';" style="cursor: pointer;">
                                     <td>{{ analysis.test_date }}</td>
                                     <td>{{ analysis.furnace.furnace_code if analysis.furnace else '-' }}</td>
                                     <td>{{ analysis.ladle_no }}</td>
@@ -221,7 +269,7 @@
                         <i class="bi bi-diagram-3"></i>
                         {{ 'آخر الأنابيب المسجلة' if session.get('lang') == 'ar' else 'Recent Pipes' }}
                     </h5>
-                    <a href="{{ url_for('stages.index') }}" class="btn btn-sm btn-outline-success">
+                    <a href="{{ url_for('stages.list') }}" class="btn btn-sm btn-outline-success">
                         {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View All' }}
                     </a>
                 </div>
@@ -238,7 +286,7 @@
                             </thead>
                             <tbody>
                                 {% for pipe in recent_pipes %}
-                                <tr onclick="window.location='{{ url_for('stages.view_pipe', id=pipe.id) }}';" style="cursor: pointer;">
+                                <tr onclick="window.location='{{ url_for('stages.tracking', id=pipe.id) }}';" style="cursor: pointer;">
                                     <td><strong>{{ pipe.no_code }}</strong></td>
                                     <td>DN{{ pipe.diameter }}</td>
                                     <td>{{ pipe.ladle_id or '-' }}</td>
@@ -259,4 +307,104 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const aiSummaryLoading = document.getElementById('aiSummaryLoading');
+    const aiSummaryContent = document.getElementById('aiSummaryContent');
+    const aiSummaryError = document.getElementById('aiSummaryError');
+    const aiSummaryErrorText = document.getElementById('aiSummaryErrorText');
+    const aiSummaryText = document.getElementById('aiSummaryText');
+    const aiAlertsList = document.getElementById('aiAlertsList');
+    const aiRecommendationsList = document.getElementById('aiRecommendationsList');
+    const aiAlertsSection = document.getElementById('aiAlertsSection');
+    const aiSummaryRefresh = document.getElementById('aiSummaryRefresh');
+    const aiSummaryCard = document.getElementById('aiSummaryCard');
+
+    const aiSummaryInitial = document.getElementById('aiSummaryInitial');
+
+    function loadAiSummary() {
+        aiSummaryInitial.style.display = 'none';
+        aiSummaryLoading.style.display = 'block';
+        aiSummaryContent.style.display = 'none';
+        aiSummaryError.style.display = 'none';
+
+        fetch('{{ url_for("main.api_ai_summary") }}')
+            .then(response => response.json())
+            .then(data => {
+                aiSummaryLoading.style.display = 'none';
+
+                if (data.error) {
+                    aiSummaryError.style.display = 'block';
+                    aiSummaryErrorText.textContent = data.error;
+                    return;
+                }
+
+                aiSummaryContent.style.display = 'block';
+
+                // Update summary text with typing effect
+                typeText(aiSummaryText, data.summary || '{{ "لا توجد بيانات كافية" if session.get("lang") == "ar" else "No data available" }}');
+
+                // Update alerts
+                aiAlertsList.innerHTML = '';
+                if (data.alerts && data.alerts.length > 0) {
+                    aiAlertsSection.style.display = 'block';
+                    data.alerts.forEach(alert => {
+                        const li = document.createElement('li');
+                        li.innerHTML = '<i class="bi bi-exclamation-circle text-warning"></i> ' + alert;
+                        li.className = 'mb-1';
+                        aiAlertsList.appendChild(li);
+                    });
+                } else {
+                    aiAlertsSection.style.display = 'none';
+                }
+
+                // Update recommendations
+                aiRecommendationsList.innerHTML = '';
+                if (data.recommendations && data.recommendations.length > 0) {
+                    data.recommendations.forEach(rec => {
+                        const li = document.createElement('li');
+                        li.innerHTML = '<i class="bi bi-check-circle text-success"></i> ' + rec;
+                        li.className = 'mb-1';
+                        aiRecommendationsList.appendChild(li);
+                    });
+                }
+
+                // Update card border based on status
+                aiSummaryCard.classList.remove('border-success', 'border-warning', 'border-danger');
+                if (data.status === 'critical') {
+                    aiSummaryCard.classList.add('border-danger');
+                } else if (data.status === 'warning') {
+                    aiSummaryCard.classList.add('border-warning');
+                } else {
+                    aiSummaryCard.classList.add('border-success');
+                }
+            })
+            .catch(error => {
+                aiSummaryLoading.style.display = 'none';
+                aiSummaryError.style.display = 'block';
+                aiSummaryErrorText.textContent = error.message;
+            });
+    }
+
+    function typeText(element, text, speed = 15) {
+        if (!text) return;
+        element.textContent = '';
+        let index = 0;
+        function type() {
+            if (index < text.length) {
+                element.textContent += text.charAt(index);
+                index++;
+                setTimeout(type, speed);
+            }
+        }
+        type();
+    }
+
+    // Only load when button is clicked
+    aiSummaryRefresh.addEventListener('click', loadAiSummary);
+});
+</script>
 {% endblock %}

@@ -17,7 +17,7 @@
                         {{ 'متابعة مراحل الإنتاج' if session.get('lang') == 'ar' else 'Track production stages' }}
                     </p>
                 </div>
-                <a href="{{ url_for('stages.create_pipe') }}" class="btn btn-success">
+                <a href="{{ url_for('stages.add') }}" class="btn btn-success">
                     <i class="bi bi-plus-circle"></i>
                     {{ 'تسجيل أنبوب جديد' if session.get('lang') == 'ar' else 'Register New Pipe' }}
                 </a>
@@ -59,7 +59,7 @@
                     </button>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
-                    <a href="{{ url_for('stages.index') }}" class="btn btn-outline-secondary w-100">
+                    <a href="{{ url_for('stages.list') }}" class="btn btn-outline-secondary w-100">
                         <i class="bi bi-x-circle"></i>
                         {{ 'مسح' if session.get('lang') == 'ar' else 'Clear' }}
                     </a>
@@ -100,7 +100,7 @@
                             <td><strong>{{ pipe.no_code }}</strong></td>
                             <td><small class="text-muted">{{ pipe.ladle_id or '-' }}</small></td>
                             <td>DN{{ pipe.diameter or '?' }}</td>
-                            <td>{{ pipe.pipe_type or '-' }}</td>
+                            <td>{{ pipe.pipe_class or '-' }}</td>
                             <td>{{ pipe.actual_weight|round(1) if pipe.actual_weight else '-' }} kg</td>
                             <td>{{ pipe.production_date }}</td>
                             <td>
@@ -145,7 +145,7 @@
 
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('stages.view_pipe', id=pipe.id) }}" class="btn btn-outline-info" title="View">
+                                    <a href="{{ url_for('stages.tracking', id=pipe.id) }}" class="btn btn-outline-info" title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     <a href="{{ url_for('stages.edit_pipe', id=pipe.id) }}" class="btn btn-outline-primary" title="Edit">
@@ -168,10 +168,10 @@
                 </table>
             </div>
         </div>
-        {% if pipes %}
+        {% if pipes.total > 0 %}
         <div class="card-footer bg-white">
             <small class="text-muted">
-                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ pipes|length }}
+                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ pipes.total }}
                 {{ 'أنبوب' if session.get('lang') == 'ar' else 'pipes' }}
             </small>
         </div>

@@ -17,7 +17,7 @@
             </h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('stages.index') }}">Pipes</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('stages.list') }}">Pipes</a></li>
                     <li class="breadcrumb-item active">{{ 'Edit' if pipe else 'Register' }}</li>
                 </ol>
             </nav>
@@ -30,6 +30,38 @@
         <div class="row">
             <!-- Left Column - Basic Info -->
             <div class="col-lg-6">
+                <!-- Production Order Selection -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clipboard-check"></i>
+                            {{ 'أمر الإنتاج' if session.get('lang') == 'ar' else 'Production Order' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'ربط بأمر إنتاج' if session.get('lang') == 'ar' else 'Link to Production Order' }}</label>
+                            <select name="production_order_id" class="form-select" id="productionOrderSelect">
+                                <option value="">-- {{ 'بدون أمر إنتاج' if session.get('lang') == 'ar' else 'No Production Order' }} --</option>
+                                {% for order in production_orders %}
+                                {% set order_ladles = order.chemical_analyses.all() %}
+                                <option value="{{ order.id }}"
+                                    {{ 'selected' if (pipe and pipe.production_order_id == order.id) or (selected_order_id == order.id) }}
+                                    data-diameter="{{ order.diameter }}"
+                                    data-type="{{ order.pipe_class }}"
+                                    data-ladles="{{ order_ladles|map(attribute='ladle_id')|list|join(',') }}">
+                                    {{ order.order_number }} - {{ order.customer_name or 'No Customer' }}
+                                    ({{ order.produced_quantity }}/{{ order.target_quantity }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">
+                                {{ 'اختر أمر الإنتاج لربط الأنبوب به' if session.get('lang') == 'ar' else 'Select a production order to link this pipe to' }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-success text-white">
                         <h5 class="mb-0">
@@ -41,13 +73,32 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'No. Code' }} *</label>
-                                <input type="text" name="no_code" class="form-control" required
+                                <input type="text" name="no_code" id="noCodeInput" class="form-control" required
                                        placeholder="N8739" value="{{ pipe.no_code if pipe else '' }}">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-2">
+                                <label class="form-label">{{ 'ترتيب الأنبوب' if session.get('lang') == 'ar' else 'Pipe Order' }}</label>
+                                <input type="number" name="arrange_pipe" class="form-control" id="pipeOrderInput"
+                                       min="1" max="20" placeholder="1-20"
+                                       value="{{ pipe.arrange_pipe if pipe else 1 }}">
+                                <small class="text-muted">{{ '1-20' }}</small>
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label">{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</label>
-                                <input type="text" name="ladle_id" class="form-control"
-                                       placeholder="4713012025" value="{{ pipe.ladle_id if pipe else '' }}">
+                                <select name="ladle_id" class="form-select" id="ladleIdSelect">
+                                    <option value="">-- {{ 'اختر معرف المغرفة' if session.get('lang') == 'ar' else 'Select Ladle ID' }} --</option>
+                                    {% for ladle in latest_ladles %}
+                                    <option value="{{ ladle.ladle_id }}"
+                                            data-decision="{{ ladle.decision }}"
+                                            {{ 'selected' if pipe and pipe.ladle_id == ladle.ladle_id }}>
+                                        {{ ladle.ladle_id }} - {{ ladle.decision or 'N/A' }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">{{ 'آخر 4 تحليلات كيميائية' if session.get('lang') == 'ar' else "Latest 4 chemical analyses" }}</small>
+                                <div id="ladleInfo" class="mt-1" style="display: none;">
+                                    <span class="badge" id="ladleDecision"></span>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter (DN)' }} *</label>
@@ -62,13 +113,13 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">{{ 'النوع' if session.get('lang') == 'ar' else 'Type' }}</label>
-                                <select name="pipe_type" class="form-select">
+                                <label class="form-label">{{ 'الصنف' if session.get('lang') == 'ar' else 'Class' }}</label>
+                                <select name="pipe_class" class="form-select">
                                     <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
-                                    <option value="K9" {{ 'selected' if pipe and pipe.pipe_type == 'K9' }}>K9</option>
-                                    <option value="C25" {{ 'selected' if pipe and pipe.pipe_type == 'C25' }}>C25</option>
-                                    <option value="C40" {{ 'selected' if pipe and pipe.pipe_type == 'C40' }}>C40</option>
-                                    <option value="Fittings" {{ 'selected' if pipe and pipe.pipe_type == 'Fittings' }}>Fittings</option>
+                                    <option value="K9" {{ 'selected' if pipe and pipe.pipe_class == 'K9' }}>K9</option>
+                                    <option value="C25" {{ 'selected' if pipe and pipe.pipe_class == 'C25' }}>C25</option>
+                                    <option value="C40" {{ 'selected' if pipe and pipe.pipe_class == 'C40' }}>C40</option>
+                                    <option value="Fittings" {{ 'selected' if pipe and pipe.pipe_class == 'Fittings' }}>Fittings</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -83,18 +134,6 @@
                                     <option value="1" {{ 'selected' if pipe and pipe.shift == 1 }}>1 - Morning</option>
                                     <option value="2" {{ 'selected' if pipe and pipe.shift == 2 }}>2 - Afternoon</option>
                                     <option value="3" {{ 'selected' if pipe and pipe.shift == 3 }}>3 - Night</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">{{ 'الماكينة' if session.get('lang') == 'ar' else 'Machine' }}</label>
-                                <select name="machine_id" class="form-select">
-                                    <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
-                                    {% for machine in machines %}
-                                    <option value="{{ machine.id }}"
-                                        {{ 'selected' if pipe and pipe.machine_id == machine.id }}>
-                                        {{ machine.machine_code }} ({{ machine.stage }})
-                                    </option>
-                                    {% endfor %}
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -117,69 +156,158 @@
                 </div>
             </div>
 
-            <!-- Right Column - Production Stages -->
+            <!-- Right Column - Additional Info -->
             <div class="col-lg-6">
                 <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-info text-white">
+                    <div class="card-header bg-warning">
                         <h5 class="mb-0">
-                            <i class="bi bi-list-check"></i>
-                            {{ 'مراحل الإنتاج' if session.get('lang') == 'ar' else 'Production Stages' }}
+                            <i class="bi bi-gear"></i>
+                            {{ 'تفاصيل إضافية' if session.get('lang') == 'ar' else 'Additional Details' }}
                         </h5>
                     </div>
                     <div class="card-body">
-                        {% set stage_names = ['CCM', 'Annealing', 'Zinc', 'Cutting', 'Hydrotest', 'Cement', 'Coating', 'Finish'] %}
-                        {% set stage_map = {} %}
-                        {% if pipe %}
-                            {% for stage in pipe.stages %}
-                                {% set _ = stage_map.update({stage.stage_name: stage}) %}
-                            {% endfor %}
-                        {% endif %}
-
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }}</th>
-                                        <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
-                                        <th>{{ 'عيب' if session.get('lang') == 'ar' else 'Defect' }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for stage_name in stage_names %}
-                                    {% set stage = stage_map.get(stage_name) %}
-                                    <tr>
-                                        <td><strong>{{ stage_name }}</strong></td>
-                                        <td>
-                                            <select name="stage_{{ stage_name }}_decision" class="form-select form-select-sm">
-                                                <option value="">-</option>
-                                                <option value="ACCEPT" {{ 'selected' if stage and stage.decision == 'ACCEPT' }}>Accept</option>
-                                                <option value="REJECT" {{ 'selected' if stage and stage.decision == 'REJECT' }}>Reject</option>
-                                                <option value="HOLD" {{ 'selected' if stage and stage.decision == 'HOLD' }}>Hold</option>
-                                                <option value="REWORK" {{ 'selected' if stage and stage.decision == 'REWORK' }}>Rework</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input type="checkbox" name="stage_{{ stage_name }}_defect"
-                                                   class="form-check-input" {{ 'checked' if stage and stage.has_defect }}>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'Pipe Code' }}</label>
+                            <input type="text" name="pipe_code" id="pipeCodeInput" class="form-control" readonly
+                                   value="{{ pipe.pipe_code if pipe else '' }}"
+                                   placeholder="{{ 'يتم توليده تلقائياً' if session.get('lang') == 'ar' else 'Auto-generated' }}">
                         </div>
-
-                        <div class="alert alert-info small mb-0">
-                            <i class="bi bi-info-circle"></i>
-                            {{ 'يمكنك تحديث قرارات كل مرحلة هنا أو من صفحة التفاصيل' if session.get('lang') == 'ar' else 'You can update stage decisions here or from the detail page' }}
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'مهندس الوردية' if session.get('lang') == 'ar' else 'Shift Engineer' }}</label>
+                            <input type="text" name="shift_engineer" class="form-control"
+                                   value="{{ pipe.shift_engineer if pipe else '' }}">
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Production Stages - Full Width -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-check"></i>
+                    {{ 'مراحل الإنتاج' if session.get('lang') == 'ar' else 'Production Stages' }}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% set stage_names = ['Melting Ladle', 'CCM', 'Annealing', 'Lab', 'Zinc', 'Cutting', 'Hydrotest', 'Cement', 'Coating', 'Finish'] %}
+                {% set stage_map = {} %}
+                {% if pipe %}
+                    {% for stage in pipe.stages %}
+                        {% set _ = stage_map.update({stage.stage_name: stage}) %}
+                    {% endfor %}
+                {% endif %}
+
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="9%">{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }}</th>
+                                <th width="10%">{{ 'الماكينة' if session.get('lang') == 'ar' else 'Machine' }}</th>
+                                <th width="12%">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                                <th width="14%">{{ 'التاريخ/الوقت/الطول' if session.get('lang') == 'ar' else 'Date/Time/Length' }}</th>
+                                <th width="12%">{{ 'نوع العيب' if session.get('lang') == 'ar' else 'Defect Type' }}</th>
+                                <th width="12%">{{ 'سبب العيب' if session.get('lang') == 'ar' else 'Defect Reason' }}</th>
+                                <th width="16%">{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stage_name in stage_names %}
+                            {% set stage = stage_map.get(stage_name) %}
+                            {% set decisions = stage_decisions.get(stage_name, []) %}
+                            {% set defects = stage_defects.get(stage_name, []) %}
+                            {% set machines = stage_machines.get(stage_name, []) %}
+                            <tr>
+                                <td><strong>{{ stage_name }}</strong></td>
+                                <td>
+                                    {% if machines %}
+                                    <select name="stage_{{ stage_name }}_machine_id" class="form-select form-select-sm">
+                                        <option value="">-</option>
+                                        {% for machine in machines %}
+                                        <option value="{{ machine.id }}" {{ 'selected' if stage and stage.machine_id == machine.id }}>
+                                            {{ machine.code }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <select name="stage_{{ stage_name }}_decision" class="form-select form-select-sm">
+                                        <option value="">-</option>
+                                        {% for decision_en, decision_ar in decisions %}
+                                        <option value="{{ decision_en }}" {{ 'selected' if stage and stage.decision == decision_en }}>
+                                            {{ decision_en }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    {% if stage_name == 'Annealing' %}
+                                    <!-- Date and Time for Annealing -->
+                                    <div class="row g-1">
+                                        <div class="col-7">
+                                            <input type="date" name="stage_{{ stage_name }}_date" class="form-control form-control-sm"
+                                                   value="{{ stage.stage_date if stage and stage.stage_date else '' }}"
+                                                   title="{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}">
+                                        </div>
+                                        <div class="col-5">
+                                            <input type="time" name="stage_{{ stage_name }}_time" class="form-control form-control-sm"
+                                                   value="{{ stage.stage_time if stage and stage.stage_time else '' }}"
+                                                   title="{{ 'الوقت' if session.get('lang') == 'ar' else 'Time' }}">
+                                        </div>
+                                    </div>
+                                    {% elif stage_name == 'Finish' %}
+                                    <!-- Length for Finish -->
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" name="stage_{{ stage_name }}_length" class="form-control form-control-sm"
+                                               step="0.01" min="0" placeholder="6.0"
+                                               value="{{ stage.measurement_value if stage and stage.measurement_value else '' }}"
+                                               title="{{ 'الطول' if session.get('lang') == 'ar' else 'Length' }}">
+                                        <span class="input-group-text">m</span>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <select name="stage_{{ stage_name }}_defect_type" class="form-select form-select-sm">
+                                        <option value="">{{ 'لا يوجد' if session.get('lang') == 'ar' else 'None' }}</option>
+                                        {% for defect_en, defect_ar in defects %}
+                                        <option value="{{ defect_en }}" {{ 'selected' if stage and stage.defect_type == defect_en }}>
+                                            {{ defect_en }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" name="stage_{{ stage_name }}_defect_reason" class="form-control form-control-sm"
+                                           value="{{ stage.defect_reason if stage and stage.defect_reason else '' }}"
+                                           placeholder="{{ 'سبب العيب' if session.get('lang') == 'ar' else 'Defect Reason' }}">
+                                </td>
+                                <td>
+                                    <input type="text" name="stage_{{ stage_name }}_notes" class="form-control form-control-sm"
+                                           value="{{ stage.notes if stage and stage.notes else '' }}"
+                                           placeholder="{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-info small mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    {{ 'يمكنك تحديث قرارات كل مرحلة هنا أو من صفحة التفاصيل' if session.get('lang') == 'ar' else 'You can update stage decisions here or from the detail page' }}
+                </div>
+            </div>
+        </div>
+
         <!-- Submit Buttons -->
         <div class="d-flex gap-2 justify-content-end mb-4">
-            <a href="{{ url_for('stages.index') }}" class="btn btn-outline-secondary">
+            <a href="{{ url_for('stages.list') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-x-circle"></i>
                 {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
             </a>
@@ -190,4 +318,110 @@
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-fill diameter and type when selecting a production order
+document.getElementById('productionOrderSelect').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    if (selectedOption.value) {
+        const diameter = selectedOption.getAttribute('data-diameter');
+        const pipeType = selectedOption.getAttribute('data-type');
+        const ladles = selectedOption.getAttribute('data-ladles');
+
+        if (diameter) {
+            document.querySelector('select[name="diameter"]').value = diameter;
+        }
+        if (pipeType) {
+            document.querySelector('select[name="pipe_class"]').value = pipeType;
+        }
+
+        // Auto-select first available ladle from the production order in the dropdown
+        if (ladles) {
+            const ladleList = ladles.split(',');
+            const ladleSelect = document.getElementById('ladleIdSelect');
+
+            for (let ladle of ladleList) {
+                ladle = ladle.trim();
+                if (ladle) {
+                    // Check if this ladle exists in today's dropdown
+                    for (let option of ladleSelect.options) {
+                        if (option.value === ladle) {
+                            ladleSelect.value = ladle;
+                            ladleSelect.dispatchEvent(new Event('change'));
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
+});
+
+// Show chemical analysis decision when ladle is selected
+document.getElementById('ladleIdSelect').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const ladleInfo = document.getElementById('ladleInfo');
+    const ladleDecision = document.getElementById('ladleDecision');
+
+    if (selectedOption.value) {
+        const decision = selectedOption.getAttribute('data-decision');
+        ladleInfo.style.display = 'block';
+        ladleDecision.textContent = decision || 'No Decision';
+
+        // Set badge color based on decision
+        ladleDecision.className = 'badge ';
+        if (decision === 'فحص أخيرة فقط') {
+            ladleDecision.className += 'bg-success';
+        } else if (decision === 'تالف') {
+            ladleDecision.className += 'bg-danger';
+        } else if (decision === 'فحص الشحنة 100%') {
+            ladleDecision.className += 'bg-warning text-dark';
+        } else if (decision === 'فحص أولى وأخيرة') {
+            ladleDecision.className += 'bg-info';
+        } else {
+            ladleDecision.className += 'bg-secondary';
+        }
+    } else {
+        ladleInfo.style.display = 'none';
+    }
+});
+
+// Trigger on page load if ladle already selected
+if (document.getElementById('ladleIdSelect').value) {
+    document.getElementById('ladleIdSelect').dispatchEvent(new Event('change'));
+}
+
+// Auto-fill ladle on page load if production order is pre-selected
+const productionOrderSelect = document.getElementById('productionOrderSelect');
+if (productionOrderSelect.value && !document.getElementById('ladleIdSelect').value) {
+    productionOrderSelect.dispatchEvent(new Event('change'));
+}
+
+// Auto-generate Pipe Code based on: no_code + pipe_order + ladle_id
+function generatePipeCode() {
+    const noCode = document.getElementById('noCodeInput').value.trim();
+    const pipeOrder = document.getElementById('pipeOrderInput').value.trim();
+    const ladleId = document.getElementById('ladleIdSelect').value.trim();
+
+    // Generate pipe code: {no_code}-{pipe_order}-{ladle_id}
+    const parts = [];
+    if (noCode) parts.push(noCode);
+    if (pipeOrder) parts.push(pipeOrder);
+    if (ladleId) parts.push(ladleId);
+
+    const pipeCode = parts.join('-');
+    document.getElementById('pipeCodeInput').value = pipeCode;
+}
+
+// Add event listeners to auto-generate pipe code
+document.getElementById('noCodeInput').addEventListener('input', generatePipeCode);
+document.getElementById('pipeOrderInput').addEventListener('input', generatePipeCode);
+document.getElementById('ladleIdSelect').addEventListener('change', generatePipeCode);
+
+// Generate on page load if values exist
+generatePipeCode();
+</script>
 {% endblock %}

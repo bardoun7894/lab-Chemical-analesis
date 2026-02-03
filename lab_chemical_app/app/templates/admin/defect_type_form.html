@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'تعديل نوع العيب' if defect_type else 'إضافة نوع عيب' if session.get('lang') == 'ar' else 'Edit Defect Type' if defect_type else 'Add Defect Type' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-bug"></i>
+            {% if defect_type %}
+                {{ 'تعديل نوع العيب' if session.get('lang') == 'ar' else 'Edit Defect Type' }}
+            {% else %}
+                {{ 'إضافة نوع عيب جديد' if session.get('lang') == 'ar' else 'Add New Defect Type' }}
+            {% endif %}
+        </h2>
+        <a href="{{ url_for('admin.defect_types') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            {{ 'رجوع' if session.get('lang') == 'ar' else 'Back' }}
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }} *</label>
+                            <select name="stage_name" class="form-select" required>
+                                <option value="">-- {{ 'اختر المرحلة' if session.get('lang') == 'ar' else 'Select Stage' }} --</option>
+                                {% for stage in stages %}
+                                <option value="{{ stage }}" {{ 'selected' if defect_type and defect_type.stage_name == stage }}>
+                                    {{ stage }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'اسم العيب (إنجليزي)' if session.get('lang') == 'ar' else 'Defect Name (English)' }} *</label>
+                            <input type="text" name="defect_name_en" class="form-control" required
+                                   value="{{ defect_type.defect_name_en if defect_type else '' }}"
+                                   placeholder="e.g., Out of specification">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'اسم العيب (عربي)' if session.get('lang') == 'ar' else 'Defect Name (Arabic)' }} *</label>
+                            <input type="text" name="defect_name_ar" class="form-control" required
+                                   value="{{ defect_type.defect_name_ar if defect_type else '' }}"
+                                   placeholder="مثلاً: خارج المواصفات">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الترتيب' if session.get('lang') == 'ar' else 'Sort Order' }}</label>
+                            <input type="number" name="sort_order" class="form-control" min="0"
+                                   value="{{ defect_type.sort_order if defect_type else '0' }}">
+                            <small class="text-muted">{{ 'يستخدم لترتيب العيوب في القائمة المنسدلة' if session.get('lang') == 'ar' else 'Used to order defects in dropdown lists' }}</small>
+                        </div>
+
+                        <div class="form-check mb-4">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+                                   {{ 'checked' if not defect_type or defect_type.is_active }}>
+                            <label class="form-check-label" for="is_active">
+                                {{ 'نشط' if session.get('lang') == 'ar' else 'Active' }}
+                            </label>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-lg"></i>
+                                {{ 'حفظ' if session.get('lang') == 'ar' else 'Save' }}
+                            </button>
+                            <a href="{{ url_for('admin.defect_types') }}" class="btn btn-outline-secondary">
+                                {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        {{ 'معلومات' if session.get('lang') == 'ar' else 'Information' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="small">
+                        {{ 'أنواع العيوب تُستخدم في نموذج مراحل الإنتاج لتحديد العيوب المحددة لكل مرحلة.' if session.get('lang') == 'ar' else 'Defect types are used in the production stages form to specify defects for each stage.' }}
+                    </p>
+                    <ul class="small">
+                        <li>{{ 'كل مرحلة يمكن أن يكون لها أنواع عيوب خاصة بها' if session.get('lang') == 'ar' else 'Each stage can have its own defect types' }}</li>
+                        <li>{{ 'يتم عرض العيوب النشطة فقط في القوائم المنسدلة' if session.get('lang') == 'ar' else 'Only active defects are shown in dropdowns' }}</li>
+                        <li>{{ 'يحدد الترتيب كيفية ظهور العيوب في القائمة' if session.get('lang') == 'ar' else 'Sort order determines how defects appear in lists' }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

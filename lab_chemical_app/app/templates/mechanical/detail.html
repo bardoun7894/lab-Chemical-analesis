@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+
+{% block title %}Mechanical Test - {{ test.pipe_code or test.code }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>
+                        <i class="bi bi-gear"></i>
+                        {{ 'تفاصيل الاختبار الميكانيكي' if session.get('lang') == 'ar' else 'Mechanical Test Details' }}
+                    </h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ url_for('mechanical.list') }}">Mechanical</a></li>
+                            <li class="breadcrumb-item active">{{ test.pipe_code or test.code or test.id }}</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="btn-group">
+                    <a href="{{ url_for('mechanical.edit', id=test.id) }}" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i>
+                        {{ 'تعديل' if session.get('lang') == 'ar' else 'Edit' }}
+                    </a>
+                    <button type="button" class="btn btn-outline-primary" onclick="window.print();">
+                        <i class="bi bi-printer"></i>
+                        {{ 'طباعة' if session.get('lang') == 'ar' else 'Print' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-4">
+            <!-- Basic Info -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        {{ 'معلومات أساسية' if session.get('lang') == 'ar' else 'Basic Information' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless mb-0">
+                        <tr>
+                            <th width="40%">{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                            <td>{{ test.test_date }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'Pipe Code' }}</th>
+                            <td><code class="fs-6">{{ test.pipe_code or '-' }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}</th>
+                            <td>DN{{ test.diameter or '?' }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                            <td>{{ test.ladle_id or '-' }}</td>
+                        </tr>
+                        {% if test.shift %}
+                        <tr>
+                            <th>{{ 'الوردية' if session.get('lang') == 'ar' else 'Shift' }}</th>
+                            <td>{{ test.shift }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if test.tester_name %}
+                        <tr>
+                            <th>{{ 'الفاحص' if session.get('lang') == 'ar' else 'Tester' }}</th>
+                            <td>{{ test.tester_name }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Decision -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header {{ 'bg-success' if test.decision == 'ACCEPT' else 'bg-danger' if test.decision == 'REJECT' else 'bg-secondary' }} text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-check-circle"></i>
+                        {{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        {% if test.decision == 'ACCEPT' %}
+                        <span class="badge bg-success fs-4 px-4 py-2">
+                            <i class="bi bi-check-lg"></i> ACCEPT / قبول
+                        </span>
+                        {% elif test.decision == 'REJECT' %}
+                        <span class="badge bg-danger fs-4 px-4 py-2">
+                            <i class="bi bi-x-lg"></i> REJECT / رفض
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary fs-4 px-4 py-2">
+                            {{ test.decision or 'N/A' }}
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {% if test.reason %}
+                    <div class="mb-2">
+                        <strong>{{ 'السبب:' if session.get('lang') == 'ar' else 'Reason:' }}</strong>
+                        <p class="mb-0 text-muted">{{ test.reason }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if test.has_defect %}
+                    <div class="alert alert-danger mb-2">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        {{ 'يوجد عيب' if session.get('lang') == 'ar' else 'Has Defect' }}
+                        {% if test.defect_reason %}
+                        : {{ test.defect_reason }}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if test.comments %}
+                    <div class="mb-0">
+                        <strong>{{ 'التعليقات:' if session.get('lang') == 'ar' else 'Comments:' }}</strong>
+                        <p class="mb-0 text-muted">{{ test.comments }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Related Pipe -->
+            {% if test.pipe %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-diagram-3"></i>
+                        {{ 'الأنبوب المرتبط' if session.get('lang') == 'ar' else 'Related Pipe' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('stages.tracking', id=test.pipe.id) }}" class="btn btn-outline-info w-100">
+                        <i class="bi bi-eye"></i>
+                        {{ test.pipe.pipe_code or test.pipe.no_code }}
+                        <span class="badge bg-secondary ms-2">DN{{ test.pipe.diameter }}</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Middle Column - Test Results -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-rulers"></i>
+                        {{ 'نتائج الاختبار' if session.get('lang') == 'ar' else 'Test Results' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Tensile Strength -->
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="text-muted mb-1">{{ 'قوة الشد' if session.get('lang') == 'ar' else 'Tensile Strength' }}</h6>
+                            {% if test.tensile_strength %}
+                                {% if test.tensile_strength >= 420 %}
+                                <span class="badge bg-success"><i class="bi bi-check"></i> OK</span>
+                                {% else %}
+                                <span class="badge bg-danger"><i class="bi bi-x"></i> Low</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <h3 class="{{ 'text-danger' if test.tensile_strength and test.tensile_strength < 420 else 'text-success' if test.tensile_strength else '' }}">
+                            {{ '%.1f'|format(test.tensile_strength) if test.tensile_strength else '-' }} MPa
+                        </h3>
+                        <small class="text-muted">Spec: min 420 MPa</small>
+                    </div>
+
+                    <!-- Elongation -->
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="text-muted mb-1">{{ 'الاستطالة' if session.get('lang') == 'ar' else 'Elongation' }}</h6>
+                            {% if test.elongation %}
+                                {% if test.elongation >= 10 %}
+                                <span class="badge bg-success"><i class="bi bi-check"></i> OK</span>
+                                {% else %}
+                                <span class="badge bg-danger"><i class="bi bi-x"></i> Low</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <h3 class="{{ 'text-danger' if test.elongation and test.elongation < 10 else 'text-success' if test.elongation else '' }}">
+                            {{ '%.1f'|format(test.elongation) if test.elongation else '-' }} %
+                        </h3>
+                        <small class="text-muted">Spec: min 10%</small>
+                    </div>
+
+                    <!-- Hardness -->
+                    <div class="border rounded p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="text-muted mb-1">{{ 'الصلادة' if session.get('lang') == 'ar' else 'Hardness' }}</h6>
+                            {% if test.hardness %}
+                                {% if test.hardness >= 130 and test.hardness <= 230 %}
+                                <span class="badge bg-success"><i class="bi bi-check"></i> OK</span>
+                                {% else %}
+                                <span class="badge bg-danger"><i class="bi bi-x"></i> Out</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <h3 class="{{ 'text-danger' if test.hardness and (test.hardness < 130 or test.hardness > 230) else 'text-success' if test.hardness else '' }}">
+                            {{ '%.0f'|format(test.hardness) if test.hardness else '-' }} HB
+                        </h3>
+                        <small class="text-muted">Spec: 130 - 230 HB</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sample Measurements -->
+            {% if test.d1 or test.d2 or test.d3 or test.force_kgf %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calculator"></i>
+                        {{ 'قياسات العينة' if session.get('lang') == 'ar' else 'Sample Measurements' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        {% if test.sample_thickness %}
+                        <tr>
+                            <th>{{ 'السُمك' if session.get('lang') == 'ar' else 'Thickness' }}</th>
+                            <td>{{ '%.3f'|format(test.sample_thickness) }} mm</td>
+                        </tr>
+                        {% endif %}
+                        {% if test.d1 %}
+                        <tr><th>D1</th><td>{{ '%.3f'|format(test.d1) }} mm</td></tr>
+                        {% endif %}
+                        {% if test.d2 %}
+                        <tr><th>D2</th><td>{{ '%.3f'|format(test.d2) }} mm</td></tr>
+                        {% endif %}
+                        {% if test.d3 %}
+                        <tr><th>D3</th><td>{{ '%.3f'|format(test.d3) }} mm</td></tr>
+                        {% endif %}
+                        {% if test.avg_dimension %}
+                        <tr><th>{{ 'المتوسط' if session.get('lang') == 'ar' else 'Avg Dim' }}</th><td>{{ '%.3f'|format(test.avg_dimension) }} mm</td></tr>
+                        {% endif %}
+                        {% if test.original_length %}
+                        <tr><th>Lo</th><td>{{ '%.2f'|format(test.original_length) }} mm</td></tr>
+                        {% endif %}
+                        {% if test.final_length %}
+                        <tr><th>Lf</th><td>{{ '%.2f'|format(test.final_length) }} mm</td></tr>
+                        {% endif %}
+                        {% if test.area_d_squared %}
+                        <tr><th>A (D²)</th><td>{{ '%.3f'|format(test.area_d_squared) }}</td></tr>
+                        {% endif %}
+                        {% if test.force_kgf %}
+                        <tr><th>{{ 'القوة' if session.get('lang') == 'ar' else 'Force' }}</th><td>{{ '%.1f'|format(test.force_kgf) }} kgf</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Microstructure -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-eye"></i>
+                        {{ 'البنية المجهرية' if session.get('lang') == 'ar' else 'Microstructure' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Nodularity -->
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="text-muted mb-1">{{ 'النودولارية' if session.get('lang') == 'ar' else 'Nodularity' }}</h6>
+                            {% if test.nodularity_percent %}
+                                {% if test.nodularity_percent >= 80 %}
+                                <span class="badge bg-success"><i class="bi bi-check"></i> OK</span>
+                                {% else %}
+                                <span class="badge bg-danger"><i class="bi bi-x"></i> Low</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <h3 class="{{ 'text-danger' if test.nodularity_percent and test.nodularity_percent < 80 else 'text-success' if test.nodularity_percent else '' }}">
+                            {{ '%.1f'|format(test.nodularity_percent) if test.nodularity_percent else '-' }} %
+                        </h3>
+                        <small class="text-muted">Spec: min 80%</small>
+                    </div>
+
+                    <!-- Carbides -->
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="text-muted mb-1">{{ 'الكربيدات' if session.get('lang') == 'ar' else 'Carbides' }}</h6>
+                            {% if test.carbides is not none %}
+                                {% if test.carbides <= 2 %}
+                                <span class="badge bg-success"><i class="bi bi-check"></i> OK</span>
+                                {% else %}
+                                <span class="badge bg-danger"><i class="bi bi-x"></i> High</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <h3 class="{{ 'text-danger' if test.carbides and test.carbides > 2 else 'text-success' if test.carbides is not none else '' }}">
+                            {{ '%.2f'|format(test.carbides) if test.carbides is not none else '-' }} %
+                        </h3>
+                        <small class="text-muted">Spec: max 2%</small>
+                    </div>
+
+                    {% if test.nodule_count %}
+                    <div class="border rounded p-3 mb-3">
+                        <h6 class="text-muted mb-1">{{ 'عدد العقد' if session.get('lang') == 'ar' else 'Nodule Count' }}</h6>
+                        <h3>{{ test.nodule_count }}</h3>
+                    </div>
+                    {% endif %}
+
+                    {% if test.microstructure %}
+                    <div class="border rounded p-3">
+                        <h6 class="text-muted mb-1">{{ 'ملاحظات البنية' if session.get('lang') == 'ar' else 'Microstructure Notes' }}</h6>
+                        <p class="mb-0">{{ test.microstructure }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Graphite Distribution -->
+            {% if test.percent_85 or test.percent_70 or test.percent_40 or test.percent_1 %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pie-chart"></i>
+                        {{ 'توزيع الجرافيت' if session.get('lang') == 'ar' else 'Graphite Distribution' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        {% if test.percent_85 %}
+                        <tr><th>>85%</th><td>{{ '%.1f'|format(test.percent_85) }}%</td></tr>
+                        {% endif %}
+                        {% if test.percent_70 %}
+                        <tr><th>>70%</th><td>{{ '%.1f'|format(test.percent_70) }}%</td></tr>
+                        {% endif %}
+                        {% if test.percent_40 %}
+                        <tr><th>>40%</th><td>{{ '%.1f'|format(test.percent_40) }}%</td></tr>
+                        {% endif %}
+                        {% if test.percent_1 %}
+                        <tr><th><1%</th><td>{{ '%.1f'|format(test.percent_1) }}%</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Timestamps -->
+    <div class="text-muted small mt-4">
+        <i class="bi bi-clock"></i>
+        {{ 'تم الإنشاء:' if session.get('lang') == 'ar' else 'Created:' }}
+        {{ test.created_at }}
+    </div>
+</div>
+{% endblock %}

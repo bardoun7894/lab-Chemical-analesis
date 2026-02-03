@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+
+{% block title %}Chemical Analysis Report{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-flask"></i>
+                {{ 'تقرير التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis Report' }}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('reports.index') }}">{{ 'التقارير' if session.get('lang') == 'ar' else 'Reports' }}</a></li>
+                    <li class="breadcrumb-item active">{{ 'التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis' }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'من تاريخ' if session.get('lang') == 'ar' else 'From Date' }}</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'إلى تاريخ' if session.get('lang') == 'ar' else 'To Date' }}</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</label>
+                    <select name="furnace_id" class="form-select">
+                        <option value="">{{ 'الكل' if session.get('lang') == 'ar' else 'All' }}</option>
+                        {% for furnace in furnaces %}
+                        <option value="{{ furnace.id }}" {{ 'selected' if selected_furnace == furnace.id }}>
+                            {{ furnace.furnace_code }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i>
+                        {{ 'بحث' if session.get('lang') == 'ar' else 'Search' }}
+                    </button>
+                    <a href="{{ url_for('reports.export_chemical_pdf', date_from=date_from, date_to=date_to) }}" class="btn btn-outline-danger">
+                        <i class="bi bi-file-pdf"></i> PDF
+                    </a>
+                    <a href="{{ url_for('reports.export_chemical_excel', date_from=date_from, date_to=date_to) }}" class="btn btn-outline-success">
+                        <i class="bi bi-file-excel"></i> Excel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- AI Summary Card -->
+    <div class="card border-0 shadow-sm mb-4" id="aiReportCard">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-robot"></i>
+                {{ 'تحليل الذكاء الاصطناعي' if session.get('lang') == 'ar' else 'AI Analysis' }}
+            </h5>
+            <button type="button" class="btn btn-sm btn-light" id="aiReportRefresh">
+                <i class="bi bi-magic"></i>
+                {{ 'تحليل' if session.get('lang') == 'ar' else 'Analyze' }}
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="aiReportInitial" class="text-center py-2">
+                <i class="bi bi-robot text-muted"></i>
+                <small class="text-muted ms-2">{{ 'انقر على زر التحليل' if session.get('lang') == 'ar' else 'Click Analyze button' }}</small>
+            </div>
+            <div id="aiReportLoading" class="text-center py-2" style="display: none;">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <small class="text-muted ms-2">{{ 'جاري التحليل...' if session.get('lang') == 'ar' else 'Analyzing...' }}</small>
+            </div>
+            <div id="aiReportContent" style="display: none;">
+                <p id="aiReportSummary" class="mb-2"></p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <small class="text-muted"><i class="bi bi-lightbulb"></i> {{ 'الملاحظات' if session.get('lang') == 'ar' else 'Insights' }}:</small>
+                        <ul id="aiReportInsights" class="small mb-0"></ul>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted"><i class="bi bi-check-circle"></i> {{ 'التوصيات' if session.get('lang') == 'ar' else 'Recommendations' }}:</small>
+                        <ul id="aiReportRecommendations" class="small mb-0"></ul>
+                    </div>
+                </div>
+            </div>
+            <div id="aiReportError" class="alert alert-warning py-1 mb-0" style="display: none;">
+                <small id="aiReportErrorText"></small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ stats.total }}</h3>
+                    <small>{{ 'إجمالي' if session.get('lang') == 'ar' else 'Total' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm bg-success text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ stats.accepted }}</h3>
+                    <small>{{ 'مقبول' if session.get('lang') == 'ar' else 'Accepted' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm bg-danger text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ stats.rejected }}</h3>
+                    <small>{{ 'مرفوض' if session.get('lang') == 'ar' else 'Rejected' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ stats.defects }}</h3>
+                    <small>{{ 'عيوب' if session.get('lang') == 'ar' else 'Defects' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-info text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ stats.rate }}%</h3>
+                    <small>{{ 'نسبة القبول' if session.get('lang') == 'ar' else 'Acceptance Rate' }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="bi bi-table"></i>
+                {{ 'نتائج التحليل' if session.get('lang') == 'ar' else 'Analysis Results' }}
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if analyses %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                            <th>{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</th>
+                            <th>{{ 'المغرفة' if session.get('lang') == 'ar' else 'Ladle' }}</th>
+                            <th>C</th>
+                            <th>Si</th>
+                            <th>Mn</th>
+                            <th>Mg</th>
+                            <th>S</th>
+                            <th>CE</th>
+                            <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for analysis in analyses %}
+                        <tr>
+                            <td>{{ analysis.test_date }}</td>
+                            <td>{{ analysis.furnace.furnace_code if analysis.furnace else '-' }}</td>
+                            <td>
+                                <a href="{{ url_for('chemical.detail', id=analysis.id) }}">{{ analysis.ladle_no }}</a>
+                            </td>
+                            <td>{{ '%.3f'|format(analysis.carbon) if analysis.carbon else '-' }}</td>
+                            <td>{{ '%.3f'|format(analysis.silicon) if analysis.silicon else '-' }}</td>
+                            <td>{{ '%.3f'|format(analysis.manganese) if analysis.manganese else '-' }}</td>
+                            <td>{{ '%.4f'|format(analysis.magnesium) if analysis.magnesium else '-' }}</td>
+                            <td>{{ '%.4f'|format(analysis.sulfur) if analysis.sulfur else '-' }}</td>
+                            <td>{{ '%.3f'|format(analysis.carbon_equivalent) if analysis.carbon_equivalent else '-' }}</td>
+                            <td>
+                                {% if analysis.decision %}
+                                <span class="badge bg-{{ 'success' if 'فحص أخيرة' in analysis.decision else ('warning' if 'فحص أولى' in analysis.decision else ('danger' if 'تالف' in analysis.decision else 'info')) }}">
+                                    {{ analysis.decision }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-4 text-muted"></i>
+                <p class="text-muted mt-2">{{ 'لا توجد نتائج للفترة المحددة' if session.get('lang') == 'ar' else 'No results for selected period' }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const aiReportLoading = document.getElementById('aiReportLoading');
+    const aiReportContent = document.getElementById('aiReportContent');
+    const aiReportError = document.getElementById('aiReportError');
+    const aiReportErrorText = document.getElementById('aiReportErrorText');
+    const aiReportSummary = document.getElementById('aiReportSummary');
+    const aiReportInsights = document.getElementById('aiReportInsights');
+    const aiReportRecommendations = document.getElementById('aiReportRecommendations');
+    const aiReportRefresh = document.getElementById('aiReportRefresh');
+    const aiReportInitial = document.getElementById('aiReportInitial');
+
+    function loadAiSummary() {
+        aiReportInitial.style.display = 'none';
+        aiReportLoading.style.display = 'block';
+        aiReportContent.style.display = 'none';
+        aiReportError.style.display = 'none';
+
+        const params = new URLSearchParams({
+            date_from: '{{ date_from }}',
+            date_to: '{{ date_to }}'
+        });
+
+        fetch('{{ url_for("reports.api_ai_summary", report_type="chemical") }}?' + params)
+            .then(response => response.json())
+            .then(data => {
+                aiReportLoading.style.display = 'none';
+
+                if (data.error) {
+                    aiReportError.style.display = 'block';
+                    aiReportErrorText.textContent = data.error;
+                    return;
+                }
+
+                aiReportContent.style.display = 'block';
+                aiReportSummary.textContent = data.summary || '';
+
+                aiReportInsights.innerHTML = '';
+                (data.insights || []).forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    aiReportInsights.appendChild(li);
+                });
+
+                aiReportRecommendations.innerHTML = '';
+                (data.recommendations || []).forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    aiReportRecommendations.appendChild(li);
+                });
+            })
+            .catch(error => {
+                aiReportLoading.style.display = 'none';
+                aiReportError.style.display = 'block';
+                aiReportErrorText.textContent = error.message;
+            });
+    }
+
+    // Only load when button is clicked
+    aiReportRefresh.addEventListener('click', loadAiSummary);
+});
+</script>
+{% endblock %}

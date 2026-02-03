@@ -264,7 +264,7 @@ class ExcelImporter:
             'no_code': 2,
             'ladle_id': 3,
             'diameter': 4,
-            'pipe_type': 5,
+            'pipe_class': 5,
             'actual_weight': 6,
             # Stages start from column 7
             'stage_start_col': 7
@@ -307,7 +307,7 @@ class ExcelImporter:
                     no_code=no_code,
                     ladle_id=str(row[mapping['ladle_id']]).strip() if row[mapping['ladle_id']] else None,
                     diameter=safe_int(row[mapping['diameter']]),
-                    pipe_type=str(row[mapping['pipe_type']]).strip() if row[mapping['pipe_type']] else None,
+                    pipe_class=str(row[mapping['pipe_class']]).strip() if row[mapping['pipe_class']] else None,
                     actual_weight=safe_float(row[mapping['actual_weight']])
                 )
 

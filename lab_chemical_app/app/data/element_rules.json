@@ -1,0 +1,153 @@
+{
+  "rules": [
+    {
+      "element": "C",
+      "ranges": [
+        { "min": 0, "max": 2.7, "decision": "تالف" },
+        { "min": 2.71, "max": 2.8, "decision": "فحص الشحنة 100%" },
+        { "min": 2.81, "max": 2.99, "decision": "فحص أولى وأخيرة" },
+        { "min": 3, "max": 3.9, "decision": "فحص أخيرة فقط" },
+        { "min": 3.91, "max": 4.1, "decision": "فحص أولى وأخيرة" },
+        { "min": 4.11, "max": 4.29, "decision": "فحص الشحنة 100%" },
+        { "min": 4.3, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "Si",
+      "ranges": [
+        { "min": 0, "max": 1.6, "decision": "تالف" },
+        { "min": 1.61, "max": 1.75, "decision": "فحص الشحنة 100%" },
+        { "min": 1.76, "max": 1.85, "decision": "فحص أولى وأخيرة" },
+        { "min": 1.86, "max": 2.7, "decision": "فحص أخيرة فقط" },
+        { "min": 2.71, "max": 2.84, "decision": "فحص أولى وأخيرة" },
+        { "min": 2.85, "max": 3, "decision": "فحص الشحنة 100%" },
+        { "min": 3.1, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "Mn",
+      "ranges": [
+        { "min": 0, "max": 0.1, "decision": "تالف" },
+        { "min": 0.1, "max": 0.4, "decision": "فحص أخيرة فقط" },
+        { "min": 0.41, "max": 0.6, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.61, "max": 0.99, "decision": "فحص الشحنة 100%" },
+        { "min": 1, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "Mg",
+      "ranges": [
+        { "min": 0, "max": 0.02, "decision": "تالف" },
+        { "min": 0.021, "max": 0.025, "decision": "فحص الشحنة 100%" },
+        { "min": 0.026, "max": 0.03, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.031, "max": 0.07, "decision": "فحص أخيرة فقط" },
+        { "min": 0.071, "max": 0.09, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.091, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "S",
+      "ranges": [
+        { "min": 0, "max": 0.007, "decision": "تالف" },
+        { "min": 0.008, "max": 0.02, "decision": "فحص أخيرة فقط" },
+        { "min": 0.021, "max": 0.025, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.026, "max": 0.035, "decision": "فحص الشحنة 100%" },
+        { "min": 0.036, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "Cr",
+      "ranges": [
+        { "min": 0, "max": 0.1, "decision": "فحص أخيرة فقط" },
+        { "min": 0.11, "max": 0.12, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.13, "max": 0.14, "decision": "فحص الشحنة 100%" },
+        { "min": 0.15, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "Cu",
+      "ranges": [
+        { "min": 0, "max": 0.1, "decision": "فحص أخيرة فقط" },
+        { "min": 0.11, "max": 0.12, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.13, "max": 0.14, "decision": "فحص الشحنة 100%" },
+        { "min": 0.15, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "Al",
+      "ranges": [
+        { "min": 0, "max": 0.049, "decision": "فحص أخيرة فقط" },
+        { "min": 0.05, "max": 0.07, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.071, "max": 0.09, "decision": "فحص الشحنة 100%" },
+        { "min": 0.091, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "P",
+      "ranges": [
+        { "min": 0, "max": 0.059, "decision": "فحص أخيرة فقط" },
+        { "min": 0.06, "max": 0.07, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.071, "max": 0.099, "decision": "فحص الشحنة 100%" },
+        { "min": 0.1, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "Ti",
+      "ranges": [
+        { "min": 0, "max": 0.05, "decision": "فحص أخيرة فقط" },
+        { "min": 0.051, "max": 0.09, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.1, "max": 0.14, "decision": "فحص الشحنة 100%" },
+        { "min": 0.15, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "Pb",
+      "ranges": [
+        { "min": 0, "max": 0.003, "decision": "فحص أخيرة فقط" },
+        { "min": 0.0031, "max": 0.005, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.0051, "max": 0.007, "decision": "فحص الشحنة 100%" },
+        { "min": 0.0071, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "Sn",
+      "ranges": [
+        { "min": 0, "max": 0.015, "decision": "فحص أخيرة فقط" },
+        { "min": 0.016, "max": 0.035, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.036, "max": 0.055, "decision": "فحص الشحنة 100%" },
+        { "min": 0.056, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "CE",
+      "ranges": [
+        { "min": 0, "max": 3.3, "decision": "تالف" },
+        { "min": 3.31, "max": 3.6, "decision": "فحص الشحنة 100%" },
+        { "min": 3.61, "max": 4, "decision": "فحص أولى وأخيرة" },
+        { "min": 4.01, "max": 4.8, "decision": "فحص أخيرة فقط" },
+        { "min": 4.81, "max": 5.1, "decision": "فحص أولى وأخيرة" },
+        { "min": 5.11, "max": 6.7, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "MnE",
+      "ranges": [
+        { "min": 0, "max": 0.5, "decision": "تالف" },
+        { "min": 0.51, "max": 0.9, "decision": "فحص أخيرة فقط" },
+        { "min": 0.91, "max": 1.2, "decision": "فحص أولى وأخيرة" },
+        { "min": 1.21, "max": 1.45, "decision": "فحص الشحنة 100%" },
+        { "min": 1.46, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "element": "MgE",
+      "ranges": [
+        { "min": 0, "max": 0.014, "decision": "تالف" },
+        { "min": 0.015, "max": 0.02, "decision": "فحص الشحنة 100%" },
+        { "min": 0.021, "max": 0.04, "decision": "فحص أولى وأخيرة" },
+        { "min": 0.041, "max": 0.06, "decision": "فحص أخيرة فقط" },
+        { "min": 0.061, "max": 0.08, "decision": "فحص أولى وأخيرة" }
+      ]
+    }
+  ]
+}

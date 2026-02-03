@@ -1,7 +1,7 @@
 """
 Main Routes - Dashboard and Home
 """
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, redirect, url_for, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import func
 from datetime import date, timedelta
@@ -9,16 +9,17 @@ from app import db
 from app.models.chemical import ChemicalAnalysis, Furnace
 from app.models.pipe import Pipe, PipeStage
 from app.models.mechanical import MechanicalTest
+from app.services.ai_service import generate_dashboard_summary
 
 main_bp = Blueprint('main', __name__)
 
 
 @main_bp.route('/')
 def index():
-    """Home page - redirect to dashboard if logged in"""
+    """Home page - redirect to dashboard if logged in, otherwise to login"""
     if current_user.is_authenticated:
         return render_template('dashboard.html', **get_dashboard_stats())
-    return render_template('index.html')
+    return redirect(url_for('auth.login'))
 
 
 @main_bp.route('/dashboard')
@@ -26,6 +27,15 @@ def index():
 def dashboard():
     """Main dashboard with summary statistics"""
     return render_template('dashboard.html', **get_dashboard_stats())
+
+
+@main_bp.route('/api/ai-summary')
+@login_required
+def api_ai_summary():
+    """API endpoint for AI dashboard summary"""
+    stats = get_dashboard_stats()['stats']
+    result = generate_dashboard_summary(stats)
+    return jsonify(result)
 
 
 def get_dashboard_stats():
@@ -93,15 +103,11 @@ def get_dashboard_stats():
     ).group_by(Furnace.furnace_code).all()
 
     return {
-        'today': {
-            'analyses': today_analyses,
-            'pipes': today_pipes,
-            'tests': today_tests
-        },
-        'week': {
-            'analyses': week_analyses,
-            'pipes': week_pipes,
-            'defects': week_defects,
+        'stats': {
+            'chem_today': today_analyses,
+            'pipes_today': today_pipes,
+            'mech_today': today_tests,
+            'defects_week': week_defects,
             'acceptance_rate': round(acceptance_rate, 1)
         },
         'recent_analyses': recent_analyses,

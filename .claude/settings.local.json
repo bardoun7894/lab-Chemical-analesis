@@ -14,7 +14,12 @@
       "Bash(Out-Null)",
       "Bash(echo:*)",
       "Bash(PYTHONLEGACYWINDOWSSTDIO=1 COLORTERM=truecolor FORCE_COLOR=0 specify init:*)",
-      "Bash(wt.exe:*)"
+      "Bash(wt.exe:*)",
+      "Bash(timeout:*)",
+      "Bash(del \"C:\\\\Users\\\\Chairi\\\\Downloads\\\\lab Chemical analesis\\\\lab_chemical_app\\\\lab_chemical.db\")",
+      "Bash(tree:*)",
+      "Bash(findstr:*)",
+      "Bash(ls:*)"
     ]
   }
 }

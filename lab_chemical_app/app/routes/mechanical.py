@@ -1,12 +1,14 @@
 """
 Mechanical Tests Routes
 """
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response
 from flask_login import login_required, current_user
 from datetime import date
 from app import db
 from app.models.mechanical import MechanicalTest
 from app.models.chemical import ChemicalAnalysis
+from app.models.pipe import Pipe
+from app.services.ai_service import generate_mechanical_analysis, generate_mechanical_stream
 
 mechanical_bp = Blueprint('mechanical', __name__)
 
@@ -95,6 +97,15 @@ def add():
             test.reason = request.form.get('reason')
             test.comments = request.form.get('comments')
 
+            # Link to pipe (required now with pipe_code)
+            pipe_id = request.form.get('pipe_id')
+            if pipe_id:
+                test.pipe_id = int(pipe_id)
+                # Get pipe and set pipe_code
+                pipe = Pipe.query.get(int(pipe_id))
+                if pipe:
+                    test.pipe_code = pipe.pipe_code or f"{pipe.no_code}-{pipe.arrange_pipe or 1}-{pipe.ladle_id or ''}"
+
             # Metadata
             test.created_by_id = current_user.id
 
@@ -112,8 +123,11 @@ def add():
         ChemicalAnalysis.test_date.desc()
     ).limit(20).all()
 
+    pipes = Pipe.query.order_by(Pipe.production_date.desc()).limit(50).all()
+
     return render_template('mechanical/form.html',
                           recent_ladles=recent_ladles,
+                          pipes=pipes,
                           today=date.today())
 
 
@@ -172,6 +186,18 @@ def edit(id):
             test.reason = request.form.get('reason')
             test.comments = request.form.get('comments')
 
+            # Update pipe link with pipe_code
+            pipe_id = request.form.get('pipe_id')
+            if pipe_id:
+                test.pipe_id = int(pipe_id)
+                # Get pipe and set pipe_code
+                pipe = Pipe.query.get(int(pipe_id))
+                if pipe:
+                    test.pipe_code = pipe.pipe_code or f"{pipe.no_code}-{pipe.arrange_pipe or 1}-{pipe.ladle_id or ''}"
+            else:
+                test.pipe_id = None
+                test.pipe_code = None
+
             db.session.commit()
             flash('Mechanical test updated successfully!', 'success')
             return redirect(url_for('mechanical.detail', id=test.id))
@@ -184,7 +210,65 @@ def edit(id):
         ChemicalAnalysis.test_date.desc()
     ).limit(20).all()
 
+    pipes = Pipe.query.order_by(Pipe.production_date.desc()).limit(50).all()
+
     return render_template('mechanical/form.html',
                           test=test,
                           recent_ladles=recent_ladles,
+                          pipes=pipes,
                           edit_mode=True)
+
+
+@mechanical_bp.route('/api/ai-analysis', methods=['POST'])
+@login_required
+def api_ai_analysis():
+    """API endpoint to generate AI analysis for mechanical test"""
+    data = request.get_json()
+
+    # Extract test values
+    test_values = {}
+    fields = ['tensile_strength', 'elongation', 'hardness', 'nodularity_percent',
+              'carbides', 'nodule_count', 'd1', 'd2', 'd3', 'force_kgf']
+
+    for field in fields:
+        if field in data and data[field] is not None and data[field] != '':
+            try:
+                test_values[field] = float(data[field])
+            except (TypeError, ValueError):
+                pass
+
+    result = generate_mechanical_analysis(test_values)
+    return jsonify(result)
+
+
+@mechanical_bp.route('/api/ai-analysis-stream', methods=['POST'])
+@login_required
+def api_ai_analysis_stream():
+    """Streaming API endpoint for mechanical test AI analysis"""
+    data = request.get_json()
+
+    # Extract test values
+    test_values = {}
+    fields = ['tensile_strength', 'elongation', 'hardness', 'nodularity_percent',
+              'carbides', 'nodule_count', 'd1', 'd2', 'd3', 'force_kgf']
+
+    for field in fields:
+        if field in data and data[field] is not None and data[field] != '':
+            try:
+                test_values[field] = float(data[field])
+            except (TypeError, ValueError):
+                pass
+
+    def generate():
+        for chunk in generate_mechanical_stream(test_values):
+            yield chunk
+
+    return Response(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        }
+    )

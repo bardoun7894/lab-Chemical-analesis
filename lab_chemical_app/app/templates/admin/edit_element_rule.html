@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'تعديل قواعد' if session.get('lang') == 'ar' else 'Edit Rules for' }} {{ element }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-pencil-square"></i>
+                {{ 'تعديل قواعد العنصر' if session.get('lang') == 'ar' else 'Edit Element Rules' }}:
+                <span class="text-primary">{{ element }}</span>
+            </h2>
+            <p class="text-muted mb-0">
+                {{ 'تحديد نطاقات القيم والقرارات المرتبطة' if session.get('lang') == 'ar' else 'Define value ranges and associated decisions' }}
+            </p>
+        </div>
+        <a href="{{ url_for('admin.element_rules') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-{{ 'left' if session.get('lang') != 'ar' else 'right' }}"></i>
+            {{ 'رجوع' if session.get('lang') == 'ar' else 'Back' }}
+        </a>
+    </div>
+
+    <form method="POST" id="rulesForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="range_count" id="rangeCount" value="{{ rule.ranges|length }}">
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-ol"></i>
+                    {{ 'نطاقات القيم' if session.get('lang') == 'ar' else 'Value Ranges' }}
+                </h5>
+                <button type="button" class="btn btn-light btn-sm" onclick="addRange()">
+                    <i class="bi bi-plus"></i>
+                    {{ 'إضافة نطاق' if session.get('lang') == 'ar' else 'Add Range' }}
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-3">
+                    <i class="bi bi-info-circle"></i>
+                    {{ 'ترتيب القرارات من الأفضل للأسوأ:' if session.get('lang') == 'ar' else 'Decision priority (best to worst):' }}
+                    <strong>فحص أخيرة فقط</strong> →
+                    <strong>فحص أولى وأخيرة</strong> →
+                    <strong>فحص الشحنة 100%</strong> →
+                    <strong>تالف</strong>
+                </div>
+
+                <div id="rangesContainer">
+                    {% for range in rule.ranges %}
+                    <div class="range-row row g-3 mb-3 align-items-end" data-index="{{ loop.index0 }}">
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'الحد الأدنى' if session.get('lang') == 'ar' else 'Min Value' }}</label>
+                            <input type="number" name="min_{{ loop.index0 }}" class="form-control"
+                                   step="0.0001" value="{{ range.min }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'الحد الأقصى' if session.get('lang') == 'ar' else 'Max Value' }}</label>
+                            <input type="number" name="max_{{ loop.index0 }}" class="form-control"
+                                   step="0.0001" value="{{ range.max }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                            <select name="decision_{{ loop.index0 }}" class="form-select decision-select" required>
+                                {% for decision in decisions %}
+                                <option value="{{ decision }}" {{ 'selected' if range.decision == decision }}>
+                                    {{ decision }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-outline-danger w-100" onclick="removeRange(this)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if not rule.ranges %}
+                <div class="text-center text-muted py-4" id="emptyMessage">
+                    <i class="bi bi-inbox display-6"></i>
+                    <p>{{ 'لا توجد نطاقات. أضف نطاق جديد.' if session.get('lang') == 'ar' else 'No ranges defined. Add a new range.' }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-eye"></i>
+                    {{ 'معاينة' if session.get('lang') == 'ar' else 'Preview' }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="previewTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{{ 'النطاق' if session.get('lang') == 'ar' else 'Range' }}</th>
+                                <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewBody">
+                            <!-- Will be updated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="d-flex gap-2 justify-content-end mb-4">
+            <a href="{{ url_for('admin.element_rules') }}" class="btn btn-outline-secondary">
+                {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-check-lg"></i>
+                {{ 'حفظ التغييرات' if session.get('lang') == 'ar' else 'Save Changes' }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let rangeIndex = {{ rule.ranges|length }};
+
+const decisions = [
+    {% for decision in decisions %}
+    "{{ decision }}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+function addRange() {
+    const container = document.getElementById('rangesContainer');
+    const emptyMessage = document.getElementById('emptyMessage');
+    if (emptyMessage) emptyMessage.remove();
+
+    const html = `
+        <div class="range-row row g-3 mb-3 align-items-end" data-index="${rangeIndex}">
+            <div class="col-md-3">
+                <label class="form-label">{{ 'الحد الأدنى' if session.get('lang') == 'ar' else 'Min Value' }}</label>
+                <input type="number" name="min_${rangeIndex}" class="form-control"
+                       step="0.0001" value="0" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">{{ 'الحد الأقصى' if session.get('lang') == 'ar' else 'Max Value' }}</label>
+                <input type="number" name="max_${rangeIndex}" class="form-control"
+                       step="0.0001" value="1" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                <select name="decision_${rangeIndex}" class="form-select decision-select" required>
+                    ${decisions.map(d => `<option value="${d}">${d}</option>`).join('')}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-danger w-100" onclick="removeRange(this)">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    container.insertAdjacentHTML('beforeend', html);
+    rangeIndex++;
+    updateRangeCount();
+    updatePreview();
+}
+
+function removeRange(button) {
+    const row = button.closest('.range-row');
+    row.remove();
+    reindexRanges();
+    updatePreview();
+}
+
+function reindexRanges() {
+    const rows = document.querySelectorAll('.range-row');
+    rangeIndex = 0;
+
+    rows.forEach((row, i) => {
+        row.dataset.index = i;
+        row.querySelector('input[type="number"]:first-of-type').name = `min_${i}`;
+        row.querySelector('input[type="number"]:last-of-type').name = `max_${i}`;
+        row.querySelector('select').name = `decision_${i}`;
+        rangeIndex = i + 1;
+    });
+
+    updateRangeCount();
+}
+
+function updateRangeCount() {
+    const count = document.querySelectorAll('.range-row').length;
+    document.getElementById('rangeCount').value = count;
+}
+
+function updatePreview() {
+    const rows = document.querySelectorAll('.range-row');
+    const previewBody = document.getElementById('previewBody');
+    previewBody.innerHTML = '';
+
+    rows.forEach(row => {
+        const min = row.querySelector('input[type="number"]:first-of-type').value;
+        const max = row.querySelector('input[type="number"]:last-of-type').value;
+        const decision = row.querySelector('select').value;
+
+        let badgeClass = 'bg-secondary';
+        if (decision === 'فحص أخيرة فقط') badgeClass = 'bg-success';
+        else if (decision === 'فحص أولى وأخيرة') badgeClass = 'bg-info';
+        else if (decision === 'فحص الشحنة 100%') badgeClass = 'bg-warning text-dark';
+        else if (decision === 'تالف') badgeClass = 'bg-danger';
+
+        previewBody.innerHTML += `
+            <tr>
+                <td><strong>${min}</strong> - <strong>${max}</strong></td>
+                <td><span class="badge ${badgeClass}">${decision}</span></td>
+            </tr>
+        `;
+    });
+
+    if (rows.length === 0) {
+        previewBody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">{{ "لا توجد نطاقات" if session.get("lang") == "ar" else "No ranges" }}</td></tr>';
+    }
+}
+
+// Add event listeners to update preview on change
+document.addEventListener('change', function(e) {
+    if (e.target.matches('.range-row input, .range-row select')) {
+        updatePreview();
+    }
+});
+
+// Initial preview
+updatePreview();
+</script>
+{% endblock %}

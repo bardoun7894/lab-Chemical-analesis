@@ -17,10 +17,13 @@ class Pipe(db.Model):
     shift_engineer = db.Column(db.String(100))
     manufacturing_order = db.Column(db.String(50))
 
+    # Link to Production Order (امر الانتاج)
+    production_order_id = db.Column(db.Integer, db.ForeignKey('production_orders.id'), index=True)
+
     # Pipe Identification
     pipe_code = db.Column(db.String(50))
     diameter = db.Column(db.Integer)  # DN: 300, 500, 600
-    pipe_type = db.Column(db.String(20))  # K9, C25, Fittings
+    pipe_class = db.Column(db.String(20))  # K9, C25, Fittings
     machine_id = db.Column(db.Integer, db.ForeignKey('machines.id'))
     mold_number = db.Column(db.String(20))
     iso_weight = db.Column(db.Float)
@@ -40,12 +43,13 @@ class Pipe(db.Model):
 
     # Relationships
     machine = db.relationship('Machine', back_populates='pipes')
-    chemical_analysis = db.relationship('ChemicalAnalysis', back_populates='pipes')
+    # chemical_analysis and production_order relationships defined via backref
     stages = db.relationship('PipeStage', back_populates='pipe', lazy='dynamic',
                             cascade='all, delete-orphan')
+    mechanical_tests = db.relationship('MechanicalTest', backref='pipe', lazy='dynamic')
 
     # Production stages
-    STAGES = ['CCM', 'Annealing', 'Zinc', 'Cutting', 'Hydrotest', 'Cement', 'Coating', 'Finish']
+    STAGES = ['Melting Ladle', 'CCM', 'Annealing', 'Lab', 'Zinc', 'Cutting', 'Hydrotest', 'Cement', 'Coating', 'Finish']
 
     def get_stage(self, stage_name):
         """Get specific stage data"""
@@ -106,12 +110,16 @@ class PipeStage(db.Model):
     measurement_type = db.Column(db.String(50))
 
     # Quality Control
-    decision = db.Column(db.String(20))
+    decision = db.Column(db.String(100))
     reason = db.Column(db.Text)
     has_defect = db.Column(db.Boolean, default=False)
     defect_type_id = db.Column(db.Integer, db.ForeignKey('defect_types.id'))
+    defect_type = db.Column(db.String(100))  # Stage-specific defect type
     defect_reason = db.Column(db.Text)
     notes = db.Column(db.Text)
+
+    # Machine used for this stage (for production stages like Zinc, Cutting, Hydrotest, Cement, Coating)
+    machine_id = db.Column(db.Integer, db.ForeignKey('machines.id'))
 
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -120,7 +128,8 @@ class PipeStage(db.Model):
 
     # Relationships
     pipe = db.relationship('Pipe', back_populates='stages')
-    defect_type = db.relationship('DefectType', back_populates='pipe_stages')
+    defect_type_obj = db.relationship('DefectType', back_populates='pipe_stages', foreign_keys=[defect_type_id])
+    machine = db.relationship('Machine', backref='pipe_stages')
 
     # Unique constraint
     __table_args__ = (
@@ -134,6 +143,181 @@ class PipeStage(db.Model):
         'Coating': 'Coating Thickness',
         'Finish': 'Length'
     }
+
+    # Stage-specific decisions (Melting Ladle, CCM, Annealing, Lab, Zinc, Cutting, Hydrotest, Cement, Coating, Finish)
+    STAGE_DECISIONS = {
+        'Melting Ladle': [
+            ('Inspect Last pipes', 'فحص أخيرة فقط'),
+            ('Inspect 1st and Last pipes', 'فحص أولى وأخيرة'),
+            ('Inspect 100%', 'فحص الشحنة 100%'),
+            ('Reject', 'تالف')
+        ],
+        'CCM': [
+            ('Accept', 'قبول'),
+            ('Reject', 'رفض'),
+            ('Accept with remark', 'قبول مع ملاحظة'),
+            ('DownGrade', 'تخفيض درجة'),
+            ('Hold', 'حجز')
+        ],
+        'Annealing': [
+            ('Accept', 'قبول'),
+            ('Reject', 'رفض'),
+            ('Accept with remark', 'قبول مع ملاحظة'),
+            ('Hold', 'حجز'),
+            ('Reheat treatment', 'إعادة معالجة حرارية'),
+            ('Resample', 'إعادة عينة')
+        ],
+        'Lab': [
+            ('Accept', 'قبول'),
+            ('Reject', 'رفض'),
+            ('Accept with remark', 'قبول مع ملاحظة'),
+            ('Hold', 'حجز'),
+            ('Reheat treatment', 'إعادة معالجة حرارية'),
+            ('Resample', 'إعادة عينة')
+        ],
+        'Zinc': [
+            ('Accept', 'قبول'),
+            ('Reject', 'رفض'),
+            ('Hold', 'حجز'),
+            ('Rework', 'إعادة عمل'),
+            ('Micro-structure', 'فحص البنية المجهرية')
+        ],
+        'Cutting': [
+            ('Accept', 'قبول'),
+            ('Reject', 'رفض'),
+            ('Hold', 'حجز'),
+            ('Retest', 'إعادة اختبار')
+        ],
+        'Hydrotest': [
+            ('Accept', 'قبول'),
+            ('Reject', 'رفض'),
+            ('Hold', 'حجز'),
+            ('Rework', 'إعادة عمل')
+        ],
+        'Cement': [
+            ('Accept', 'قبول'),
+            ('Reject', 'رفض'),
+            ('Hold', 'حجز'),
+            ('Rework', 'إعادة عمل')
+        ],
+        'Coating': [
+            ('Accept', 'قبول'),
+            ('Reject', 'رفض'),
+            ('Hold', 'حجز'),
+            ('Rework', 'إعادة عمل')
+        ],
+        'Finish': [
+            ('Accept', 'قبول'),
+            ('Reject', 'رفض'),
+            ('Hold', 'حجز')
+        ]
+    }
+
+    # Stage-specific defects
+    STAGE_DEFECTS = {
+        'Melting Ladle': [
+            ('Out of specification', 'خارج المواصفات'),
+            ('دلاليـك', 'Dalek'),
+            ('رينـــكل', 'Wrinkle'),
+            ('تكتل معدن/عتبة', 'Metal clustering/threshold'),
+            ('طى معدن', 'Metal folding'),
+            ('شروخ', 'Cracks'),
+            ('حفر', 'Pits'),
+            ('توريق LA', 'LA Flaking'),
+            ('سمك عالى', 'High thickness'),
+            ('سمك ضعيف', 'Low thickness'),
+            ('جرافيت', 'Graphite'),
+            ('جلخ/خبط SL', 'Grinding/slag'),
+            ('تطعيم', 'Inoculation'),
+            ('كسر فى الرأس', 'Head break'),
+            ('بدون مصد', 'Without socket'),
+            ('D4', 'D4'),
+            ('Short pipe', 'أنبوب قصير'),
+            ('تحليل شحنة', 'Batch analysis'),
+            ('بيضاوى', 'Oval'),
+            ('تقوس CU', 'Curvature'),
+            ('عيب مناولة', 'Handling defect'),
+            ('Other', 'أخرى')
+        ],
+        'CCM': [
+            ('دلاليـك', 'Dalek'),
+            ('رينـــكل', 'Wrinkle'),
+            ('تكتل معدن/عتبة', 'Metal clustering/threshold'),
+            ('طى معدن', 'Metal folding'),
+            ('شروخ', 'Cracks'),
+            ('حفر', 'Pits'),
+            ('توريق LA', 'LA Flaking'),
+            ('سمك عالى', 'High thickness'),
+            ('سمك ضعيف', 'Low thickness'),
+            ('جرافيت', 'Graphite'),
+            ('جلخ/خبط SL', 'Grinding/slag'),
+            ('تطعيم', 'Inoculation'),
+            ('كسر فى الرأس', 'Head break'),
+            ('بدون مصد', 'Without socket'),
+            ('D4', 'D4'),
+            ('بيضاوى', 'Oval'),
+            ('تقوس CU', 'Curvature'),
+            ('عيب مناولة', 'Handling defect'),
+            ('Other', 'أخرى')
+        ],
+        'Annealing': [
+            ('مناوله', 'Handling'),
+            ('شرخ', 'Crack'),
+            ('بيضاوى', 'Oval'),
+            ('Other', 'أخرى')
+        ],
+        'Lab': [
+            ('زهر رمادى', 'Gray cast'),
+            ('خواص ميكانيكيه', 'Mechanical properties'),
+            ('رينج تيست', 'Ring test'),
+            ('Other', 'أخرى')
+        ],
+        'Zinc': [],  # No specific defects listed
+        'Cutting': [
+            ('مناوله', 'Handling'),
+            ('خواص ميكانيكيه', 'Mechanical properties'),
+            ('انتفاخ', 'Bulging'),
+            ('كسر على المكبس', 'Break on press'),
+            ('قصر طول', 'Short length'),
+            ('شروخ', 'Cracks'),
+            ('Other', 'أخرى')
+        ],
+        'Hydrotest': [
+            ('مناوله', 'Handling'),
+            ('تسريب', 'Leakage'),
+            ('Other', 'أخرى')
+        ],
+        'Cement': [
+            ('سمك', 'Thickness'),
+            ('تالف دهان', 'Paint damage'),
+            ('تالف اسمنت', 'Cement damage'),
+            ('Other', 'أخرى')
+        ],
+        'Coating': [
+            ('مناوله', 'Handling'),
+            ('تالف دهان', 'Paint damage'),
+            ('تالف اسمنت', 'Cement damage'),
+            ('Other', 'أخرى')
+        ],
+        'Finish': [
+            ('مناوله', 'Handling'),
+            ('Other', 'أخرى')
+        ]
+    }
+
+    @classmethod
+    def get_decisions_for_stage(cls, stage_name):
+        """Get allowed decisions for a specific stage"""
+        return cls.STAGE_DECISIONS.get(stage_name, [
+            ('Accept', 'قبول'),
+            ('Reject', 'رفض'),
+            ('Hold', 'حجز')
+        ])
+
+    @classmethod
+    def get_defects_for_stage(cls, stage_name):
+        """Get allowed defects for a specific stage"""
+        return cls.STAGE_DEFECTS.get(stage_name, [('Other', 'أخرى')])
 
     def __repr__(self):
         return f'<PipeStage {self.pipe_id}:{self.stage_name}>'

@@ -17,7 +17,7 @@
             </h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('chemical.index') }}">Chemical</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('chemical.list') }}">Chemical</a></li>
                     <li class="breadcrumb-item active">{{ 'Edit' if analysis else 'New' }}</li>
                 </ol>
             </nav>
@@ -77,48 +77,106 @@
 
                 <!-- Decision -->
                 <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-success text-white">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="bi bi-check-circle"></i>
                             {{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}
                         </h5>
+                        <span id="decisionModeIndicator" class="badge bg-light text-dark" style="display: none;">
+                            <i class="bi bi-robot"></i> Auto
+                        </span>
                     </div>
                     <div class="card-body">
+                        <!-- Auto-calculated decision display -->
+                        <div id="autoDecisionCard" class="alert alert-info mb-3" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">{{ 'القرار المقترح' if session.get('lang') == 'ar' else 'Recommended Decision' }}:</small>
+                                    <div id="autoDecisionValue" class="fw-bold fs-5"></div>
+                                </div>
+                                <div id="worstElementsInfo" class="text-end">
+                                    <small class="text-muted">{{ 'العناصر المؤثرة' if session.get('lang') == 'ar' else 'Affected Elements' }}:</small>
+                                    <div id="worstElementsList" class="fw-bold"></div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
-                            <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                            <label class="form-label d-flex justify-content-between">
+                                <span>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</span>
+                                <span id="manualOverrideIndicator" class="badge bg-warning text-dark" style="display: none;">
+                                    <i class="bi bi-pencil"></i> {{ 'تجاوز يدوي' if session.get('lang') == 'ar' else 'Manual Override' }}
+                                </span>
+                            </label>
                             <select name="decision" class="form-select" id="decisionSelect">
                                 <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
-                                <option value="ACCEPT" {{ 'selected' if analysis and analysis.decision == 'ACCEPT' }}>
-                                    Accept / قبول
+                                <option value="فحص أخيرة فقط" {{ 'selected' if analysis and analysis.decision == 'فحص أخيرة فقط' }}>
+                                    فحص أخيرة فقط (Last Only)
                                 </option>
-                                <option value="REJECT" {{ 'selected' if analysis and analysis.decision == 'REJECT' }}>
-                                    Reject / رفض
+                                <option value="فحص أولى وأخيرة" {{ 'selected' if analysis and analysis.decision == 'فحص أولى وأخيرة' }}>
+                                    فحص أولى وأخيرة (First & Last)
                                 </option>
-                                <option value="HOLD" {{ 'selected' if analysis and analysis.decision == 'HOLD' }}>
-                                    Hold / انتظار
+                                <option value="فحص الشحنة 100%" {{ 'selected' if analysis and analysis.decision == 'فحص الشحنة 100%' }}>
+                                    فحص الشحنة 100% (100% Inspection)
                                 </option>
-                                <option value="INSPECT_100" {{ 'selected' if analysis and analysis.decision == 'INSPECT_100' }}>
-                                    Inspect 100% / فحص 100%
+                                <option value="تالف" {{ 'selected' if analysis and analysis.decision == 'تالف' }}>
+                                    تالف (Rejected)
                                 </option>
                             </select>
                         </div>
 
+                        <!-- AI Auto-fill Status -->
                         <div class="mb-3">
-                            <label class="form-label">{{ 'السبب' if session.get('lang') == 'ar' else 'Reason' }}</label>
-                            <textarea name="reason" class="form-control" rows="2">{{ analysis.reason if analysis else '' }}</textarea>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="aiRefreshBtn" title="{{ 'تحديث التحليل' if session.get('lang') == 'ar' else 'Refresh Analysis' }}">
+                                    <i class="bi bi-robot"></i>
+                                    <span id="aiRefreshBtnIcon"><i class="bi bi-arrow-clockwise"></i></span>
+                                    <span id="aiCooldownTimer" style="display: none; font-size: 0.8em;"></span>
+                                </button>
+                                <div id="aiLoadingSpinner" class="flex-grow-1" style="display: none;">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <small class="text-muted ms-2">
+                                        {{ 'جاري التحليل...' if session.get('lang') == 'ar' else 'Analyzing...' }}
+                                    </small>
+                                </div>
+                                <small id="aiStatusText" class="text-muted"></small>
+                            </div>
+                            <div id="aiErrorAlert" class="alert alert-warning py-1 mb-2 mt-2" style="display: none;">
+                                <small id="aiErrorMessage"></small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label d-flex justify-content-between align-items-center">
+                                <span>{{ 'السبب' if session.get('lang') == 'ar' else 'Reason' }}</span>
+                                <span id="aiReasonBadge" class="badge bg-info" style="display: none;">
+                                    <i class="bi bi-robot"></i> AI
+                                </span>
+                            </label>
+                            <textarea name="reason" class="form-control" rows="2" id="reasonField">{{ analysis.reason if analysis else '' }}</textarea>
                         </div>
 
                         <div class="form-check mb-3">
                             <input type="checkbox" name="has_defect" class="form-check-input" id="hasDefect"
                                 {{ 'checked' if analysis and analysis.has_defect }}>
-                            <label class="form-check-label" for="hasDefect">
+                            <label class="form-check-label d-flex align-items-center gap-2" for="hasDefect">
                                 {{ 'يوجد عيب' if session.get('lang') == 'ar' else 'Has Defect' }}
+                                <span id="aiDefectBadge" class="badge bg-info" style="display: none;">
+                                    <i class="bi bi-robot"></i> AI
+                                </span>
                             </label>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}</label>
-                            <textarea name="notes" class="form-control" rows="2">{{ analysis.notes if analysis else '' }}</textarea>
+                            <label class="form-label d-flex justify-content-between align-items-center">
+                                <span>{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}</span>
+                                <span id="aiNotesBadge" class="badge bg-info" style="display: none;">
+                                    <i class="bi bi-robot"></i> AI
+                                </span>
+                            </label>
+                            <textarea name="notes" class="form-control" rows="2" id="notesField">{{ analysis.notes if analysis else '' }}</textarea>
                         </div>
                     </div>
                 </div>
@@ -146,67 +204,97 @@
                         <div class="row g-3">
                             <!-- Primary Elements -->
                             <div class="col-md-3">
-                                <label class="form-label">C (Carbon)</label>
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>C (Carbon)</span>
+                                    <span class="element-badge badge" data-element="C" style="display: none;"></span>
+                                </label>
                                 <input type="number" name="carbon" class="form-control element-input"
-                                       step="0.001" min="0" max="10" data-min="3.0" data-max="3.9"
+                                       step="0.001" min="0" max="10" data-element="C" data-min="3.0" data-max="3.9"
                                        value="{{ analysis.carbon if analysis else '' }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Si (Silicon)</label>
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Si (Silicon)</span>
+                                    <span class="element-badge badge" data-element="Si" style="display: none;"></span>
+                                </label>
                                 <input type="number" name="silicon" class="form-control element-input"
-                                       step="0.001" min="0" max="10" data-min="1.86" data-max="2.7"
+                                       step="0.001" min="0" max="10" data-element="Si" data-min="1.86" data-max="2.7"
                                        value="{{ analysis.silicon if analysis else '' }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Mg (Magnesium)</label>
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Mg (Magnesium)</span>
+                                    <span class="element-badge badge" data-element="Mg" style="display: none;"></span>
+                                </label>
                                 <input type="number" name="magnesium" class="form-control element-input"
-                                       step="0.0001" min="0" max="1" data-min="0.031" data-max="0.07"
+                                       step="0.0001" min="0" max="1" data-element="Mg" data-min="0.031" data-max="0.07"
                                        value="{{ analysis.magnesium if analysis else '' }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Cu (Copper)</label>
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Cu (Copper)</span>
+                                    <span class="element-badge badge" data-element="Cu" style="display: none;"></span>
+                                </label>
                                 <input type="number" name="copper" class="form-control element-input"
-                                       step="0.0001" min="0" max="1" data-max="0.1"
+                                       step="0.0001" min="0" max="1" data-element="Cu" data-max="0.1"
                                        value="{{ analysis.copper if analysis else '' }}">
                             </div>
 
                             <!-- Secondary Elements -->
                             <div class="col-md-3">
-                                <label class="form-label">Cr (Chromium)</label>
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Cr (Chromium)</span>
+                                    <span class="element-badge badge" data-element="Cr" style="display: none;"></span>
+                                </label>
                                 <input type="number" name="chromium" class="form-control element-input"
-                                       step="0.0001" min="0" max="1" data-max="0.1"
+                                       step="0.0001" min="0" max="1" data-element="Cr" data-max="0.1"
                                        value="{{ analysis.chromium if analysis else '' }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">S (Sulfur)</label>
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>S (Sulfur)</span>
+                                    <span class="element-badge badge" data-element="S" style="display: none;"></span>
+                                </label>
                                 <input type="number" name="sulfur" class="form-control element-input"
-                                       step="0.0001" min="0" max="1" data-max="0.02"
+                                       step="0.0001" min="0" max="1" data-element="S" data-max="0.02"
                                        value="{{ analysis.sulfur if analysis else '' }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Mn (Manganese)</label>
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Mn (Manganese)</span>
+                                    <span class="element-badge badge" data-element="Mn" style="display: none;"></span>
+                                </label>
                                 <input type="number" name="manganese" class="form-control element-input"
-                                       step="0.0001" min="0" max="1" data-max="0.4"
+                                       step="0.0001" min="0" max="1" data-element="Mn" data-max="0.4"
                                        value="{{ analysis.manganese if analysis else '' }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">P (Phosphorus)</label>
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>P (Phosphorus)</span>
+                                    <span class="element-badge badge" data-element="P" style="display: none;"></span>
+                                </label>
                                 <input type="number" name="phosphorus" class="form-control element-input"
-                                       step="0.0001" min="0" max="1" data-max="0.059"
+                                       step="0.0001" min="0" max="1" data-element="P" data-max="0.059"
                                        value="{{ analysis.phosphorus if analysis else '' }}">
                             </div>
 
                             <!-- Trace Elements -->
                             <div class="col-md-3">
-                                <label class="form-label">Pb (Lead)</label>
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Pb (Lead)</span>
+                                    <span class="element-badge badge" data-element="Pb" style="display: none;"></span>
+                                </label>
                                 <input type="number" name="lead" class="form-control element-input"
-                                       step="0.0001" min="0" max="0.1" data-max="0.003"
+                                       step="0.0001" min="0" max="0.1" data-element="Pb" data-max="0.003"
                                        value="{{ analysis.lead if analysis else '' }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Al (Aluminum)</label>
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Al (Aluminum)</span>
+                                    <span class="element-badge badge" data-element="Al" style="display: none;"></span>
+                                </label>
                                 <input type="number" name="aluminum" class="form-control element-input"
-                                       step="0.0001" min="0" max="1" data-max="0.049"
+                                       step="0.0001" min="0" max="1" data-element="Al" data-max="0.049"
                                        value="{{ analysis.aluminum if analysis else '' }}">
                             </div>
                         </div>
@@ -217,25 +305,34 @@
                         <h6>{{ 'القيم المحسوبة' if session.get('lang') == 'ar' else 'Calculated Values' }}</h6>
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label">CE (Carbon Equivalent)</label>
-                                <input type="number" name="carbon_equivalent" class="form-control bg-light"
-                                       step="0.001" id="ceField" readonly
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>CE (Carbon Equivalent)</span>
+                                    <span class="element-badge badge" data-element="CE" style="display: none;"></span>
+                                </label>
+                                <input type="number" name="carbon_equivalent" class="form-control bg-light element-input"
+                                       step="0.001" id="ceField" data-element="CE" readonly
                                        value="{{ analysis.carbon_equivalent if analysis else '' }}">
-                                <small class="text-muted">CE = C + Si/3 (3.62-4.83)</small>
+                                <small class="text-muted">CE = C + Si/3 + P/2</small>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">MnE (Manganese Equivalent)</label>
-                                <input type="number" name="manganese_equivalent" class="form-control bg-light"
-                                       step="0.001" id="mneField" readonly
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>MnE (Manganese Equivalent)</span>
+                                    <span class="element-badge badge" data-element="MnE" style="display: none;"></span>
+                                </label>
+                                <input type="number" name="manganese_equivalent" class="form-control bg-light element-input"
+                                       step="0.001" id="mneField" data-element="MnE" readonly
                                        value="{{ analysis.manganese_equivalent if analysis else '' }}">
-                                <small class="text-muted">MnE = Mn - 1.7*S (0.1-0.85)</small>
+                                <small class="text-muted">MnE = 3*Cr + Cu + Mn + P</small>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">MgE (Magnesium Equivalent)</label>
-                                <input type="number" name="magnesium_equivalent" class="form-control bg-light"
-                                       step="0.001" id="mgeField" readonly
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>MgE (Magnesium Equivalent)</span>
+                                    <span class="element-badge badge" data-element="MgE" style="display: none;"></span>
+                                </label>
+                                <input type="number" name="magnesium_equivalent" class="form-control bg-light element-input"
+                                       step="0.001" id="mgeField" data-element="MgE" readonly
                                        value="{{ analysis.magnesium_equivalent if analysis else '' }}">
-                                <small class="text-muted">MgE = Mg - 0.76*S (min 0.023)</small>
+                                <small class="text-muted">MgE = Mg - S</small>
                             </div>
                         </div>
                     </div>
@@ -243,7 +340,7 @@
 
                 <!-- Submit Buttons -->
                 <div class="d-flex gap-2 justify-content-end">
-                    <a href="{{ url_for('chemical.index') }}" class="btn btn-outline-secondary">
+                    <a href="{{ url_for('chemical.list') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-x-circle"></i>
                         {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
                     </a>
@@ -261,15 +358,43 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // State tracking
+    let isManualOverride = false;
+    let lastAutoDecision = null;
+    let debounceTimer = null;
+
     // Element inputs validation and highlighting
     const elementInputs = document.querySelectorAll('.element-input');
+    const decisionSelect = document.getElementById('decisionSelect');
+    const autoDecisionCard = document.getElementById('autoDecisionCard');
+    const autoDecisionValue = document.getElementById('autoDecisionValue');
+    const worstElementsList = document.getElementById('worstElementsList');
+    const manualOverrideIndicator = document.getElementById('manualOverrideIndicator');
+    const decisionModeIndicator = document.getElementById('decisionModeIndicator');
+
     elementInputs.forEach(input => {
         input.addEventListener('input', function() {
             validateElement(this);
             calculateEquivalents();
+            // Debounced auto-decision calculation
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(calculateAutoDecision, 300);
         });
         // Initial validation
         validateElement(input);
+    });
+
+    // Track manual override when user changes decision
+    decisionSelect.addEventListener('change', function() {
+        if (lastAutoDecision && this.value !== lastAutoDecision) {
+            isManualOverride = true;
+            manualOverrideIndicator.style.display = 'inline-block';
+            decisionModeIndicator.style.display = 'none';
+        } else if (this.value === lastAutoDecision) {
+            isManualOverride = false;
+            manualOverrideIndicator.style.display = 'none';
+            decisionModeIndicator.style.display = 'inline-block';
+        }
     });
 
     // Auto-calculate ladle_id
@@ -293,9 +418,465 @@ document.addEventListener('DOMContentLoaded', function() {
     testDateInput.addEventListener('change', updateLadleId);
     ladleNoInput.addEventListener('input', updateLadleId);
 
-    // Initial calculation
+    // Generate ladle_id on page load
+    updateLadleId();
+
+    // Initial calculations
     calculateEquivalents();
+    // Delay auto-decision to allow equivalents to be calculated first
+    setTimeout(calculateAutoDecision, 100);
+
+    // AI Auto-Analysis (triggered automatically when elements change)
+    const aiLoadingSpinner = document.getElementById('aiLoadingSpinner');
+    const aiErrorAlert = document.getElementById('aiErrorAlert');
+    const aiErrorMessage = document.getElementById('aiErrorMessage');
+    const reasonField = document.getElementById('reasonField');
+    const notesField = document.getElementById('notesField');
+    const hasDefectCheckbox = document.getElementById('hasDefect');
+    const aiReasonBadge = document.getElementById('aiReasonBadge');
+    const aiDefectBadge = document.getElementById('aiDefectBadge');
+    const aiNotesBadge = document.getElementById('aiNotesBadge');
+
+    let aiDebounceTimer = null;
+    let lastAiValues = '';
+    let lastAiCallTime = 0;
+    let aiRateLimited = false;
+    let cooldownInterval = null;
+    const AI_COOLDOWN = 5000; // 5 seconds between API calls (Gemini has better rate limits)
+    const aiRefreshBtnIcon = document.getElementById('aiRefreshBtnIcon');
+    const aiCooldownTimer = document.getElementById('aiCooldownTimer');
+    const aiStatusText = document.getElementById('aiStatusText');
+    const aiRefreshBtn = document.getElementById('aiRefreshBtn');
+
+    // Update cooldown display
+    function updateCooldownDisplay() {
+        const now = Date.now();
+        const timeSinceLastCall = now - lastAiCallTime;
+        const remainingTime = Math.ceil((AI_COOLDOWN - timeSinceLastCall) / 1000);
+
+        if (remainingTime > 0) {
+            aiRefreshBtnIcon.style.display = 'none';
+            aiCooldownTimer.style.display = 'inline';
+            aiCooldownTimer.textContent = remainingTime + 's';
+            aiRefreshBtn.classList.add('disabled');
+            aiRefreshBtn.classList.remove('btn-outline-primary');
+            aiRefreshBtn.classList.add('btn-outline-secondary');
+        } else {
+            aiRefreshBtnIcon.style.display = 'inline';
+            aiCooldownTimer.style.display = 'none';
+            aiRefreshBtn.classList.remove('disabled');
+            aiRefreshBtn.classList.remove('btn-outline-secondary');
+            aiRefreshBtn.classList.add('btn-outline-primary');
+            if (cooldownInterval) {
+                clearInterval(cooldownInterval);
+                cooldownInterval = null;
+                // Update status when cooldown ends
+                if (typeof updateAiStatus === 'function') {
+                    updateAiStatus();
+                }
+            }
+        }
+    }
+
+    // Start cooldown timer
+    function startCooldownTimer() {
+        updateCooldownDisplay();
+        if (!cooldownInterval) {
+            cooldownInterval = setInterval(updateCooldownDisplay, 1000);
+        }
+    }
+
+    // Auto-trigger AI analysis when all fields are filled
+    function triggerAiAnalysis() {
+        console.log('AI Analysis: Checking fields...');
+
+        // Basic info fields required
+        const basicInfoFields = ['test_date', 'furnace_id', 'ladle_no'];
+
+        // Required element fields
+        const requiredElementFields = ['carbon', 'silicon', 'manganese', 'magnesium', 'sulfur'];
+
+        // All element fields to collect
+        const allElementFields = [
+            'carbon', 'silicon', 'manganese', 'magnesium', 'sulfur',
+            'chromium', 'copper', 'aluminum', 'phosphorus', 'lead',
+            'carbon_equivalent', 'manganese_equivalent', 'magnesium_equivalent'
+        ];
+
+        // Check basic info fields
+        for (const name of basicInfoFields) {
+            const input = document.querySelector(`[name="${name}"]`);
+            if (!input || !input.value || input.value.trim() === '') {
+                console.log('AI Analysis: Missing basic field:', name);
+                return;
+            }
+        }
+
+        // Check required element fields
+        for (const name of requiredElementFields) {
+            const input = document.querySelector(`input[name="${name}"]`);
+            if (!input || !input.value || input.value.trim() === '') {
+                console.log('AI Analysis: Missing element field:', name);
+                return;
+            }
+        }
+
+        console.log('AI Analysis: All required fields filled!');
+
+        // Collect all element values
+        const elementValues = {};
+        allElementFields.forEach(name => {
+            const input = document.querySelector(`input[name="${name}"]`);
+            if (input && input.value) {
+                elementValues[name] = parseFloat(input.value);
+            }
+        });
+
+        // Check if values changed from last call
+        const valuesKey = JSON.stringify(elementValues);
+        if (valuesKey === lastAiValues) {
+            return;
+        }
+
+        // Check cooldown to avoid rate limiting
+        const now = Date.now();
+        const timeSinceLastCall = now - lastAiCallTime;
+        if (timeSinceLastCall < AI_COOLDOWN) {
+            const waitTime = Math.ceil((AI_COOLDOWN - timeSinceLastCall) / 1000);
+            console.log(`AI Analysis: Cooldown active, wait ${waitTime}s`);
+            startCooldownTimer();
+            return;
+        }
+
+        lastAiValues = valuesKey;
+        lastAiCallTime = now;
+        startCooldownTimer(); // Start timer after successful call
+
+        // Show loading, hide error
+        aiLoadingSpinner.style.display = 'block';
+        aiErrorAlert.style.display = 'none';
+        aiStatusText.textContent = '{{ "جاري التحليل..." if session.get("lang") == "ar" else "Analyzing..." }}';
+        aiStatusText.className = 'text-primary small';
+        aiRefreshBtn.classList.remove('btn-pulse');
+
+        // Clear fields and show badges
+        reasonField.value = '';
+        notesField.value = '';
+        aiReasonBadge.style.display = 'inline-block';
+        aiNotesBadge.style.display = 'inline-block';
+        aiDefectBadge.style.display = 'inline-block';
+
+        console.log('AI Analysis: Calling streaming API with:', elementValues);
+
+        // Call streaming AI API
+        fetch('{{ url_for("chemical.api_ai_analysis_stream") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(elementValues)
+        })
+        .then(response => {
+            console.log('AI Analysis: Stream started');
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            function readStream() {
+                reader.read().then(({ done, value }) => {
+                    if (done) {
+                        aiLoadingSpinner.style.display = 'none';
+                        return;
+                    }
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // Keep incomplete line in buffer
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+
+                                if (data.error) {
+                                    console.log('AI Analysis: Stream error:', data.error);
+                                    aiLoadingSpinner.style.display = 'none';
+                                    aiErrorAlert.style.display = 'block';
+                                    if (data.error.includes('429')) {
+                                        aiRateLimited = true;
+                                        aiErrorMessage.innerHTML = '{{ "تم تجاوز الحد" if session.get("lang") == "ar" else "Rate limited" }}';
+                                        // Extend cooldown by 30 seconds after rate limit error
+                                        lastAiCallTime = Date.now() + 25000;
+                                        startCooldownTimer();
+                                    } else {
+                                        aiErrorMessage.textContent = data.error;
+                                    }
+                                    return;
+                                }
+
+                                if (data.done && data.result) {
+                                    // Final result - fill fields with typing effect
+                                    console.log('AI Analysis: Done, result:', data.result);
+                                    aiLoadingSpinner.style.display = 'none';
+                                    aiErrorAlert.style.display = 'none';
+
+                                    // Type out the reason
+                                    typeText(reasonField, data.result.reason || '', 20);
+
+                                    // Type out the notes after reason
+                                    const reasonDelay = (data.result.reason || '').length * 20 + 100;
+                                    setTimeout(() => {
+                                        typeText(notesField, data.result.notes || '', 20);
+                                    }, reasonDelay);
+
+                                    // Set defect checkbox
+                                    hasDefectCheckbox.checked = data.result.has_defect;
+
+                                    // Update status after typing is done
+                                    const totalDelay = reasonDelay + (data.result.notes || '').length * 20 + 200;
+                                    setTimeout(() => {
+                                        aiStatusText.textContent = '{{ "تم التحليل ✓" if session.get("lang") == "ar" else "Analysis complete ✓" }}';
+                                        aiStatusText.className = 'text-success small';
+                                    }, totalDelay);
+                                }
+                            } catch (e) {
+                                // Ignore parse errors for incomplete chunks
+                            }
+                        }
+                    }
+
+                    readStream();
+                });
+            }
+
+            readStream();
+        })
+        .catch(error => {
+            console.log('AI Analysis: Fetch error:', error);
+            aiLoadingSpinner.style.display = 'none';
+            aiErrorAlert.style.display = 'block';
+            aiErrorMessage.textContent = 'Error: ' + error.message;
+        });
+    }
+
+    // Check if all required fields are filled (for showing ready status)
+    function checkAiReadiness() {
+        const basicInfoFields = ['test_date', 'furnace_id', 'ladle_no'];
+        const requiredElementFields = ['carbon', 'silicon', 'manganese', 'magnesium', 'sulfur'];
+
+        for (const name of basicInfoFields) {
+            const input = document.querySelector(`[name="${name}"]`);
+            if (!input || !input.value || input.value.trim() === '') return false;
+        }
+
+        for (const name of requiredElementFields) {
+            const input = document.querySelector(`input[name="${name}"]`);
+            if (!input || !input.value || input.value.trim() === '') return false;
+        }
+
+        return true;
+    }
+
+    // Update status text based on readiness
+    function updateAiStatus() {
+        const isReady = checkAiReadiness();
+        const now = Date.now();
+        const timeSinceLastCall = now - lastAiCallTime;
+        const inCooldown = timeSinceLastCall < AI_COOLDOWN;
+
+        if (isReady && !inCooldown) {
+            aiStatusText.textContent = '{{ "جاهز للتحليل" if session.get("lang") == "ar" else "Ready to analyze" }}';
+            aiStatusText.className = 'text-success small';
+            aiRefreshBtn.classList.add('btn-pulse');
+        } else if (isReady && inCooldown) {
+            aiStatusText.textContent = '{{ "انتظر..." if session.get("lang") == "ar" else "Waiting..." }}';
+            aiStatusText.className = 'text-muted small';
+            aiRefreshBtn.classList.remove('btn-pulse');
+        } else {
+            aiStatusText.textContent = '{{ "أكمل الحقول المطلوبة" if session.get("lang") == "ar" else "Fill required fields" }}';
+            aiStatusText.className = 'text-muted small';
+            aiRefreshBtn.classList.remove('btn-pulse');
+        }
+    }
+
+    // Check AI readiness when values change (no auto-call to avoid rate limits)
+    function scheduleAiStatusCheck() {
+        clearTimeout(aiDebounceTimer);
+        aiDebounceTimer = setTimeout(updateAiStatus, 500);
+    }
+
+    // Add status check to element inputs
+    elementInputs.forEach(input => {
+        input.addEventListener('input', scheduleAiStatusCheck);
+    });
+
+    // Add status check to basic info fields
+    document.querySelector('input[name="test_date"]').addEventListener('change', scheduleAiStatusCheck);
+    document.querySelector('select[name="furnace_id"]').addEventListener('change', scheduleAiStatusCheck);
+    document.querySelector('input[name="ladle_no"]').addEventListener('input', scheduleAiStatusCheck);
+
+    // Initial status check
+    setTimeout(updateAiStatus, 200);
+
+    // Manual refresh button
+    aiRefreshBtn.addEventListener('click', function() {
+        const now = Date.now();
+        const timeSinceLastCall = now - lastAiCallTime;
+
+        if (timeSinceLastCall < AI_COOLDOWN) {
+            // Just show the timer is counting, don't show error
+            startCooldownTimer();
+            return;
+        }
+
+        lastAiValues = ''; // Reset cache
+        aiErrorAlert.style.display = 'none';
+        triggerAiAnalysis();
+    });
+
+    // Auto-decision calculation function
+    function calculateAutoDecision() {
+        // Collect all element values
+        const elementValues = {};
+        const fieldNames = [
+            'carbon', 'silicon', 'manganese', 'magnesium', 'sulfur',
+            'chromium', 'copper', 'aluminum', 'phosphorus', 'lead',
+            'carbon_equivalent', 'manganese_equivalent', 'magnesium_equivalent'
+        ];
+
+        fieldNames.forEach(name => {
+            const input = document.querySelector(`input[name="${name}"]`);
+            if (input && input.value) {
+                elementValues[name] = parseFloat(input.value);
+            }
+        });
+
+        // Check if we have any values
+        if (Object.keys(elementValues).length === 0) {
+            autoDecisionCard.style.display = 'none';
+            return;
+        }
+
+        // Call API
+        fetch('{{ url_for("chemical.api_auto_decision") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(elementValues)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.recommended_decision) {
+                // Show auto-decision card
+                autoDecisionCard.style.display = 'block';
+                autoDecisionValue.textContent = data.recommended_decision;
+
+                // Update card color based on decision priority
+                autoDecisionCard.className = 'alert mb-3 ' + getDecisionAlertClass(data.decision_priority);
+
+                // Show worst elements
+                if (data.worst_elements && data.worst_elements.length > 0) {
+                    worstElementsList.textContent = data.worst_elements.join(', ');
+                } else {
+                    worstElementsList.textContent = '-';
+                }
+
+                // Update element badges
+                updateElementBadges(data.element_decisions);
+
+                // Store last auto decision
+                lastAutoDecision = data.recommended_decision;
+
+                // Auto-select decision if not manually overridden
+                if (!isManualOverride) {
+                    decisionSelect.value = data.recommended_decision;
+                    decisionModeIndicator.style.display = 'inline-block';
+                }
+            } else {
+                autoDecisionCard.style.display = 'none';
+                // Clear badges
+                document.querySelectorAll('.element-badge').forEach(badge => {
+                    badge.style.display = 'none';
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error calculating auto-decision:', error);
+        });
+    }
+
+    function getDecisionAlertClass(priority) {
+        switch(priority) {
+            case 1: return 'alert-success';    // Best - Green
+            case 2: return 'alert-warning';    // Warning - Yellow
+            case 3: return 'alert-orange';     // 100% Inspection - Orange
+            case 4: return 'alert-danger';     // Rejected - Red
+            default: return 'alert-info';
+        }
+    }
+
+    function getDecisionBadgeClass(priority) {
+        switch(priority) {
+            case 1: return 'bg-success';    // Best - Green
+            case 2: return 'bg-warning text-dark';  // Warning - Yellow
+            case 3: return 'bg-orange';     // 100% Inspection - Orange
+            case 4: return 'bg-danger';     // Rejected - Red
+            default: return 'bg-secondary';
+        }
+    }
+
+    function getShortDecision(decision) {
+        const shortNames = {
+            'فحص أخيرة فقط': 'OK',
+            'فحص أولى وأخيرة': '1st+Last',
+            'فحص الشحنة 100%': '100%',
+            'تالف': 'Reject'
+        };
+        return shortNames[decision] || decision;
+    }
+
+    function updateElementBadges(elementDecisions) {
+        // Hide all badges first
+        document.querySelectorAll('.element-badge').forEach(badge => {
+            badge.style.display = 'none';
+        });
+
+        // Update badges for each element
+        for (const [elementCode, data] of Object.entries(elementDecisions)) {
+            const badge = document.querySelector(`.element-badge[data-element="${elementCode}"]`);
+            if (badge) {
+                badge.style.display = 'inline-block';
+                badge.textContent = getShortDecision(data.decision);
+                badge.className = 'element-badge badge ' + getDecisionBadgeClass(data.priority);
+            }
+        }
+    }
 });
+
+// Typing effect function - types text character by character
+function typeText(element, text, speed = 30) {
+    if (!text) return;
+
+    element.value = '';
+    element.classList.add('border-success');
+    let index = 0;
+
+    function type() {
+        if (index < text.length) {
+            element.value += text.charAt(index);
+            index++;
+            setTimeout(type, speed);
+        } else {
+            // Done typing
+            setTimeout(() => element.classList.remove('border-success'), 1000);
+        }
+    }
+
+    type();
+}
 
 function validateElement(input) {
     const value = parseFloat(input.value);
@@ -323,21 +904,50 @@ function calculateEquivalents() {
     const manganese = parseFloat(document.querySelector('input[name="manganese"]').value) || 0;
     const magnesium = parseFloat(document.querySelector('input[name="magnesium"]').value) || 0;
     const sulfur = parseFloat(document.querySelector('input[name="sulfur"]').value) || 0;
+    const phosphorus = parseFloat(document.querySelector('input[name="phosphorus"]').value) || 0;
+    const chromium = parseFloat(document.querySelector('input[name="chromium"]').value) || 0;
+    const copper = parseFloat(document.querySelector('input[name="copper"]').value) || 0;
 
-    // CE = C + Si/3
-    if (carbon > 0 && silicon > 0) {
-        document.getElementById('ceField').value = (carbon + silicon / 3).toFixed(3);
+    // CE = C + Si/3 + P/2
+    if (carbon > 0 || silicon > 0 || phosphorus > 0) {
+        document.getElementById('ceField').value = (carbon + silicon / 3 + phosphorus / 2).toFixed(3);
     }
 
-    // MnE = Mn - 1.7*S
-    if (manganese > 0) {
-        document.getElementById('mneField').value = (manganese - 1.7 * sulfur).toFixed(4);
+    // MnE = 3*Cr + Cu + Mn + P
+    if (chromium > 0 || copper > 0 || manganese > 0 || phosphorus > 0) {
+        document.getElementById('mneField').value = (3 * chromium + copper + manganese + phosphorus).toFixed(4);
     }
 
-    // MgE = Mg - 0.76*S
+    // MgE = Mg - S
     if (magnesium > 0) {
-        document.getElementById('mgeField').value = (magnesium - 0.76 * sulfur).toFixed(4);
+        document.getElementById('mgeField').value = (magnesium - sulfur).toFixed(4);
     }
 }
 </script>
+<style>
+/* Custom orange color for 100% inspection decision */
+.alert-orange {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+.bg-orange {
+    background-color: #fd7e14 !important;
+    color: white !important;
+}
+/* Pulse animation for AI button when ready */
+.btn-pulse {
+    animation: pulse-animation 2s infinite;
+}
+@keyframes pulse-animation {
+    0% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(13, 110, 253, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
+}
+/* Typing animation border */
+.border-success {
+    border-color: #198754 !important;
+    box-shadow: 0 0 5px rgba(25, 135, 84, 0.5);
+}
+</style>
 {% endblock %}

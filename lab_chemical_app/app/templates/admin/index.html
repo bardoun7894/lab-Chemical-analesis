@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'لوحة الإدارة' if session.get('lang') == 'ar' else 'Admin Dashboard' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-shield-lock"></i>
+                {{ 'لوحة الإدارة' if session.get('lang') == 'ar' else 'Admin Dashboard' }}
+            </h2>
+            <p class="text-muted mb-0">
+                {{ 'مرحباً بك في لوحة إدارة النظام' if session.get('lang') == 'ar' else 'Welcome to the system administration panel' }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">
+                                {{ 'إجمالي المستخدمين' if session.get('lang') == 'ar' else 'Total Users' }}
+                            </h6>
+                            <h2 class="mb-0">{{ user_count }}</h2>
+                        </div>
+                        <i class="bi bi-people display-4 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card border-0 shadow-sm bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">
+                                {{ 'المستخدمين النشطين' if session.get('lang') == 'ar' else 'Active Users' }}
+                            </h6>
+                            <h2 class="mb-0">{{ active_users }}</h2>
+                        </div>
+                        <i class="bi bi-person-check display-4 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card border-0 shadow-sm bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">
+                                {{ 'المستخدمين المعطلين' if session.get('lang') == 'ar' else 'Inactive Users' }}
+                            </h6>
+                            <h2 class="mb-0">{{ user_count - active_users }}</h2>
+                        </div>
+                        <i class="bi bi-person-x display-4 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="card border-0 shadow-sm bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-dark-50">
+                                {{ 'معدل التفعيل' if session.get('lang') == 'ar' else 'Active Rate' }}
+                            </h6>
+                            <h2 class="mb-0">{{ ((active_users / user_count * 100) if user_count > 0 else 0)|round|int }}%</h2>
+                        </div>
+                        <i class="bi bi-graph-up display-4 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-person-plus display-4 text-primary"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'إضافة مستخدم' if session.get('lang') == 'ar' else 'Add User' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'إنشاء حساب مستخدم جديد' if session.get('lang') == 'ar' else 'Create a new user account' }}
+                    </p>
+                    <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg"></i>
+                        {{ 'إضافة' if session.get('lang') == 'ar' else 'Add' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-people display-4 text-success"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'إدارة المستخدمين' if session.get('lang') == 'ar' else 'Manage Users' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'عرض وتعديل المستخدمين الحاليين' if session.get('lang') == 'ar' else 'View and edit existing users' }}
+                    </p>
+                    <a href="{{ url_for('admin.users') }}" class="btn btn-success">
+                        <i class="bi bi-arrow-{{ 'left' if session.get('lang') == 'ar' else 'right' }}"></i>
+                        {{ 'عرض' if session.get('lang') == 'ar' else 'View' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-gear display-4 text-info"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'الإعدادات' if session.get('lang') == 'ar' else 'Settings' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'تكوين إعدادات النظام والقواعد' if session.get('lang') == 'ar' else 'Configure system settings and rules' }}
+                    </p>
+                    <a href="{{ url_for('admin.settings') }}" class="btn btn-info">
+                        <i class="bi bi-arrow-{{ 'left' if session.get('lang') == 'ar' else 'right' }}"></i>
+                        {{ 'إعدادات' if session.get('lang') == 'ar' else 'Settings' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-bug display-4 text-danger"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'أنواع العيوب' if session.get('lang') == 'ar' else 'Defect Types' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'إدارة أنواع العيوب لكل مرحلة إنتاج' if session.get('lang') == 'ar' else 'Manage defect types for each production stage' }}
+                    </p>
+                    <a href="{{ url_for('admin.defect_types') }}" class="btn btn-danger">
+                        <i class="bi bi-arrow-{{ 'left' if session.get('lang') == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة' if session.get('lang') == 'ar' else 'Manage' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

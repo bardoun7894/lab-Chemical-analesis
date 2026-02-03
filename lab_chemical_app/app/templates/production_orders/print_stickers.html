@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'طباعة ملصقات' if session.get('lang') == 'ar' else 'Print Stickers' }} - {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-printer"></i>
+                {{ 'طباعة ملصقات أمر الإنتاج' if session.get('lang') == 'ar' else 'Print Production Order Stickers' }}
+            </h2>
+            <p class="text-muted mb-0">
+                {{ order.order_number }} - {{ order.customer_name or ('بدون عميل' if session.get('lang') == 'ar' else 'No Customer') }}
+                <span class="badge bg-secondary">{{ pipes|length }} {{ 'أنبوب' if session.get('lang') == 'ar' else 'pipes' }}</span>
+            </p>
+        </div>
+        <a href="{{ url_for('production_orders.view', id=order.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-{{ 'left' if session.get('lang') != 'ar' else 'right' }}"></i>
+            {{ 'رجوع' if session.get('lang') == 'ar' else 'Back' }}
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Options -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear"></i>
+                        {{ 'خيارات الطباعة' if session.get('lang') == 'ar' else 'Print Options' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'حجم الملصق' if session.get('lang') == 'ar' else 'Sticker Size' }}</label>
+                        <div class="btn-group-vertical w-100" role="group">
+                            <input type="radio" class="btn-check" name="stickerSize" id="sizeSmall" value="small">
+                            <label class="btn btn-outline-primary" for="sizeSmall">
+                                {{ 'صغير' if session.get('lang') == 'ar' else 'Small' }} (50x30mm)
+                            </label>
+
+                            <input type="radio" class="btn-check" name="stickerSize" id="sizeMedium" value="medium" checked>
+                            <label class="btn btn-outline-primary" for="sizeMedium">
+                                {{ 'متوسط' if session.get('lang') == 'ar' else 'Medium' }} (70x50mm)
+                            </label>
+
+                            <input type="radio" class="btn-check" name="stickerSize" id="sizeLarge" value="large">
+                            <label class="btn btn-outline-primary" for="sizeLarge">
+                                {{ 'كبير' if session.get('lang') == 'ar' else 'Large' }} (100x70mm)
+                            </label>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-grid gap-2">
+                        <a id="downloadPdfBtn" href="{{ url_for('production_orders.generate_batch_stickers', id=order.id) }}?size=medium"
+                           class="btn btn-success btn-lg">
+                            <i class="bi bi-file-pdf"></i>
+                            {{ 'تحميل PDF للطباعة' if session.get('lang') == 'ar' else 'Download PDF for Print' }}
+                        </a>
+                        <button type="button" class="btn btn-outline-primary" onclick="printSelected()">
+                            <i class="bi bi-printer"></i>
+                            {{ 'طباعة المحددة' if session.get('lang') == 'ar' else 'Print Selected' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        {{ 'معلومات الأمر' if session.get('lang') == 'ar' else 'Order Info' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr>
+                            <th>{{ 'رقم الأمر' if session.get('lang') == 'ar' else 'Order #' }}</th>
+                            <td>{{ order.order_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'العميل' if session.get('lang') == 'ar' else 'Customer' }}</th>
+                            <td>{{ order.customer_name or '-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}</th>
+                            <td>DN{{ order.diameter }} {{ order.pipe_class or '' }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'عدد الأنابيب' if session.get('lang') == 'ar' else 'Pipes Count' }}</th>
+                            <td>{{ pipes|length }} / {{ order.target_quantity }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pipes Selection -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-check"></i>
+                        {{ 'اختيار الأنابيب' if session.get('lang') == 'ar' else 'Select Pipes' }}
+                    </h5>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAll()">
+                            {{ 'اختيار الكل' if session.get('lang') == 'ar' else 'Select All' }}
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAll()">
+                            {{ 'إلغاء الكل' if session.get('lang') == 'ar' else 'Deselect All' }}
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 40px;">
+                                    <input type="checkbox" class="form-check-input" id="selectAllCheck" onchange="toggleAll(this)">
+                                </th>
+                                <th>{{ 'الكود' if session.get('lang') == 'ar' else 'Code' }}</th>
+                                <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                                <th>{{ 'القطر' if session.get('lang') == 'ar' else 'DN' }}</th>
+                                <th>{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }}</th>
+                                <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                                <th>{{ 'معاينة' if session.get('lang') == 'ar' else 'Preview' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pipe in pipes %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input pipe-checkbox" value="{{ pipe.id }}" checked>
+                                </td>
+                                <td><strong>{{ pipe.no_code }}</strong></td>
+                                <td>{{ pipe.ladle_id or '-' }}</td>
+                                <td>DN{{ pipe.diameter }}</td>
+                                <td><span class="badge bg-info">{{ pipe.current_stage }}</span></td>
+                                <td>
+                                    {% if pipe.final_decision == 'ACCEPT' %}
+                                        <span class="badge bg-success">{{ 'مقبول' if session.get('lang') == 'ar' else 'ACCEPT' }}</span>
+                                    {% elif pipe.final_decision == 'REJECT' %}
+                                        <span class="badge bg-danger">{{ 'مرفوض' if session.get('lang') == 'ar' else 'REJECT' }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('stickers.generate_sticker', pipe_id=pipe.id) }}"
+                                       target="_blank" class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    {{ 'لا توجد أنابيب' if session.get('lang') == 'ar' else 'No pipes found' }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Update PDF download link when size changes
+document.querySelectorAll('input[name="stickerSize"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const btn = document.getElementById('downloadPdfBtn');
+        btn.href = "{{ url_for('production_orders.generate_batch_stickers', id=order.id) }}?size=" + this.value;
+    });
+});
+
+function selectAll() {
+    document.querySelectorAll('.pipe-checkbox').forEach(cb => cb.checked = true);
+    document.getElementById('selectAllCheck').checked = true;
+}
+
+function deselectAll() {
+    document.querySelectorAll('.pipe-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('selectAllCheck').checked = false;
+}
+
+function toggleAll(checkbox) {
+    document.querySelectorAll('.pipe-checkbox').forEach(cb => cb.checked = checkbox.checked);
+}
+
+function printSelected() {
+    const selectedIds = [];
+    document.querySelectorAll('.pipe-checkbox:checked').forEach(cb => {
+        selectedIds.push(cb.value);
+    });
+
+    if (selectedIds.length === 0) {
+        alert("{{ 'الرجاء اختيار أنابيب للطباعة' if session.get('lang') == 'ar' else 'Please select pipes to print' }}");
+        return;
+    }
+
+    const size = document.querySelector('input[name="stickerSize"]:checked').value;
+
+    // Open print window with selected stickers
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Print Stickers</title>
+            <style>
+                body { margin: 0; padding: 20px; }
+                .sticker { page-break-inside: avoid; margin-bottom: 20px; }
+                img { max-width: 100%; }
+                @media print {
+                    .sticker { page-break-inside: avoid; }
+                }
+            </style>
+        </head>
+        <body>
+    `);
+
+    selectedIds.forEach(id => {
+        printWindow.document.write(`
+            <div class="sticker">
+                <img src="/stickers/generate/${id}?size=${size}" alt="Sticker">
+            </div>
+        `);
+    });
+
+    printWindow.document.write(`
+            <script>
+                window.onload = function() {
+                    setTimeout(function() { window.print(); }, 1000);
+                };
+            <\/script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
+</script>
+{% endblock %}

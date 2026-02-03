@@ -17,7 +17,7 @@
                         {{ 'قائمة جميع الاختبارات الميكانيكية' if session.get('lang') == 'ar' else 'List of all mechanical tests' }}
                     </p>
                 </div>
-                <a href="{{ url_for('mechanical.create') }}" class="btn btn-warning">
+                <a href="{{ url_for('mechanical.add') }}" class="btn btn-warning">
                     <i class="bi bi-plus-circle"></i>
                     {{ 'إضافة اختبار' if session.get('lang') == 'ar' else 'Add Test' }}
                 </a>
@@ -62,7 +62,7 @@
                     </button>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
-                    <a href="{{ url_for('mechanical.index') }}" class="btn btn-outline-secondary w-100">
+                    <a href="{{ url_for('mechanical.list') }}" class="btn btn-outline-secondary w-100">
                         <i class="bi bi-x-circle"></i>
                         {{ 'مسح' if session.get('lang') == 'ar' else 'Clear' }}
                     </a>
@@ -79,7 +79,7 @@
                     <thead class="table-dark">
                         <tr>
                             <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
-                            <th>{{ 'الكود' if session.get('lang') == 'ar' else 'Code' }}</th>
+                            <th>{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'Pipe Code' }}</th>
                             <th>{{ 'القطر' if session.get('lang') == 'ar' else 'DN' }}</th>
                             <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
                             <th>{{ 'قوة الشد' if session.get('lang') == 'ar' else 'Tensile' }}</th>
@@ -94,7 +94,7 @@
                         {% for test in tests %}
                         <tr>
                             <td>{{ test.test_date }}</td>
-                            <td><strong>{{ test.code or '-' }}</strong></td>
+                            <td><strong>{{ test.pipe_code or test.code or '-' }}</strong></td>
                             <td>DN{{ test.diameter or '?' }}</td>
                             <td><small class="text-muted">{{ test.ladle_id or '-' }}</small></td>
                             <td>{{ '%.1f'|format(test.tensile_strength) if test.tensile_strength else '-' }} MPa</td>
@@ -112,7 +112,7 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('mechanical.view', id=test.id) }}" class="btn btn-outline-info" title="View">
+                                    <a href="{{ url_for('mechanical.detail', id=test.id) }}" class="btn btn-outline-info" title="View">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     <a href="{{ url_for('mechanical.edit', id=test.id) }}" class="btn btn-outline-primary" title="Edit">
@@ -132,10 +132,10 @@
                 </table>
             </div>
         </div>
-        {% if tests %}
+        {% if tests.total > 0 %}
         <div class="card-footer bg-white">
             <small class="text-muted">
-                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ tests|length }}
+                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ tests.total }}
                 {{ 'اختبار' if session.get('lang') == 'ar' else 'tests' }}
             </small>
         </div>

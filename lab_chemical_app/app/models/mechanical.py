@@ -16,8 +16,10 @@ class MechanicalTest(db.Model):
     test_number = db.Column(db.Integer)
     diameter = db.Column(db.Integer)  # 300, 500, etc.
     code = db.Column(db.String(50))  # A2989, V4783
+    pipe_code = db.Column(db.String(100), index=True)  # Full pipe code: N2133-1-303022026
     pipe_no = db.Column(db.Integer)
     ladle_id = db.Column(db.String(20), db.ForeignKey('chemical_analyses.ladle_id'), index=True)
+    pipe_id = db.Column(db.Integer, db.ForeignKey('pipes.id'), index=True)
     day = db.Column(db.Integer)
     month = db.Column(db.Integer)
     year = db.Column(db.Integer)
@@ -61,8 +63,7 @@ class MechanicalTest(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
-    # Relationships
-    chemical_analysis = db.relationship('ChemicalAnalysis', back_populates='mechanical_tests')
+    # Relationships defined via backref in ChemicalAnalysis and Pipe
 
     def calculate_derived_values(self):
         """Calculate derived values from measurements"""
