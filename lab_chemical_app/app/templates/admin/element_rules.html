@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ 'إعدادات قواعد العناصر' if session.get('lang') == 'ar' else 'Element Rules Settings' }}{% endblock %}
+{% block title %}{{ 'إعدادات قواعد العناصر' if current_locale == 'ar' else 'Element Rules Settings' }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -9,20 +9,20 @@
         <div>
             <h2>
                 <i class="bi bi-sliders"></i>
-                {{ 'إعدادات قواعد العناصر الكيميائية' if session.get('lang') == 'ar' else 'Chemical Element Rules Settings' }}
+                {{ 'إعدادات قواعد العناصر الكيميائية' if current_locale == 'ar' else 'Chemical Element Rules Settings' }}
             </h2>
             <p class="text-muted mb-0">
-                {{ 'تعديل نطاقات القرارات لكل عنصر كيميائي' if session.get('lang') == 'ar' else 'Configure decision ranges for each chemical element' }}
+                {{ 'تعديل نطاقات القرارات لكل عنصر كيميائي' if current_locale == 'ar' else 'Configure decision ranges for each chemical element' }}
             </p>
         </div>
         <div>
             <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addElementModal">
                 <i class="bi bi-plus-lg"></i>
-                {{ 'إضافة عنصر' if session.get('lang') == 'ar' else 'Add Element' }}
+                {{ 'إضافة عنصر' if current_locale == 'ar' else 'Add Element' }}
             </button>
             <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-{{ 'left' if session.get('lang') != 'ar' else 'right' }}"></i>
-                {{ 'رجوع' if session.get('lang') == 'ar' else 'Back' }}
+                <i class="bi bi-arrow-{{ 'left' if current_locale != 'ar' else 'right' }}"></i>
+                {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
             </a>
         </div>
     </div>
@@ -30,12 +30,12 @@
     <!-- Decision Legend -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <h6 class="mb-3">{{ 'مفتاح القرارات:' if session.get('lang') == 'ar' else 'Decision Legend:' }}</h6>
+            <h6 class="mb-3">{{ 'مفتاح القرارات:' if current_locale == 'ar' else 'Decision Legend:' }}</h6>
             <div class="d-flex flex-wrap gap-3">
-                <span class="badge bg-success fs-6">فحص أخيرة فقط - {{ 'الأفضل' if session.get('lang') == 'ar' else 'Best' }}</span>
+                <span class="badge bg-success fs-6">فحص أخيرة فقط - {{ 'الأفضل' if current_locale == 'ar' else 'Best' }}</span>
                 <span class="badge bg-info fs-6">فحص أولى وأخيرة</span>
                 <span class="badge bg-warning text-dark fs-6">فحص الشحنة 100%</span>
-                <span class="badge bg-danger fs-6">تالف - {{ 'مرفوض' if session.get('lang') == 'ar' else 'Rejected' }}</span>
+                <span class="badge bg-danger fs-6">تالف - {{ 'مرفوض' if current_locale == 'ar' else 'Rejected' }}</span>
             </div>
         </div>
     </div>
@@ -65,9 +65,9 @@
                     <table class="table table-sm table-striped mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>{{ 'من' if session.get('lang') == 'ar' else 'Min' }}</th>
-                                <th>{{ 'إلى' if session.get('lang') == 'ar' else 'Max' }}</th>
-                                <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                                <th>{{ 'من' if current_locale == 'ar' else 'Min' }}</th>
+                                <th>{{ 'إلى' if current_locale == 'ar' else 'Max' }}</th>
+                                <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -98,7 +98,7 @@
         {% else %}
         <div class="col-12">
             <div class="alert alert-info">
-                {{ 'لا توجد قواعد عناصر. أضف عنصر جديد للبدء.' if session.get('lang') == 'ar' else 'No element rules found. Add a new element to get started.' }}
+                {{ 'لا توجد قواعد عناصر. أضف عنصر جديد للبدء.' if current_locale == 'ar' else 'No element rules found. Add a new element to get started.' }}
             </div>
         </div>
         {% endfor %}
@@ -112,26 +112,26 @@
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="bi bi-plus-circle"></i>
-                    {{ 'إضافة عنصر جديد' if session.get('lang') == 'ar' else 'Add New Element' }}
+                    {{ 'إضافة عنصر جديد' if current_locale == 'ar' else 'Add New Element' }}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">{{ 'رمز العنصر' if session.get('lang') == 'ar' else 'Element Symbol' }}</label>
+                    <label class="form-label">{{ 'رمز العنصر' if current_locale == 'ar' else 'Element Symbol' }}</label>
                     <input type="text" id="newElementName" class="form-control" placeholder="Fe, Ni, V...">
                     <small class="text-muted">
-                        {{ 'استخدم الرمز الكيميائي للعنصر' if session.get('lang') == 'ar' else 'Use the chemical symbol' }}
+                        {{ 'استخدم الرمز الكيميائي للعنصر' if current_locale == 'ar' else 'Use the chemical symbol' }}
                     </small>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                    {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
                 </button>
                 <button type="button" class="btn btn-success" onclick="addElement()">
                     <i class="bi bi-plus"></i>
-                    {{ 'إضافة' if session.get('lang') == 'ar' else 'Add' }}
+                    {{ 'إضافة' if current_locale == 'ar' else 'Add' }}
                 </button>
             </div>
         </div>
@@ -144,7 +144,7 @@
 function addElement() {
     const elementName = document.getElementById('newElementName').value.trim().toUpperCase();
     if (!elementName) {
-        alert("{{ 'الرجاء إدخال رمز العنصر' if session.get('lang') == 'ar' else 'Please enter element symbol' }}");
+        alert("{{ 'الرجاء إدخال رمز العنصر' if current_locale == 'ar' else 'Please enter element symbol' }}");
         return;
     }
 
@@ -176,7 +176,7 @@ function addElement() {
 }
 
 function deleteElement(element) {
-    if (!confirm("{{ 'هل أنت متأكد من حذف عنصر ' if session.get('lang') == 'ar' else 'Are you sure you want to delete ' }}" + element + "?")) {
+    if (!confirm("{{ 'هل أنت متأكد من حذف عنصر ' if current_locale == 'ar' else 'Are you sure you want to delete ' }}" + element + "?")) {
         return;
     }
 

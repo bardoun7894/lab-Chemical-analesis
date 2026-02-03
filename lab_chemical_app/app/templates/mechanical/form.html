@@ -10,9 +10,9 @@
             <h2>
                 <i class="bi bi-gear"></i>
                 {% if test %}
-                {{ 'تعديل الاختبار الميكانيكي' if session.get('lang') == 'ar' else 'Edit Mechanical Test' }}
+                {{ 'تعديل الاختبار الميكانيكي' if current_locale == 'ar' else 'Edit Mechanical Test' }}
                 {% else %}
-                {{ 'اختبار ميكانيكي جديد' if session.get('lang') == 'ar' else 'New Mechanical Test' }}
+                {{ 'اختبار ميكانيكي جديد' if current_locale == 'ar' else 'New Mechanical Test' }}
                 {% endif %}
             </h2>
             <nav aria-label="breadcrumb">
@@ -34,21 +34,21 @@
                     <div class="card-header bg-warning">
                         <h5 class="mb-0">
                             <i class="bi bi-info-circle"></i>
-                            {{ 'معلومات أساسية' if session.get('lang') == 'ar' else 'Basic Information' }}
+                            {{ 'معلومات أساسية' if current_locale == 'ar' else 'Basic Information' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <!-- Pipe Code at top with search -->
                         <div class="mb-3">
-                            <label class="form-label">{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'Pipe Code' }} *</label>
+                            <label class="form-label">{{ 'كود الأنبوب' if current_locale == 'ar' else 'Pipe Code' }} *</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                                 <input type="text" class="form-control" id="pipeSearchInput"
-                                       placeholder="{{ 'ابحث عن كود الأنبوب...' if session.get('lang') == 'ar' else 'Search pipe code...' }}"
+                                       placeholder="{{ 'ابحث عن كود الأنبوب...' if current_locale == 'ar' else 'Search pipe code...' }}"
                                        autocomplete="off">
                             </div>
                             <select name="pipe_id" class="form-select mt-2" id="pipeSelect" required size="5" style="height: auto;">
-                                <option value="">-- {{ 'اختر كود الأنبوب' if session.get('lang') == 'ar' else 'Select Pipe Code' }} --</option>
+                                <option value="">-- {{ 'اختر كود الأنبوب' if current_locale == 'ar' else 'Select Pipe Code' }} --</option>
                                 {% for pipe in pipes %}
                                 <option value="{{ pipe.id }}"
                                     {{ 'selected' if test and test.pipe_id == pipe.id }}
@@ -62,14 +62,14 @@
                             <input type="hidden" name="pipe_code" id="pipeCodeHidden" value="{{ test.pipe_code if test else '' }}">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">{{ 'تاريخ الاختبار' if session.get('lang') == 'ar' else 'Test Date' }} *</label>
+                            <label class="form-label">{{ 'تاريخ الاختبار' if current_locale == 'ar' else 'Test Date' }} *</label>
                             <input type="date" name="test_date" class="form-control" required
                                    value="{{ test.test_date if test else today }}">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter (DN)' }}</label>
+                            <label class="form-label">{{ 'القطر' if current_locale == 'ar' else 'Diameter (DN)' }}</label>
                             <select name="diameter" class="form-select" id="diameterSelect">
-                                <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
                                 <option value="300" {{ 'selected' if test and test.diameter == 300 }}>DN300</option>
                                 <option value="400" {{ 'selected' if test and test.diameter == 400 }}>DN400</option>
                                 <option value="500" {{ 'selected' if test and test.diameter == 500 }}>DN500</option>
@@ -77,10 +77,10 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</label>
+                            <label class="form-label">{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</label>
                             <input type="text" name="ladle_id" class="form-control" placeholder="4713012025"
                                    value="{{ test.ladle_id if test else '' }}" id="ladleIdInput" readonly>
-                            <small class="text-muted">{{ 'يتم تعبئته تلقائياً من كود الأنبوب' if session.get('lang') == 'ar' else 'Auto-filled from pipe code' }}</small>
+                            <small class="text-muted">{{ 'يتم تعبئته تلقائياً من كود الأنبوب' if current_locale == 'ar' else 'Auto-filled from pipe code' }}</small>
                         </div>
                     </div>
                 </div>
@@ -90,7 +90,7 @@
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="bi bi-check-circle"></i>
-                            {{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}
+                            {{ 'القرار' if current_locale == 'ar' else 'Decision' }}
                         </h5>
                         <span id="aiModeBadge" class="badge bg-light text-dark" style="display: none;">
                             <i class="bi bi-robot"></i> AI
@@ -107,7 +107,7 @@
                                 </button>
                                 <div id="aiLoadingSpinner" style="display: none;">
                                     <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                                    <small class="text-muted ms-2">{{ 'جاري التحليل...' if session.get('lang') == 'ar' else 'Analyzing...' }}</small>
+                                    <small class="text-muted ms-2">{{ 'جاري التحليل...' if current_locale == 'ar' else 'Analyzing...' }}</small>
                                 </div>
                                 <small id="aiStatusText" class="text-muted"></small>
                             </div>
@@ -117,9 +117,9 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                            <label class="form-label">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</label>
                             <select name="decision" class="form-select" id="decisionSelect">
-                                <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
                                 <option value="ACCEPT" {{ 'selected' if test and test.decision == 'ACCEPT' }}>Accept / قبول</option>
                                 <option value="REJECT" {{ 'selected' if test and test.decision == 'REJECT' }}>Reject / رفض</option>
                             </select>
@@ -127,7 +127,7 @@
 
                         <div class="mb-3">
                             <label class="form-label d-flex justify-content-between">
-                                <span>{{ 'السبب' if session.get('lang') == 'ar' else 'Reason' }}</span>
+                                <span>{{ 'السبب' if current_locale == 'ar' else 'Reason' }}</span>
                                 <span id="aiReasonBadge" class="badge bg-info" style="display: none;">
                                     <i class="bi bi-robot"></i> AI
                                 </span>
@@ -137,7 +137,7 @@
 
                         <div class="mb-3">
                             <label class="form-label d-flex justify-content-between">
-                                <span>{{ 'التعليقات' if session.get('lang') == 'ar' else 'Comments' }}</span>
+                                <span>{{ 'التعليقات' if current_locale == 'ar' else 'Comments' }}</span>
                                 <span id="aiCommentsBadge" class="badge bg-info" style="display: none;">
                                     <i class="bi bi-robot"></i> AI
                                 </span>
@@ -154,21 +154,21 @@
                     <div class="card-header bg-info text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-rulers"></i>
-                            {{ 'قياسات العينة' if session.get('lang') == 'ar' else 'Sample Measurements' }}
+                            {{ 'قياسات العينة' if current_locale == 'ar' else 'Sample Measurements' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <!-- Specifications Alert -->
                         <div class="alert alert-info py-2 mb-3">
                             <small>
-                                <strong>{{ 'المواصفات:' if session.get('lang') == 'ar' else 'Specs:' }}</strong>
+                                <strong>{{ 'المواصفات:' if current_locale == 'ar' else 'Specs:' }}</strong>
                                 Tensile ≥420 MPa | Elongation ≥10% | Hardness 130-230 HB
                             </small>
                         </div>
 
                         <div class="row g-3">
                             <div class="col-6">
-                                <label class="form-label">{{ 'السُمك' if session.get('lang') == 'ar' else 'Thickness' }}</label>
+                                <label class="form-label">{{ 'السُمك' if current_locale == 'ar' else 'Thickness' }}</label>
                                 <input type="number" name="sample_thickness" class="form-control test-input" step="0.001"
                                        value="{{ test.sample_thickness if test else '' }}">
                             </div>
@@ -191,13 +191,13 @@
                         <hr>
                         <div class="row g-3">
                             <div class="col-6">
-                                <label class="form-label">{{ 'القوة (kgf)' if session.get('lang') == 'ar' else 'Force (kgf)' }}</label>
+                                <label class="form-label">{{ 'القوة (kgf)' if current_locale == 'ar' else 'Force (kgf)' }}</label>
                                 <input type="number" name="force_kgf" class="form-control test-input" step="0.1"
                                        value="{{ test.force_kgf if test else '' }}">
                             </div>
                             <div class="col-6">
                                 <label class="form-label d-flex justify-content-between">
-                                    <span>{{ 'قوة الشد' if session.get('lang') == 'ar' else 'Tensile (MPa)' }}</span>
+                                    <span>{{ 'قوة الشد' if current_locale == 'ar' else 'Tensile (MPa)' }}</span>
                                     <span class="result-badge badge" id="tensileBadge" style="display: none;"></span>
                                 </label>
                                 <input type="number" name="tensile_strength" class="form-control test-input" step="0.1"
@@ -206,7 +206,7 @@
                             </div>
                             <div class="col-12">
                                 <label class="form-label d-flex justify-content-between">
-                                    <span>{{ 'الاستطالة (%)' if session.get('lang') == 'ar' else 'Elongation (%)' }}</span>
+                                    <span>{{ 'الاستطالة (%)' if current_locale == 'ar' else 'Elongation (%)' }}</span>
                                     <span class="result-badge badge" id="elongationBadge" style="display: none;"></span>
                                 </label>
                                 <input type="number" name="elongation" class="form-control test-input" step="0.1"
@@ -224,14 +224,14 @@
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-eye"></i>
-                            {{ 'البنية المجهرية' if session.get('lang') == 'ar' else 'Microstructure' }}
+                            {{ 'البنية المجهرية' if current_locale == 'ar' else 'Microstructure' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <!-- Specifications Alert -->
                         <div class="alert alert-info py-2 mb-3">
                             <small>
-                                <strong>{{ 'المواصفات:' if session.get('lang') == 'ar' else 'Specs:' }}</strong>
+                                <strong>{{ 'المواصفات:' if current_locale == 'ar' else 'Specs:' }}</strong>
                                 Nodularity ≥80% | Carbides &lt;2%
                             </small>
                         </div>
@@ -239,7 +239,7 @@
                         <div class="row g-3">
                             <div class="col-6">
                                 <label class="form-label d-flex justify-content-between">
-                                    <span>{{ 'النودولارية (%)' if session.get('lang') == 'ar' else 'Nodularity (%)' }}</span>
+                                    <span>{{ 'النودولارية (%)' if current_locale == 'ar' else 'Nodularity (%)' }}</span>
                                     <span class="result-badge badge" id="nodularityBadge" style="display: none;"></span>
                                 </label>
                                 <input type="number" name="nodularity_percent" class="form-control test-input" step="0.1"
@@ -247,13 +247,13 @@
                                        value="{{ test.nodularity_percent if test else '' }}">
                             </div>
                             <div class="col-6">
-                                <label class="form-label">{{ 'عدد العقد' if session.get('lang') == 'ar' else 'Nodule Count' }}</label>
+                                <label class="form-label">{{ 'عدد العقد' if current_locale == 'ar' else 'Nodule Count' }}</label>
                                 <input type="number" name="nodule_count" class="form-control test-input"
                                        value="{{ test.nodule_count if test else '' }}">
                             </div>
                             <div class="col-6">
                                 <label class="form-label d-flex justify-content-between">
-                                    <span>{{ 'الصلادة (HB)' if session.get('lang') == 'ar' else 'Hardness (HB)' }}</span>
+                                    <span>{{ 'الصلادة (HB)' if current_locale == 'ar' else 'Hardness (HB)' }}</span>
                                     <span class="result-badge badge" id="hardnessBadge" style="display: none;"></span>
                                 </label>
                                 <input type="number" name="hardness" class="form-control test-input" step="0.1"
@@ -262,7 +262,7 @@
                             </div>
                             <div class="col-6">
                                 <label class="form-label d-flex justify-content-between">
-                                    <span>{{ 'الكربيدات (%)' if session.get('lang') == 'ar' else 'Carbides (%)' }}</span>
+                                    <span>{{ 'الكربيدات (%)' if current_locale == 'ar' else 'Carbides (%)' }}</span>
                                     <span class="result-badge badge" id="carbidesBadge" style="display: none;"></span>
                                 </label>
                                 <input type="number" name="carbides" class="form-control test-input" step="0.01"
@@ -279,11 +279,11 @@
         <div class="d-flex gap-2 justify-content-end mb-4">
             <a href="{{ url_for('mechanical.list') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-x-circle"></i>
-                {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
             </a>
             <button type="submit" class="btn btn-warning">
                 <i class="bi bi-check-circle"></i>
-                {{ 'حفظ' if session.get('lang') == 'ar' else 'Save' }}
+                {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
             </button>
         </div>
     </form>

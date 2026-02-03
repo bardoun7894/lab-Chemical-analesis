@@ -11,7 +11,7 @@
                 <div>
                     <h2>
                         <i class="bi bi-gear"></i>
-                        {{ 'تفاصيل الاختبار الميكانيكي' if session.get('lang') == 'ar' else 'Mechanical Test Details' }}
+                        {{ 'تفاصيل الاختبار الميكانيكي' if current_locale == 'ar' else 'Mechanical Test Details' }}
                     </h2>
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
@@ -23,11 +23,11 @@
                 <div class="btn-group">
                     <a href="{{ url_for('mechanical.edit', id=test.id) }}" class="btn btn-primary">
                         <i class="bi bi-pencil"></i>
-                        {{ 'تعديل' if session.get('lang') == 'ar' else 'Edit' }}
+                        {{ 'تعديل' if current_locale == 'ar' else 'Edit' }}
                     </a>
                     <button type="button" class="btn btn-outline-primary" onclick="window.print();">
                         <i class="bi bi-printer"></i>
-                        {{ 'طباعة' if session.get('lang') == 'ar' else 'Print' }}
+                        {{ 'طباعة' if current_locale == 'ar' else 'Print' }}
                     </button>
                 </div>
             </div>
@@ -42,36 +42,36 @@
                 <div class="card-header bg-warning">
                     <h5 class="mb-0">
                         <i class="bi bi-info-circle"></i>
-                        {{ 'معلومات أساسية' if session.get('lang') == 'ar' else 'Basic Information' }}
+                        {{ 'معلومات أساسية' if current_locale == 'ar' else 'Basic Information' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-borderless mb-0">
                         <tr>
-                            <th width="40%">{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                            <th width="40%">{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
                             <td>{{ test.test_date }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'Pipe Code' }}</th>
+                            <th>{{ 'كود الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}</th>
                             <td><code class="fs-6">{{ test.pipe_code or '-' }}</code></td>
                         </tr>
                         <tr>
-                            <th>{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}</th>
+                            <th>{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</th>
                             <td>DN{{ test.diameter or '?' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                            <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
                             <td>{{ test.ladle_id or '-' }}</td>
                         </tr>
                         {% if test.shift %}
                         <tr>
-                            <th>{{ 'الوردية' if session.get('lang') == 'ar' else 'Shift' }}</th>
+                            <th>{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</th>
                             <td>{{ test.shift }}</td>
                         </tr>
                         {% endif %}
                         {% if test.tester_name %}
                         <tr>
-                            <th>{{ 'الفاحص' if session.get('lang') == 'ar' else 'Tester' }}</th>
+                            <th>{{ 'الفاحص' if current_locale == 'ar' else 'Tester' }}</th>
                             <td>{{ test.tester_name }}</td>
                         </tr>
                         {% endif %}
@@ -84,7 +84,7 @@
                 <div class="card-header {{ 'bg-success' if test.decision == 'ACCEPT' else 'bg-danger' if test.decision == 'REJECT' else 'bg-secondary' }} text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-check-circle"></i>
-                        {{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}
+                        {{ 'القرار' if current_locale == 'ar' else 'Decision' }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -106,7 +106,7 @@
 
                     {% if test.reason %}
                     <div class="mb-2">
-                        <strong>{{ 'السبب:' if session.get('lang') == 'ar' else 'Reason:' }}</strong>
+                        <strong>{{ 'السبب:' if current_locale == 'ar' else 'Reason:' }}</strong>
                         <p class="mb-0 text-muted">{{ test.reason }}</p>
                     </div>
                     {% endif %}
@@ -114,7 +114,7 @@
                     {% if test.has_defect %}
                     <div class="alert alert-danger mb-2">
                         <i class="bi bi-exclamation-triangle"></i>
-                        {{ 'يوجد عيب' if session.get('lang') == 'ar' else 'Has Defect' }}
+                        {{ 'يوجد عيب' if current_locale == 'ar' else 'Has Defect' }}
                         {% if test.defect_reason %}
                         : {{ test.defect_reason }}
                         {% endif %}
@@ -123,7 +123,7 @@
 
                     {% if test.comments %}
                     <div class="mb-0">
-                        <strong>{{ 'التعليقات:' if session.get('lang') == 'ar' else 'Comments:' }}</strong>
+                        <strong>{{ 'التعليقات:' if current_locale == 'ar' else 'Comments:' }}</strong>
                         <p class="mb-0 text-muted">{{ test.comments }}</p>
                     </div>
                     {% endif %}
@@ -136,7 +136,7 @@
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-diagram-3"></i>
-                        {{ 'الأنبوب المرتبط' if session.get('lang') == 'ar' else 'Related Pipe' }}
+                        {{ 'الأنبوب المرتبط' if current_locale == 'ar' else 'Related Pipe' }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -156,14 +156,14 @@
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-rulers"></i>
-                        {{ 'نتائج الاختبار' if session.get('lang') == 'ar' else 'Test Results' }}
+                        {{ 'نتائج الاختبار' if current_locale == 'ar' else 'Test Results' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <!-- Tensile Strength -->
                     <div class="border rounded p-3 mb-3">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="text-muted mb-1">{{ 'قوة الشد' if session.get('lang') == 'ar' else 'Tensile Strength' }}</h6>
+                            <h6 class="text-muted mb-1">{{ 'قوة الشد' if current_locale == 'ar' else 'Tensile Strength' }}</h6>
                             {% if test.tensile_strength %}
                                 {% if test.tensile_strength >= 420 %}
                                 <span class="badge bg-success"><i class="bi bi-check"></i> OK</span>
@@ -181,7 +181,7 @@
                     <!-- Elongation -->
                     <div class="border rounded p-3 mb-3">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="text-muted mb-1">{{ 'الاستطالة' if session.get('lang') == 'ar' else 'Elongation' }}</h6>
+                            <h6 class="text-muted mb-1">{{ 'الاستطالة' if current_locale == 'ar' else 'Elongation' }}</h6>
                             {% if test.elongation %}
                                 {% if test.elongation >= 10 %}
                                 <span class="badge bg-success"><i class="bi bi-check"></i> OK</span>
@@ -199,7 +199,7 @@
                     <!-- Hardness -->
                     <div class="border rounded p-3">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="text-muted mb-1">{{ 'الصلادة' if session.get('lang') == 'ar' else 'Hardness' }}</h6>
+                            <h6 class="text-muted mb-1">{{ 'الصلادة' if current_locale == 'ar' else 'Hardness' }}</h6>
                             {% if test.hardness %}
                                 {% if test.hardness >= 130 and test.hardness <= 230 %}
                                 <span class="badge bg-success"><i class="bi bi-check"></i> OK</span>
@@ -222,14 +222,14 @@
                 <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-calculator"></i>
-                        {{ 'قياسات العينة' if session.get('lang') == 'ar' else 'Sample Measurements' }}
+                        {{ 'قياسات العينة' if current_locale == 'ar' else 'Sample Measurements' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm mb-0">
                         {% if test.sample_thickness %}
                         <tr>
-                            <th>{{ 'السُمك' if session.get('lang') == 'ar' else 'Thickness' }}</th>
+                            <th>{{ 'السُمك' if current_locale == 'ar' else 'Thickness' }}</th>
                             <td>{{ '%.3f'|format(test.sample_thickness) }} mm</td>
                         </tr>
                         {% endif %}
@@ -243,7 +243,7 @@
                         <tr><th>D3</th><td>{{ '%.3f'|format(test.d3) }} mm</td></tr>
                         {% endif %}
                         {% if test.avg_dimension %}
-                        <tr><th>{{ 'المتوسط' if session.get('lang') == 'ar' else 'Avg Dim' }}</th><td>{{ '%.3f'|format(test.avg_dimension) }} mm</td></tr>
+                        <tr><th>{{ 'المتوسط' if current_locale == 'ar' else 'Avg Dim' }}</th><td>{{ '%.3f'|format(test.avg_dimension) }} mm</td></tr>
                         {% endif %}
                         {% if test.original_length %}
                         <tr><th>Lo</th><td>{{ '%.2f'|format(test.original_length) }} mm</td></tr>
@@ -255,7 +255,7 @@
                         <tr><th>A (D²)</th><td>{{ '%.3f'|format(test.area_d_squared) }}</td></tr>
                         {% endif %}
                         {% if test.force_kgf %}
-                        <tr><th>{{ 'القوة' if session.get('lang') == 'ar' else 'Force' }}</th><td>{{ '%.1f'|format(test.force_kgf) }} kgf</td></tr>
+                        <tr><th>{{ 'القوة' if current_locale == 'ar' else 'Force' }}</th><td>{{ '%.1f'|format(test.force_kgf) }} kgf</td></tr>
                         {% endif %}
                     </table>
                 </div>
@@ -269,14 +269,14 @@
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-eye"></i>
-                        {{ 'البنية المجهرية' if session.get('lang') == 'ar' else 'Microstructure' }}
+                        {{ 'البنية المجهرية' if current_locale == 'ar' else 'Microstructure' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <!-- Nodularity -->
                     <div class="border rounded p-3 mb-3">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="text-muted mb-1">{{ 'النودولارية' if session.get('lang') == 'ar' else 'Nodularity' }}</h6>
+                            <h6 class="text-muted mb-1">{{ 'النودولارية' if current_locale == 'ar' else 'Nodularity' }}</h6>
                             {% if test.nodularity_percent %}
                                 {% if test.nodularity_percent >= 80 %}
                                 <span class="badge bg-success"><i class="bi bi-check"></i> OK</span>
@@ -294,7 +294,7 @@
                     <!-- Carbides -->
                     <div class="border rounded p-3 mb-3">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="text-muted mb-1">{{ 'الكربيدات' if session.get('lang') == 'ar' else 'Carbides' }}</h6>
+                            <h6 class="text-muted mb-1">{{ 'الكربيدات' if current_locale == 'ar' else 'Carbides' }}</h6>
                             {% if test.carbides is not none %}
                                 {% if test.carbides <= 2 %}
                                 <span class="badge bg-success"><i class="bi bi-check"></i> OK</span>
@@ -311,14 +311,14 @@
 
                     {% if test.nodule_count %}
                     <div class="border rounded p-3 mb-3">
-                        <h6 class="text-muted mb-1">{{ 'عدد العقد' if session.get('lang') == 'ar' else 'Nodule Count' }}</h6>
+                        <h6 class="text-muted mb-1">{{ 'عدد العقد' if current_locale == 'ar' else 'Nodule Count' }}</h6>
                         <h3>{{ test.nodule_count }}</h3>
                     </div>
                     {% endif %}
 
                     {% if test.microstructure %}
                     <div class="border rounded p-3">
-                        <h6 class="text-muted mb-1">{{ 'ملاحظات البنية' if session.get('lang') == 'ar' else 'Microstructure Notes' }}</h6>
+                        <h6 class="text-muted mb-1">{{ 'ملاحظات البنية' if current_locale == 'ar' else 'Microstructure Notes' }}</h6>
                         <p class="mb-0">{{ test.microstructure }}</p>
                     </div>
                     {% endif %}
@@ -331,7 +331,7 @@
                 <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-pie-chart"></i>
-                        {{ 'توزيع الجرافيت' if session.get('lang') == 'ar' else 'Graphite Distribution' }}
+                        {{ 'توزيع الجرافيت' if current_locale == 'ar' else 'Graphite Distribution' }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -358,7 +358,7 @@
     <!-- Timestamps -->
     <div class="text-muted small mt-4">
         <i class="bi bi-clock"></i>
-        {{ 'تم الإنشاء:' if session.get('lang') == 'ar' else 'Created:' }}
+        {{ 'تم الإنشاء:' if current_locale == 'ar' else 'Created:' }}
         {{ test.created_at }}
     </div>
 </div>

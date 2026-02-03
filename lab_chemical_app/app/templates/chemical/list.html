@@ -11,15 +11,15 @@
                 <div>
                     <h2>
                         <i class="bi bi-flask"></i>
-                        {{ 'التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis' }}
+                        {{ 'التحليل الكيميائي' if current_locale == 'ar' else 'Chemical Analysis' }}
                     </h2>
                     <p class="text-muted mb-0">
-                        {{ 'قائمة جميع التحليلات الكيميائية' if session.get('lang') == 'ar' else 'List of all chemical analyses' }}
+                        {{ 'قائمة جميع التحليلات الكيميائية' if current_locale == 'ar' else 'List of all chemical analyses' }}
                     </p>
                 </div>
                 <a href="{{ url_for('chemical.add') }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i>
-                    {{ 'إضافة جديد' if session.get('lang') == 'ar' else 'Add New' }}
+                    {{ 'إضافة جديد' if current_locale == 'ar' else 'Add New' }}
                 </a>
             </div>
         </div>
@@ -30,17 +30,17 @@
         <div class="card-body">
             <form method="GET" class="row g-3">
                 <div class="col-md-2">
-                    <label class="form-label">{{ 'من تاريخ' if session.get('lang') == 'ar' else 'From Date' }}</label>
+                    <label class="form-label">{{ 'من تاريخ' if current_locale == 'ar' else 'From Date' }}</label>
                     <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">{{ 'إلى تاريخ' if session.get('lang') == 'ar' else 'To Date' }}</label>
+                    <label class="form-label">{{ 'إلى تاريخ' if current_locale == 'ar' else 'To Date' }}</label>
                     <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</label>
+                    <label class="form-label">{{ 'الفرن' if current_locale == 'ar' else 'Furnace' }}</label>
                     <select name="furnace_id" class="form-select">
-                        <option value="">{{ 'الكل' if session.get('lang') == 'ar' else 'All' }}</option>
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
                         {% for furnace in furnaces %}
                         <option value="{{ furnace.id }}" {{ 'selected' if furnace.id == selected_furnace }}>
                             {{ furnace.furnace_code }}
@@ -49,9 +49,9 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                    <label class="form-label">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</label>
                     <select name="decision" class="form-select">
-                        <option value="">{{ 'الكل' if session.get('lang') == 'ar' else 'All' }}</option>
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
                         <option value="ACCEPT" {{ 'selected' if selected_decision == 'ACCEPT' }}>Accept</option>
                         <option value="REJECT" {{ 'selected' if selected_decision == 'REJECT' }}>Reject</option>
                         <option value="HOLD" {{ 'selected' if selected_decision == 'HOLD' }}>Hold</option>
@@ -60,13 +60,13 @@
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="bi bi-search"></i>
-                        {{ 'بحث' if session.get('lang') == 'ar' else 'Search' }}
+                        {{ 'بحث' if current_locale == 'ar' else 'Search' }}
                     </button>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <a href="{{ url_for('chemical.list') }}" class="btn btn-outline-secondary w-100">
                         <i class="bi bi-x-circle"></i>
-                        {{ 'مسح' if session.get('lang') == 'ar' else 'Clear' }}
+                        {{ 'مسح' if current_locale == 'ar' else 'Clear' }}
                     </a>
                 </div>
             </form>
@@ -80,17 +80,17 @@
                 <table class="table table-hover table-striped mb-0">
                     <thead class="table-dark">
                         <tr>
-                            <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
-                            <th>{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</th>
-                            <th>{{ 'رقم المغرفة' if session.get('lang') == 'ar' else 'Ladle#' }}</th>
-                            <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                            <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                            <th>{{ 'الفرن' if current_locale == 'ar' else 'Furnace' }}</th>
+                            <th>{{ 'رقم المغرفة' if current_locale == 'ar' else 'Ladle#' }}</th>
+                            <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
                             <th>C</th>
                             <th>Si</th>
                             <th>Mg</th>
                             <th>S</th>
                             <th>CE</th>
-                            <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
-                            <th>{{ 'إجراءات' if session.get('lang') == 'ar' else 'Actions' }}</th>
+                            <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
+                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -142,7 +142,7 @@
                         {% else %}
                         <tr>
                             <td colspan="11" class="text-center py-4 text-muted">
-                                {{ 'لا توجد نتائج' if session.get('lang') == 'ar' else 'No results found' }}
+                                {{ 'لا توجد نتائج' if current_locale == 'ar' else 'No results found' }}
                             </td>
                         </tr>
                         {% endfor %}
@@ -153,8 +153,8 @@
         {% if analyses.total > 0 %}
         <div class="card-footer bg-white">
             <small class="text-muted">
-                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ analyses.total }}
-                {{ 'تحليل' if session.get('lang') == 'ar' else 'analyses' }}
+                {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ analyses.total }}
+                {{ 'تحليل' if current_locale == 'ar' else 'analyses' }}
             </small>
         </div>
         {% endif %}
@@ -166,21 +166,21 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{{ 'تأكيد الحذف' if session.get('lang') == 'ar' else 'Confirm Delete' }}</h5>
+                <h5 class="modal-title">{{ 'تأكيد الحذف' if current_locale == 'ar' else 'Confirm Delete' }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                {{ 'هل أنت متأكد من حذف التحليل' if session.get('lang') == 'ar' else 'Are you sure you want to delete analysis' }}
+                {{ 'هل أنت متأكد من حذف التحليل' if current_locale == 'ar' else 'Are you sure you want to delete analysis' }}
                 <strong id="deleteLadleId"></strong>?
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                    {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
                 </button>
                 <form id="deleteForm" method="POST" style="display: inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-danger">
-                        {{ 'حذف' if session.get('lang') == 'ar' else 'Delete' }}
+                        {{ 'حذف' if current_locale == 'ar' else 'Delete' }}
                     </button>
                 </form>
             </div>

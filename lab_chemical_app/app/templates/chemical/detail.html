@@ -11,7 +11,7 @@
                 <div>
                     <h2>
                         <i class="bi bi-flask"></i>
-                        {{ 'تفاصيل التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis Details' }}
+                        {{ 'تفاصيل التحليل الكيميائي' if current_locale == 'ar' else 'Chemical Analysis Details' }}
                     </h2>
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
@@ -23,11 +23,11 @@
                 <div class="btn-group">
                     <a href="{{ url_for('chemical.edit', id=analysis.id) }}" class="btn btn-primary">
                         <i class="bi bi-pencil"></i>
-                        {{ 'تعديل' if session.get('lang') == 'ar' else 'Edit' }}
+                        {{ 'تعديل' if current_locale == 'ar' else 'Edit' }}
                     </a>
                     <button type="button" class="btn btn-outline-primary" onclick="window.print();">
                         <i class="bi bi-printer"></i>
-                        {{ 'طباعة' if session.get('lang') == 'ar' else 'Print' }}
+                        {{ 'طباعة' if current_locale == 'ar' else 'Print' }}
                     </button>
                 </div>
             </div>
@@ -42,25 +42,25 @@
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-info-circle"></i>
-                        {{ 'معلومات أساسية' if session.get('lang') == 'ar' else 'Basic Information' }}
+                        {{ 'معلومات أساسية' if current_locale == 'ar' else 'Basic Information' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-borderless mb-0">
                         <tr>
-                            <th width="40%">{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                            <th width="40%">{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
                             <td>{{ analysis.test_date }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</th>
+                            <th>{{ 'الفرن' if current_locale == 'ar' else 'Furnace' }}</th>
                             <td>{{ analysis.furnace.furnace_code if analysis.furnace else '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'رقم المغرفة' if session.get('lang') == 'ar' else 'Ladle#' }}</th>
+                            <th>{{ 'رقم المغرفة' if current_locale == 'ar' else 'Ladle#' }}</th>
                             <td><strong>{{ analysis.ladle_no }}</strong></td>
                         </tr>
                         <tr>
-                            <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                            <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
                             <td><code>{{ analysis.ladle_id }}</code></td>
                         </tr>
                     </table>
@@ -72,7 +72,7 @@
                 <div class="card-header {{ 'bg-success' if analysis.decision == 'ACCEPT' else 'bg-danger' if analysis.decision == 'REJECT' else 'bg-warning' }} text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-check-circle"></i>
-                        {{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}
+                        {{ 'القرار' if current_locale == 'ar' else 'Decision' }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -98,7 +98,7 @@
 
                     {% if analysis.reason %}
                     <div class="mb-2">
-                        <strong>{{ 'السبب:' if session.get('lang') == 'ar' else 'Reason:' }}</strong>
+                        <strong>{{ 'السبب:' if current_locale == 'ar' else 'Reason:' }}</strong>
                         <p class="mb-0 text-muted">{{ analysis.reason }}</p>
                     </div>
                     {% endif %}
@@ -106,7 +106,7 @@
                     {% if analysis.has_defect %}
                     <div class="alert alert-danger mb-2">
                         <i class="bi bi-exclamation-triangle"></i>
-                        {{ 'يوجد عيب' if session.get('lang') == 'ar' else 'Has Defect' }}
+                        {{ 'يوجد عيب' if current_locale == 'ar' else 'Has Defect' }}
                         {% if analysis.defect_reason %}
                         : {{ analysis.defect_reason }}
                         {% endif %}
@@ -115,7 +115,7 @@
 
                     {% if analysis.notes %}
                     <div class="mb-0">
-                        <strong>{{ 'ملاحظات:' if session.get('lang') == 'ar' else 'Notes:' }}</strong>
+                        <strong>{{ 'ملاحظات:' if current_locale == 'ar' else 'Notes:' }}</strong>
                         <p class="mb-0 text-muted">{{ analysis.notes }}</p>
                     </div>
                     {% endif %}
@@ -128,7 +128,7 @@
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-diagram-3"></i>
-                        {{ 'الأنابيب المرتبطة' if session.get('lang') == 'ar' else 'Related Pipes' }}
+                        {{ 'الأنابيب المرتبطة' if current_locale == 'ar' else 'Related Pipes' }}
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -153,7 +153,7 @@
                 <div class="card-header bg-warning">
                     <h5 class="mb-0">
                         <i class="bi bi-calculator"></i>
-                        {{ 'العناصر الكيميائية (%)' if session.get('lang') == 'ar' else 'Chemical Elements (%)' }}
+                        {{ 'العناصر الكيميائية (%)' if current_locale == 'ar' else 'Chemical Elements (%)' }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -213,7 +213,7 @@
                     <hr>
 
                     <!-- Calculated Values -->
-                    <h6 class="mb-3">{{ 'القيم المحسوبة' if session.get('lang') == 'ar' else 'Calculated Values' }}</h6>
+                    <h6 class="mb-3">{{ 'القيم المحسوبة' if current_locale == 'ar' else 'Calculated Values' }}</h6>
                     <div class="row text-center">
                         <div class="col-md-4">
                             <div class="border rounded p-3">
@@ -249,7 +249,7 @@
             <!-- Timestamps -->
             <div class="text-muted small">
                 <i class="bi bi-clock"></i>
-                {{ 'تم الإنشاء:' if session.get('lang') == 'ar' else 'Created:' }}
+                {{ 'تم الإنشاء:' if current_locale == 'ar' else 'Created:' }}
                 {{ analysis.created_at }}
             </div>
         </div>

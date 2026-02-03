@@ -11,15 +11,15 @@
                 <div>
                     <h2>
                         <i class="bi bi-people"></i>
-                        {{ 'إدارة المستخدمين' if session.get('lang') == 'ar' else 'User Management' }}
+                        {{ 'إدارة المستخدمين' if current_locale == 'ar' else 'User Management' }}
                     </h2>
                     <p class="text-muted mb-0">
-                        {{ 'إضافة وتعديل وحذف المستخدمين' if session.get('lang') == 'ar' else 'Add, edit and delete users' }}
+                        {{ 'إضافة وتعديل وحذف المستخدمين' if current_locale == 'ar' else 'Add, edit and delete users' }}
                     </p>
                 </div>
                 <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary">
                     <i class="bi bi-person-plus"></i>
-                    {{ 'إضافة مستخدم' if session.get('lang') == 'ar' else 'Add User' }}
+                    {{ 'إضافة مستخدم' if current_locale == 'ar' else 'Add User' }}
                 </a>
             </div>
         </div>
@@ -32,13 +32,13 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-dark">
                         <tr>
-                            <th>{{ 'اسم المستخدم' if session.get('lang') == 'ar' else 'Username' }}</th>
-                            <th>{{ 'الاسم الكامل' if session.get('lang') == 'ar' else 'Full Name' }}</th>
-                            <th>{{ 'الدور' if session.get('lang') == 'ar' else 'Role' }}</th>
-                            <th>{{ 'القسم' if session.get('lang') == 'ar' else 'Department' }}</th>
-                            <th>{{ 'الحالة' if session.get('lang') == 'ar' else 'Status' }}</th>
-                            <th>{{ 'آخر دخول' if session.get('lang') == 'ar' else 'Last Login' }}</th>
-                            <th>{{ 'إجراءات' if session.get('lang') == 'ar' else 'Actions' }}</th>
+                            <th>{{ 'اسم المستخدم' if current_locale == 'ar' else 'Username' }}</th>
+                            <th>{{ 'الاسم الكامل' if current_locale == 'ar' else 'Full Name' }}</th>
+                            <th>{{ 'الدور' if current_locale == 'ar' else 'Role' }}</th>
+                            <th>{{ 'القسم' if current_locale == 'ar' else 'Department' }}</th>
+                            <th>{{ 'الحالة' if current_locale == 'ar' else 'Status' }}</th>
+                            <th>{{ 'آخر دخول' if current_locale == 'ar' else 'Last Login' }}</th>
+                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -47,11 +47,11 @@
                             <td>
                                 <strong>{{ user.username }}</strong>
                                 {% if user.id == current_user.id %}
-                                <span class="badge bg-info">{{ 'أنت' if session.get('lang') == 'ar' else 'You' }}</span>
+                                <span class="badge bg-info">{{ 'أنت' if current_locale == 'ar' else 'You' }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {{ user.full_name_ar if session.get('lang') == 'ar' and user.full_name_ar else user.full_name or '-' }}
+                                {{ user.full_name_ar if current_locale == 'ar' and user.full_name_ar else user.full_name or '-' }}
                             </td>
                             <td>
                                 {% if user.role == 'admin' %}
@@ -69,12 +69,12 @@
                                 {% if user.is_active %}
                                 <span class="badge bg-success">
                                     <i class="bi bi-check-circle"></i>
-                                    {{ 'نشط' if session.get('lang') == 'ar' else 'Active' }}
+                                    {{ 'نشط' if current_locale == 'ar' else 'Active' }}
                                 </span>
                                 {% else %}
                                 <span class="badge bg-secondary">
                                     <i class="bi bi-x-circle"></i>
-                                    {{ 'معطل' if session.get('lang') == 'ar' else 'Inactive' }}
+                                    {{ 'معطل' if current_locale == 'ar' else 'Inactive' }}
                                 </span>
                                 {% endif %}
                             </td>
@@ -82,7 +82,7 @@
                                 {% if user.last_login %}
                                 {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
                                 {% else %}
-                                <span class="text-muted">{{ 'لم يسجل دخول' if session.get('lang') == 'ar' else 'Never' }}</span>
+                                <span class="text-muted">{{ 'لم يسجل دخول' if current_locale == 'ar' else 'Never' }}</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -108,7 +108,7 @@
                         {% else %}
                         <tr>
                             <td colspan="7" class="text-center py-4 text-muted">
-                                {{ 'لا يوجد مستخدمين' if session.get('lang') == 'ar' else 'No users found' }}
+                                {{ 'لا يوجد مستخدمين' if current_locale == 'ar' else 'No users found' }}
                             </td>
                         </tr>
                         {% endfor %}
@@ -118,8 +118,8 @@
         </div>
         <div class="card-footer bg-white">
             <small class="text-muted">
-                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ users|length }}
-                {{ 'مستخدم' if session.get('lang') == 'ar' else 'users' }}
+                {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ users|length }}
+                {{ 'مستخدم' if current_locale == 'ar' else 'users' }}
             </small>
         </div>
     </div>
@@ -130,21 +130,21 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{{ 'تأكيد الحذف' if session.get('lang') == 'ar' else 'Confirm Delete' }}</h5>
+                <h5 class="modal-title">{{ 'تأكيد الحذف' if current_locale == 'ar' else 'Confirm Delete' }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                {{ 'هل أنت متأكد من حذف المستخدم' if session.get('lang') == 'ar' else 'Are you sure you want to delete user' }}
+                {{ 'هل أنت متأكد من حذف المستخدم' if current_locale == 'ar' else 'Are you sure you want to delete user' }}
                 <strong id="deleteUsername"></strong>?
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                    {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
                 </button>
                 <form id="deleteForm" method="POST" style="display: inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-danger">
-                        {{ 'حذف' if session.get('lang') == 'ar' else 'Delete' }}
+                        {{ 'حذف' if current_locale == 'ar' else 'Delete' }}
                     </button>
                 </form>
             </div>

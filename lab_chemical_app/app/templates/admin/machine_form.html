@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ 'تعديل الماكينة' if machine else 'إضافة ماكينة' if session.get('lang') == 'ar' else 'Edit Machine' if machine else 'Add Machine' }}{% endblock %}
+{% block title %}{{ 'تعديل الماكينة' if machine else 'إضافة ماكينة' if current_locale == 'ar' else 'Edit Machine' if machine else 'Add Machine' }}{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -8,14 +8,14 @@
         <h2>
             <i class="bi bi-gear-fill"></i>
             {% if machine %}
-                {{ 'تعديل الماكينة' if session.get('lang') == 'ar' else 'Edit Machine' }}
+                {{ 'تعديل الماكينة' if current_locale == 'ar' else 'Edit Machine' }}
             {% else %}
-                {{ 'إضافة ماكينة جديدة' if session.get('lang') == 'ar' else 'Add New Machine' }}
+                {{ 'إضافة ماكينة جديدة' if current_locale == 'ar' else 'Add New Machine' }}
             {% endif %}
         </h2>
         <a href="{{ url_for('admin.machines') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i>
-            {{ 'رجوع' if session.get('lang') == 'ar' else 'Back' }}
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
         </a>
     </div>
 
@@ -27,48 +27,48 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <div class="mb-3">
-                            <label class="form-label">{{ 'رمز الماكينة' if session.get('lang') == 'ar' else 'Machine Code' }} *</label>
+                            <label class="form-label">{{ 'رمز الماكينة' if current_locale == 'ar' else 'Machine Code' }} *</label>
                             <input type="text" name="machine_code" class="form-control" required
                                    value="{{ machine.machine_code if machine else '' }}"
                                    placeholder="e.g., ZC1, HT2, BC3">
-                            <small class="text-muted">{{ 'رمز فريد للماكينة' if session.get('lang') == 'ar' else 'Unique identifier for the machine' }}</small>
+                            <small class="text-muted">{{ 'رمز فريد للماكينة' if current_locale == 'ar' else 'Unique identifier for the machine' }}</small>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">{{ 'اسم الماكينة' if session.get('lang') == 'ar' else 'Machine Name' }}</label>
+                            <label class="form-label">{{ 'اسم الماكينة' if current_locale == 'ar' else 'Machine Name' }}</label>
                             <input type="text" name="machine_name" class="form-control"
                                    value="{{ machine.machine_name if machine else '' }}"
-                                   placeholder="{{ 'الاسم الوصفي (اختياري)' if session.get('lang') == 'ar' else 'Descriptive name (optional)' }}">
+                                   placeholder="{{ 'الاسم الوصفي (اختياري)' if current_locale == 'ar' else 'Descriptive name (optional)' }}">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }}</label>
+                            <label class="form-label">{{ 'المرحلة' if current_locale == 'ar' else 'Stage' }}</label>
                             <select name="stage" class="form-select">
-                                <option value="">-- {{ 'اختر المرحلة (اختياري)' if session.get('lang') == 'ar' else 'Select Stage (optional)' }} --</option>
+                                <option value="">-- {{ 'اختر المرحلة (اختياري)' if current_locale == 'ar' else 'Select Stage (optional)' }} --</option>
                                 {% for stage in stages %}
                                 <option value="{{ stage }}" {{ 'selected' if machine and machine.stage == stage }}>
                                     {{ stage }}
                                 </option>
                                 {% endfor %}
                             </select>
-                            <small class="text-muted">{{ 'ربط الماكينة بمرحلة إنتاج محددة' if session.get('lang') == 'ar' else 'Link machine to a specific production stage' }}</small>
+                            <small class="text-muted">{{ 'ربط الماكينة بمرحلة إنتاج محددة' if current_locale == 'ar' else 'Link machine to a specific production stage' }}</small>
                         </div>
 
                         <div class="form-check mb-4">
                             <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
                                    {{ 'checked' if not machine or machine.is_active }}>
                             <label class="form-check-label" for="is_active">
-                                {{ 'نشط' if session.get('lang') == 'ar' else 'Active' }}
+                                {{ 'نشط' if current_locale == 'ar' else 'Active' }}
                             </label>
                         </div>
 
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="bi bi-check-lg"></i>
-                                {{ 'حفظ' if session.get('lang') == 'ar' else 'Save' }}
+                                {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
                             </button>
                             <a href="{{ url_for('admin.machines') }}" class="btn btn-outline-secondary">
-                                {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
                             </a>
                         </div>
                     </form>
@@ -81,17 +81,17 @@
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-info-circle"></i>
-                        {{ 'معلومات' if session.get('lang') == 'ar' else 'Information' }}
+                        {{ 'معلومات' if current_locale == 'ar' else 'Information' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <p class="small">
-                        {{ 'الماكينات تُستخدم في مراحل الإنتاج المختلفة لتتبع أي ماكينة قامت بمعالجة الأنبوب.' if session.get('lang') == 'ar' else 'Machines are used in various production stages to track which machine processed the pipe.' }}
+                        {{ 'الماكينات تُستخدم في مراحل الإنتاج المختلفة لتتبع أي ماكينة قامت بمعالجة الأنبوب.' if current_locale == 'ar' else 'Machines are used in various production stages to track which machine processed the pipe.' }}
                     </p>
                     <ul class="small">
-                        <li>{{ 'رمز الماكينة يجب أن يكون فريداً' if session.get('lang') == 'ar' else 'Machine code must be unique' }}</li>
-                        <li>{{ 'يتم عرض الماكينات النشطة فقط في القوائم المنسدلة' if session.get('lang') == 'ar' else 'Only active machines are shown in dropdowns' }}</li>
-                        <li>{{ 'المراحل: الزنك، القطع، الاختبار، الإسمنت، الدهان' if session.get('lang') == 'ar' else 'Stages: Zinc, Cutting, Hydrotest, Cement, Coating' }}</li>
+                        <li>{{ 'رمز الماكينة يجب أن يكون فريداً' if current_locale == 'ar' else 'Machine code must be unique' }}</li>
+                        <li>{{ 'يتم عرض الماكينات النشطة فقط في القوائم المنسدلة' if current_locale == 'ar' else 'Only active machines are shown in dropdowns' }}</li>
+                        <li>{{ 'المراحل: الزنك، القطع، الاختبار، الإسمنت، الدهان' if current_locale == 'ar' else 'Stages: Zinc, Cutting, Hydrotest, Cement, Coating' }}</li>
                     </ul>
                 </div>
             </div>

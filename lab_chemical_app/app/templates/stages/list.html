@@ -11,15 +11,15 @@
                 <div>
                     <h2>
                         <i class="bi bi-diagram-3"></i>
-                        {{ 'قائمة الأنابيب' if session.get('lang') == 'ar' else 'Pipes List' }}
+                        {{ 'قائمة الأنابيب' if current_locale == 'ar' else 'Pipes List' }}
                     </h2>
                     <p class="text-muted mb-0">
-                        {{ 'متابعة مراحل الإنتاج' if session.get('lang') == 'ar' else 'Track production stages' }}
+                        {{ 'متابعة مراحل الإنتاج' if current_locale == 'ar' else 'Track production stages' }}
                     </p>
                 </div>
                 <a href="{{ url_for('stages.add') }}" class="btn btn-success">
                     <i class="bi bi-plus-circle"></i>
-                    {{ 'تسجيل أنبوب جديد' if session.get('lang') == 'ar' else 'Register New Pipe' }}
+                    {{ 'تسجيل أنبوب جديد' if current_locale == 'ar' else 'Register New Pipe' }}
                 </a>
             </div>
         </div>
@@ -30,17 +30,17 @@
         <div class="card-body">
             <form method="GET" class="row g-3">
                 <div class="col-md-2">
-                    <label class="form-label">{{ 'من تاريخ' if session.get('lang') == 'ar' else 'From Date' }}</label>
+                    <label class="form-label">{{ 'من تاريخ' if current_locale == 'ar' else 'From Date' }}</label>
                     <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">{{ 'إلى تاريخ' if session.get('lang') == 'ar' else 'To Date' }}</label>
+                    <label class="form-label">{{ 'إلى تاريخ' if current_locale == 'ar' else 'To Date' }}</label>
                     <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}</label>
+                    <label class="form-label">{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</label>
                     <select name="diameter" class="form-select">
-                        <option value="">{{ 'الكل' if session.get('lang') == 'ar' else 'All' }}</option>
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
                         <option value="300" {{ 'selected' if selected_diameter == 300 }}>DN300</option>
                         <option value="400" {{ 'selected' if selected_diameter == 400 }}>DN400</option>
                         <option value="500" {{ 'selected' if selected_diameter == 500 }}>DN500</option>
@@ -48,20 +48,20 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'Pipe Code' }}</label>
+                    <label class="form-label">{{ 'كود الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}</label>
                     <input type="text" name="no_code" class="form-control" placeholder="N8739..."
                            value="{{ selected_no_code }}">
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="bi bi-search"></i>
-                        {{ 'بحث' if session.get('lang') == 'ar' else 'Search' }}
+                        {{ 'بحث' if current_locale == 'ar' else 'Search' }}
                     </button>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <a href="{{ url_for('stages.list') }}" class="btn btn-outline-secondary w-100">
                         <i class="bi bi-x-circle"></i>
-                        {{ 'مسح' if session.get('lang') == 'ar' else 'Clear' }}
+                        {{ 'مسح' if current_locale == 'ar' else 'Clear' }}
                     </a>
                 </div>
             </form>
@@ -75,13 +75,13 @@
                 <table class="table table-hover table-striped mb-0">
                     <thead class="table-dark">
                         <tr>
-                            <th>{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'No. Code' }}</th>
-                            <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
-                            <th>{{ 'القطر' if session.get('lang') == 'ar' else 'DN' }}</th>
-                            <th>{{ 'النوع' if session.get('lang') == 'ar' else 'Type' }}</th>
-                            <th>{{ 'الوزن' if session.get('lang') == 'ar' else 'Weight' }}</th>
-                            <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
-                            <th>{{ 'الوردية' if session.get('lang') == 'ar' else 'Shift' }}</th>
+                            <th>{{ 'كود الأنبوب' if current_locale == 'ar' else 'No. Code' }}</th>
+                            <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
+                            <th>{{ 'القطر' if current_locale == 'ar' else 'DN' }}</th>
+                            <th>{{ 'النوع' if current_locale == 'ar' else 'Type' }}</th>
+                            <th>{{ 'الوزن' if current_locale == 'ar' else 'Weight' }}</th>
+                            <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                            <th>{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</th>
                             <!-- Stage columns -->
                             <th class="text-center" title="CCM">CCM</th>
                             <th class="text-center" title="Annealing">Ann</th>
@@ -91,7 +91,7 @@
                             <th class="text-center" title="Cement">Cem</th>
                             <th class="text-center" title="Coating">Coat</th>
                             <th class="text-center" title="Finish">Fin</th>
-                            <th>{{ 'إجراءات' if session.get('lang') == 'ar' else 'Actions' }}</th>
+                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -160,7 +160,7 @@
                         {% else %}
                         <tr>
                             <td colspan="17" class="text-center py-4 text-muted">
-                                {{ 'لا توجد نتائج' if session.get('lang') == 'ar' else 'No results found' }}
+                                {{ 'لا توجد نتائج' if current_locale == 'ar' else 'No results found' }}
                             </td>
                         </tr>
                         {% endfor %}
@@ -171,8 +171,8 @@
         {% if pipes.total > 0 %}
         <div class="card-footer bg-white">
             <small class="text-muted">
-                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ pipes.total }}
-                {{ 'أنبوب' if session.get('lang') == 'ar' else 'pipes' }}
+                {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ pipes.total }}
+                {{ 'أنبوب' if current_locale == 'ar' else 'pipes' }}
             </small>
         </div>
         {% endif %}
@@ -184,7 +184,7 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body py-2">
             <small>
-                <strong>{{ 'دليل الرموز:' if session.get('lang') == 'ar' else 'Legend:' }}</strong>
+                <strong>{{ 'دليل الرموز:' if current_locale == 'ar' else 'Legend:' }}</strong>
                 <span class="badge bg-success mx-1"><i class="bi bi-check"></i></span> Accept
                 <span class="badge bg-danger mx-1"><i class="bi bi-x"></i></span> Reject
                 <span class="badge bg-warning mx-1"><i class="bi bi-exclamation"></i></span> Defect

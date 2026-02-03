@@ -10,9 +10,9 @@
             <h2>
                 <i class="bi bi-flask"></i>
                 {% if analysis %}
-                {{ 'تعديل التحليل الكيميائي' if session.get('lang') == 'ar' else 'Edit Chemical Analysis' }}
+                {{ 'تعديل التحليل الكيميائي' if current_locale == 'ar' else 'Edit Chemical Analysis' }}
                 {% else %}
-                {{ 'تحليل كيميائي جديد' if session.get('lang') == 'ar' else 'New Chemical Analysis' }}
+                {{ 'تحليل كيميائي جديد' if current_locale == 'ar' else 'New Chemical Analysis' }}
                 {% endif %}
             </h2>
             <nav aria-label="breadcrumb">
@@ -34,20 +34,20 @@
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-info-circle"></i>
-                            {{ 'معلومات أساسية' if session.get('lang') == 'ar' else 'Basic Information' }}
+                            {{ 'معلومات أساسية' if current_locale == 'ar' else 'Basic Information' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label class="form-label">{{ 'تاريخ الاختبار' if session.get('lang') == 'ar' else 'Test Date' }} *</label>
+                            <label class="form-label">{{ 'تاريخ الاختبار' if current_locale == 'ar' else 'Test Date' }} *</label>
                             <input type="date" name="test_date" class="form-control" required
                                    value="{{ analysis.test_date if analysis else today }}">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }} *</label>
+                            <label class="form-label">{{ 'الفرن' if current_locale == 'ar' else 'Furnace' }} *</label>
                             <select name="furnace_id" class="form-select" required>
-                                <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
                                 {% for furnace in furnaces %}
                                 <option value="{{ furnace.id }}"
                                     {{ 'selected' if analysis and analysis.furnace_id == furnace.id }}>
@@ -58,19 +58,19 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">{{ 'رقم المغرفة' if session.get('lang') == 'ar' else 'Ladle Number' }} *</label>
+                            <label class="form-label">{{ 'رقم المغرفة' if current_locale == 'ar' else 'Ladle Number' }} *</label>
                             <input type="number" name="ladle_no" class="form-control" required min="1"
                                    value="{{ analysis.ladle_no if analysis else next_ladle_no }}">
                             <small class="text-muted">
-                                {{ 'يبدأ من 1 كل يوم' if session.get('lang') == 'ar' else 'Resets to 1 each day' }}
+                                {{ 'يبدأ من 1 كل يوم' if current_locale == 'ar' else 'Resets to 1 each day' }}
                             </small>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</label>
+                            <label class="form-label">{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</label>
                             <input type="text" name="ladle_id" class="form-control bg-light" readonly
                                    value="{{ analysis.ladle_id if analysis else '' }}" id="ladleIdField">
-                            <small class="text-muted">{{ 'يتم حسابه تلقائياً' if session.get('lang') == 'ar' else 'Auto-calculated' }}</small>
+                            <small class="text-muted">{{ 'يتم حسابه تلقائياً' if current_locale == 'ar' else 'Auto-calculated' }}</small>
                         </div>
                     </div>
                 </div>
@@ -80,7 +80,7 @@
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="bi bi-check-circle"></i>
-                            {{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}
+                            {{ 'القرار' if current_locale == 'ar' else 'Decision' }}
                         </h5>
                         <span id="decisionModeIndicator" class="badge bg-light text-dark" style="display: none;">
                             <i class="bi bi-robot"></i> Auto
@@ -91,11 +91,11 @@
                         <div id="autoDecisionCard" class="alert alert-info mb-3" style="display: none;">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <small class="text-muted">{{ 'القرار المقترح' if session.get('lang') == 'ar' else 'Recommended Decision' }}:</small>
+                                    <small class="text-muted">{{ 'القرار المقترح' if current_locale == 'ar' else 'Recommended Decision' }}:</small>
                                     <div id="autoDecisionValue" class="fw-bold fs-5"></div>
                                 </div>
                                 <div id="worstElementsInfo" class="text-end">
-                                    <small class="text-muted">{{ 'العناصر المؤثرة' if session.get('lang') == 'ar' else 'Affected Elements' }}:</small>
+                                    <small class="text-muted">{{ 'العناصر المؤثرة' if current_locale == 'ar' else 'Affected Elements' }}:</small>
                                     <div id="worstElementsList" class="fw-bold"></div>
                                 </div>
                             </div>
@@ -103,13 +103,13 @@
 
                         <div class="mb-3">
                             <label class="form-label d-flex justify-content-between">
-                                <span>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</span>
+                                <span>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</span>
                                 <span id="manualOverrideIndicator" class="badge bg-warning text-dark" style="display: none;">
-                                    <i class="bi bi-pencil"></i> {{ 'تجاوز يدوي' if session.get('lang') == 'ar' else 'Manual Override' }}
+                                    <i class="bi bi-pencil"></i> {{ 'تجاوز يدوي' if current_locale == 'ar' else 'Manual Override' }}
                                 </span>
                             </label>
                             <select name="decision" class="form-select" id="decisionSelect">
-                                <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
                                 <option value="فحص أخيرة فقط" {{ 'selected' if analysis and analysis.decision == 'فحص أخيرة فقط' }}>
                                     فحص أخيرة فقط (Last Only)
                                 </option>
@@ -128,7 +128,7 @@
                         <!-- AI Auto-fill Status -->
                         <div class="mb-3">
                             <div class="d-flex align-items-center gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="aiRefreshBtn" title="{{ 'تحديث التحليل' if session.get('lang') == 'ar' else 'Refresh Analysis' }}">
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="aiRefreshBtn" title="{{ 'تحديث التحليل' if current_locale == 'ar' else 'Refresh Analysis' }}">
                                     <i class="bi bi-robot"></i>
                                     <span id="aiRefreshBtnIcon"><i class="bi bi-arrow-clockwise"></i></span>
                                     <span id="aiCooldownTimer" style="display: none; font-size: 0.8em;"></span>
@@ -138,7 +138,7 @@
                                         <span class="visually-hidden">Loading...</span>
                                     </div>
                                     <small class="text-muted ms-2">
-                                        {{ 'جاري التحليل...' if session.get('lang') == 'ar' else 'Analyzing...' }}
+                                        {{ 'جاري التحليل...' if current_locale == 'ar' else 'Analyzing...' }}
                                     </small>
                                 </div>
                                 <small id="aiStatusText" class="text-muted"></small>
@@ -150,7 +150,7 @@
 
                         <div class="mb-3">
                             <label class="form-label d-flex justify-content-between align-items-center">
-                                <span>{{ 'السبب' if session.get('lang') == 'ar' else 'Reason' }}</span>
+                                <span>{{ 'السبب' if current_locale == 'ar' else 'Reason' }}</span>
                                 <span id="aiReasonBadge" class="badge bg-info" style="display: none;">
                                     <i class="bi bi-robot"></i> AI
                                 </span>
@@ -162,7 +162,7 @@
                             <input type="checkbox" name="has_defect" class="form-check-input" id="hasDefect"
                                 {{ 'checked' if analysis and analysis.has_defect }}>
                             <label class="form-check-label d-flex align-items-center gap-2" for="hasDefect">
-                                {{ 'يوجد عيب' if session.get('lang') == 'ar' else 'Has Defect' }}
+                                {{ 'يوجد عيب' if current_locale == 'ar' else 'Has Defect' }}
                                 <span id="aiDefectBadge" class="badge bg-info" style="display: none;">
                                     <i class="bi bi-robot"></i> AI
                                 </span>
@@ -171,7 +171,7 @@
 
                         <div class="mb-3">
                             <label class="form-label d-flex justify-content-between align-items-center">
-                                <span>{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}</span>
+                                <span>{{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}</span>
                                 <span id="aiNotesBadge" class="badge bg-info" style="display: none;">
                                     <i class="bi bi-robot"></i> AI
                                 </span>
@@ -188,14 +188,14 @@
                     <div class="card-header bg-warning">
                         <h5 class="mb-0">
                             <i class="bi bi-calculator"></i>
-                            {{ 'العناصر الكيميائية (%)' if session.get('lang') == 'ar' else 'Chemical Elements (%)' }}
+                            {{ 'العناصر الكيميائية (%)' if current_locale == 'ar' else 'Chemical Elements (%)' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <!-- Element specs reference -->
                         <div class="alert alert-info mb-3">
                             <small>
-                                <strong>{{ 'المواصفات:' if session.get('lang') == 'ar' else 'Specifications:' }}</strong>
+                                <strong>{{ 'المواصفات:' if current_locale == 'ar' else 'Specifications:' }}</strong>
                                 C: 3.0-3.9 | Si: 1.86-2.7 | Mg: 0.031-0.07 | Cu: max 0.1 | Cr: max 0.1 |
                                 S: max 0.02 | Mn: max 0.4 | P: max 0.059 | Pb: max 0.003 | Al: max 0.049
                             </small>
@@ -302,7 +302,7 @@
                         <hr class="my-4">
 
                         <!-- Calculated Values -->
-                        <h6>{{ 'القيم المحسوبة' if session.get('lang') == 'ar' else 'Calculated Values' }}</h6>
+                        <h6>{{ 'القيم المحسوبة' if current_locale == 'ar' else 'Calculated Values' }}</h6>
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label d-flex justify-content-between align-items-center">
@@ -342,11 +342,11 @@
                 <div class="d-flex gap-2 justify-content-end">
                     <a href="{{ url_for('chemical.list') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-x-circle"></i>
-                        {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                        {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
                     </a>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check-circle"></i>
-                        {{ 'حفظ' if session.get('lang') == 'ar' else 'Save' }}
+                        {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
                     </button>
                 </div>
             </div>

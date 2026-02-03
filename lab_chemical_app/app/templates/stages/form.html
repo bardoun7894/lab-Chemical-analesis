@@ -10,9 +10,9 @@
             <h2>
                 <i class="bi bi-diagram-3"></i>
                 {% if pipe %}
-                {{ 'تعديل الأنبوب' if session.get('lang') == 'ar' else 'Edit Pipe' }}: {{ pipe.no_code }}
+                {{ 'تعديل الأنبوب' if current_locale == 'ar' else 'Edit Pipe' }}: {{ pipe.no_code }}
                 {% else %}
-                {{ 'تسجيل أنبوب جديد' if session.get('lang') == 'ar' else 'Register New Pipe' }}
+                {{ 'تسجيل أنبوب جديد' if current_locale == 'ar' else 'Register New Pipe' }}
                 {% endif %}
             </h2>
             <nav aria-label="breadcrumb">
@@ -35,14 +35,14 @@
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-clipboard-check"></i>
-                            {{ 'أمر الإنتاج' if session.get('lang') == 'ar' else 'Production Order' }}
+                            {{ 'أمر الإنتاج' if current_locale == 'ar' else 'Production Order' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label class="form-label">{{ 'ربط بأمر إنتاج' if session.get('lang') == 'ar' else 'Link to Production Order' }}</label>
+                            <label class="form-label">{{ 'ربط بأمر إنتاج' if current_locale == 'ar' else 'Link to Production Order' }}</label>
                             <select name="production_order_id" class="form-select" id="productionOrderSelect">
-                                <option value="">-- {{ 'بدون أمر إنتاج' if session.get('lang') == 'ar' else 'No Production Order' }} --</option>
+                                <option value="">-- {{ 'بدون أمر إنتاج' if current_locale == 'ar' else 'No Production Order' }} --</option>
                                 {% for order in production_orders %}
                                 {% set order_ladles = order.chemical_analyses.all() %}
                                 <option value="{{ order.id }}"
@@ -56,7 +56,7 @@
                                 {% endfor %}
                             </select>
                             <small class="text-muted">
-                                {{ 'اختر أمر الإنتاج لربط الأنبوب به' if session.get('lang') == 'ar' else 'Select a production order to link this pipe to' }}
+                                {{ 'اختر أمر الإنتاج لربط الأنبوب به' if current_locale == 'ar' else 'Select a production order to link this pipe to' }}
                             </small>
                         </div>
                     </div>
@@ -66,27 +66,27 @@
                     <div class="card-header bg-success text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-info-circle"></i>
-                            {{ 'معلومات الأنبوب' if session.get('lang') == 'ar' else 'Pipe Information' }}
+                            {{ 'معلومات الأنبوب' if current_locale == 'ar' else 'Pipe Information' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'No. Code' }} *</label>
+                                <label class="form-label">{{ 'كود الأنبوب' if current_locale == 'ar' else 'No. Code' }} *</label>
                                 <input type="text" name="no_code" id="noCodeInput" class="form-control" required
                                        placeholder="N8739" value="{{ pipe.no_code if pipe else '' }}">
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">{{ 'ترتيب الأنبوب' if session.get('lang') == 'ar' else 'Pipe Order' }}</label>
+                                <label class="form-label">{{ 'ترتيب الأنبوب' if current_locale == 'ar' else 'Pipe Order' }}</label>
                                 <input type="number" name="arrange_pipe" class="form-control" id="pipeOrderInput"
                                        min="1" max="20" placeholder="1-20"
                                        value="{{ pipe.arrange_pipe if pipe else 1 }}">
                                 <small class="text-muted">{{ '1-20' }}</small>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</label>
+                                <label class="form-label">{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</label>
                                 <select name="ladle_id" class="form-select" id="ladleIdSelect">
-                                    <option value="">-- {{ 'اختر معرف المغرفة' if session.get('lang') == 'ar' else 'Select Ladle ID' }} --</option>
+                                    <option value="">-- {{ 'اختر معرف المغرفة' if current_locale == 'ar' else 'Select Ladle ID' }} --</option>
                                     {% for ladle in latest_ladles %}
                                     <option value="{{ ladle.ladle_id }}"
                                             data-decision="{{ ladle.decision }}"
@@ -95,15 +95,15 @@
                                     </option>
                                     {% endfor %}
                                 </select>
-                                <small class="text-muted">{{ 'آخر 4 تحليلات كيميائية' if session.get('lang') == 'ar' else "Latest 4 chemical analyses" }}</small>
+                                <small class="text-muted">{{ 'آخر 4 تحليلات كيميائية' if current_locale == 'ar' else "Latest 4 chemical analyses" }}</small>
                                 <div id="ladleInfo" class="mt-1" style="display: none;">
                                     <span class="badge" id="ladleDecision"></span>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter (DN)' }} *</label>
+                                <label class="form-label">{{ 'القطر' if current_locale == 'ar' else 'Diameter (DN)' }} *</label>
                                 <select name="diameter" class="form-select" required>
-                                    <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                    <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
                                     <option value="300" {{ 'selected' if pipe and pipe.diameter == 300 }}>DN300</option>
                                     <option value="400" {{ 'selected' if pipe and pipe.diameter == 400 }}>DN400</option>
                                     <option value="500" {{ 'selected' if pipe and pipe.diameter == 500 }}>DN500</option>
@@ -113,9 +113,9 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">{{ 'الصنف' if session.get('lang') == 'ar' else 'Class' }}</label>
+                                <label class="form-label">{{ 'الصنف' if current_locale == 'ar' else 'Class' }}</label>
                                 <select name="pipe_class" class="form-select">
-                                    <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                    <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
                                     <option value="K9" {{ 'selected' if pipe and pipe.pipe_class == 'K9' }}>K9</option>
                                     <option value="C25" {{ 'selected' if pipe and pipe.pipe_class == 'C25' }}>C25</option>
                                     <option value="C40" {{ 'selected' if pipe and pipe.pipe_class == 'C40' }}>C40</option>
@@ -123,31 +123,31 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">{{ 'تاريخ الإنتاج' if session.get('lang') == 'ar' else 'Production Date' }} *</label>
+                                <label class="form-label">{{ 'تاريخ الإنتاج' if current_locale == 'ar' else 'Production Date' }} *</label>
                                 <input type="date" name="production_date" class="form-control" required
                                        value="{{ pipe.production_date if pipe else today }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">{{ 'الوردية' if session.get('lang') == 'ar' else 'Shift' }}</label>
+                                <label class="form-label">{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</label>
                                 <select name="shift" class="form-select">
-                                    <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                    <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
                                     <option value="1" {{ 'selected' if pipe and pipe.shift == 1 }}>1 - Morning</option>
                                     <option value="2" {{ 'selected' if pipe and pipe.shift == 2 }}>2 - Afternoon</option>
                                     <option value="3" {{ 'selected' if pipe and pipe.shift == 3 }}>3 - Night</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">{{ 'الوزن الفعلي (كجم)' if session.get('lang') == 'ar' else 'Actual Weight (kg)' }}</label>
+                                <label class="form-label">{{ 'الوزن الفعلي (كجم)' if current_locale == 'ar' else 'Actual Weight (kg)' }}</label>
                                 <input type="number" name="actual_weight" class="form-control"
                                        step="0.1" min="0" value="{{ pipe.actual_weight if pipe else '' }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">{{ 'السُمك' if session.get('lang') == 'ar' else 'Thickness' }}</label>
+                                <label class="form-label">{{ 'السُمك' if current_locale == 'ar' else 'Thickness' }}</label>
                                 <input type="number" name="thickness" class="form-control"
                                        step="0.001" min="0" value="{{ pipe.thickness if pipe else '' }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">{{ 'رقم القالب' if session.get('lang') == 'ar' else 'Mold Number' }}</label>
+                                <label class="form-label">{{ 'رقم القالب' if current_locale == 'ar' else 'Mold Number' }}</label>
                                 <input type="text" name="mold_number" class="form-control"
                                        value="{{ pipe.mold_number if pipe else '' }}">
                             </div>
@@ -162,18 +162,18 @@
                     <div class="card-header bg-warning">
                         <h5 class="mb-0">
                             <i class="bi bi-gear"></i>
-                            {{ 'تفاصيل إضافية' if session.get('lang') == 'ar' else 'Additional Details' }}
+                            {{ 'تفاصيل إضافية' if current_locale == 'ar' else 'Additional Details' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label class="form-label">{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'Pipe Code' }}</label>
+                            <label class="form-label">{{ 'كود الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}</label>
                             <input type="text" name="pipe_code" id="pipeCodeInput" class="form-control" readonly
                                    value="{{ pipe.pipe_code if pipe else '' }}"
-                                   placeholder="{{ 'يتم توليده تلقائياً' if session.get('lang') == 'ar' else 'Auto-generated' }}">
+                                   placeholder="{{ 'يتم توليده تلقائياً' if current_locale == 'ar' else 'Auto-generated' }}">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">{{ 'مهندس الوردية' if session.get('lang') == 'ar' else 'Shift Engineer' }}</label>
+                            <label class="form-label">{{ 'مهندس الوردية' if current_locale == 'ar' else 'Shift Engineer' }}</label>
                             <input type="text" name="shift_engineer" class="form-control"
                                    value="{{ pipe.shift_engineer if pipe else '' }}">
                         </div>
@@ -187,7 +187,7 @@
             <div class="card-header bg-info text-white">
                 <h5 class="mb-0">
                     <i class="bi bi-list-check"></i>
-                    {{ 'مراحل الإنتاج' if session.get('lang') == 'ar' else 'Production Stages' }}
+                    {{ 'مراحل الإنتاج' if current_locale == 'ar' else 'Production Stages' }}
                 </h5>
             </div>
             <div class="card-body">
@@ -203,13 +203,13 @@
                     <table class="table table-sm">
                         <thead class="table-light">
                             <tr>
-                                <th width="9%">{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }}</th>
-                                <th width="10%">{{ 'الماكينة' if session.get('lang') == 'ar' else 'Machine' }}</th>
-                                <th width="12%">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
-                                <th width="14%">{{ 'التاريخ/الوقت/الطول' if session.get('lang') == 'ar' else 'Date/Time/Length' }}</th>
-                                <th width="12%">{{ 'نوع العيب' if session.get('lang') == 'ar' else 'Defect Type' }}</th>
-                                <th width="12%">{{ 'سبب العيب' if session.get('lang') == 'ar' else 'Defect Reason' }}</th>
-                                <th width="16%">{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}</th>
+                                <th width="9%">{{ 'المرحلة' if current_locale == 'ar' else 'Stage' }}</th>
+                                <th width="10%">{{ 'الماكينة' if current_locale == 'ar' else 'Machine' }}</th>
+                                <th width="12%">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
+                                <th width="14%">{{ 'التاريخ/الوقت/الطول' if current_locale == 'ar' else 'Date/Time/Length' }}</th>
+                                <th width="12%">{{ 'نوع العيب' if current_locale == 'ar' else 'Defect Type' }}</th>
+                                <th width="12%">{{ 'سبب العيب' if current_locale == 'ar' else 'Defect Reason' }}</th>
+                                <th width="16%">{{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -251,12 +251,12 @@
                                         <div class="col-7">
                                             <input type="date" name="stage_{{ stage_name }}_date" class="form-control form-control-sm"
                                                    value="{{ stage.stage_date if stage and stage.stage_date else '' }}"
-                                                   title="{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}">
+                                                   title="{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}">
                                         </div>
                                         <div class="col-5">
                                             <input type="time" name="stage_{{ stage_name }}_time" class="form-control form-control-sm"
                                                    value="{{ stage.stage_time if stage and stage.stage_time else '' }}"
-                                                   title="{{ 'الوقت' if session.get('lang') == 'ar' else 'Time' }}">
+                                                   title="{{ 'الوقت' if current_locale == 'ar' else 'Time' }}">
                                         </div>
                                     </div>
                                     {% elif stage_name == 'Finish' %}
@@ -265,7 +265,7 @@
                                         <input type="number" name="stage_{{ stage_name }}_length" class="form-control form-control-sm"
                                                step="0.01" min="0" placeholder="6.0"
                                                value="{{ stage.measurement_value if stage and stage.measurement_value else '' }}"
-                                               title="{{ 'الطول' if session.get('lang') == 'ar' else 'Length' }}">
+                                               title="{{ 'الطول' if current_locale == 'ar' else 'Length' }}">
                                         <span class="input-group-text">m</span>
                                     </div>
                                     {% else %}
@@ -274,7 +274,7 @@
                                 </td>
                                 <td>
                                     <select name="stage_{{ stage_name }}_defect_type" class="form-select form-select-sm">
-                                        <option value="">{{ 'لا يوجد' if session.get('lang') == 'ar' else 'None' }}</option>
+                                        <option value="">{{ 'لا يوجد' if current_locale == 'ar' else 'None' }}</option>
                                         {% for defect_en, defect_ar in defects %}
                                         <option value="{{ defect_en }}" {{ 'selected' if stage and stage.defect_type == defect_en }}>
                                             {{ defect_en }}
@@ -285,12 +285,12 @@
                                 <td>
                                     <input type="text" name="stage_{{ stage_name }}_defect_reason" class="form-control form-control-sm"
                                            value="{{ stage.defect_reason if stage and stage.defect_reason else '' }}"
-                                           placeholder="{{ 'سبب العيب' if session.get('lang') == 'ar' else 'Defect Reason' }}">
+                                           placeholder="{{ 'سبب العيب' if current_locale == 'ar' else 'Defect Reason' }}">
                                 </td>
                                 <td>
                                     <input type="text" name="stage_{{ stage_name }}_notes" class="form-control form-control-sm"
                                            value="{{ stage.notes if stage and stage.notes else '' }}"
-                                           placeholder="{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}">
+                                           placeholder="{{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}">
                                 </td>
                             </tr>
                             {% endfor %}
@@ -300,7 +300,7 @@
 
                 <div class="alert alert-info small mb-0">
                     <i class="bi bi-info-circle"></i>
-                    {{ 'يمكنك تحديث قرارات كل مرحلة هنا أو من صفحة التفاصيل' if session.get('lang') == 'ar' else 'You can update stage decisions here or from the detail page' }}
+                    {{ 'يمكنك تحديث قرارات كل مرحلة هنا أو من صفحة التفاصيل' if current_locale == 'ar' else 'You can update stage decisions here or from the detail page' }}
                 </div>
             </div>
         </div>
@@ -309,11 +309,11 @@
         <div class="d-flex gap-2 justify-content-end mb-4">
             <a href="{{ url_for('stages.list') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-x-circle"></i>
-                {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
             </a>
             <button type="submit" class="btn btn-success">
                 <i class="bi bi-check-circle"></i>
-                {{ 'حفظ' if session.get('lang') == 'ar' else 'Save' }}
+                {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
             </button>
         </div>
     </form>

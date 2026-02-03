@@ -11,7 +11,7 @@
                 <div>
                     <h2>
                         <i class="bi bi-diagram-3"></i>
-                        {{ 'تفاصيل الأنبوب' if session.get('lang') == 'ar' else 'Pipe Details' }}: {{ pipe.no_code }}
+                        {{ 'تفاصيل الأنبوب' if current_locale == 'ar' else 'Pipe Details' }}: {{ pipe.no_code }}
                     </h2>
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
@@ -23,15 +23,15 @@
                 <div class="btn-group">
                     <a href="{{ url_for('stages.edit_pipe', id=pipe.id) }}" class="btn btn-primary">
                         <i class="bi bi-pencil"></i>
-                        {{ 'تعديل' if session.get('lang') == 'ar' else 'Edit' }}
+                        {{ 'تعديل' if current_locale == 'ar' else 'Edit' }}
                     </a>
                     <a href="{{ url_for('stickers.preview_sticker', pipe_id=pipe.id) }}" class="btn btn-success">
                         <i class="bi bi-qr-code"></i>
-                        {{ 'طباعة ملصق' if session.get('lang') == 'ar' else 'Print Sticker' }}
+                        {{ 'طباعة ملصق' if current_locale == 'ar' else 'Print Sticker' }}
                     </a>
                     <button type="button" class="btn btn-outline-primary" onclick="window.print();">
                         <i class="bi bi-printer"></i>
-                        {{ 'طباعة' if session.get('lang') == 'ar' else 'Print' }}
+                        {{ 'طباعة' if current_locale == 'ar' else 'Print' }}
                     </button>
                 </div>
             </div>
@@ -45,17 +45,17 @@
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-info-circle"></i>
-                        {{ 'معلومات الأنبوب' if session.get('lang') == 'ar' else 'Pipe Information' }}
+                        {{ 'معلومات الأنبوب' if current_locale == 'ar' else 'Pipe Information' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-borderless mb-0">
                         <tr>
-                            <th width="40%">{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'No. Code' }}</th>
+                            <th width="40%">{{ 'كود الأنبوب' if current_locale == 'ar' else 'No. Code' }}</th>
                             <td><strong class="fs-5">{{ pipe.no_code }}</strong></td>
                         </tr>
                         <tr>
-                            <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                            <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
                             <td>
                                 {% if pipe.ladle_id %}
                                 <a href="{{ url_for('chemical.list') }}?ladle_id={{ pipe.ladle_id }}">
@@ -65,40 +65,40 @@
                             </td>
                         </tr>
                         <tr>
-                            <th>{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}</th>
+                            <th>{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</th>
                             <td><span class="badge bg-primary fs-6">DN{{ pipe.diameter }}</span></td>
                         </tr>
                         <tr>
-                            <th>{{ 'النوع' if session.get('lang') == 'ar' else 'Type' }}</th>
+                            <th>{{ 'النوع' if current_locale == 'ar' else 'Type' }}</th>
                             <td>{{ pipe.pipe_class or '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'الوزن' if session.get('lang') == 'ar' else 'Weight' }}</th>
+                            <th>{{ 'الوزن' if current_locale == 'ar' else 'Weight' }}</th>
                             <td>{{ pipe.actual_weight|round(1) if pipe.actual_weight else '-' }} kg</td>
                         </tr>
                         <tr>
-                            <th>{{ 'السُمك' if session.get('lang') == 'ar' else 'Thickness' }}</th>
+                            <th>{{ 'السُمك' if current_locale == 'ar' else 'Thickness' }}</th>
                             <td>{{ pipe.thickness if pipe.thickness else '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'تاريخ الإنتاج' if session.get('lang') == 'ar' else 'Production Date' }}</th>
+                            <th>{{ 'تاريخ الإنتاج' if current_locale == 'ar' else 'Production Date' }}</th>
                             <td>{{ pipe.production_date }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'الوردية' if session.get('lang') == 'ar' else 'Shift' }}</th>
+                            <th>{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</th>
                             <td>{{ pipe.shift or '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'الماكينة' if session.get('lang') == 'ar' else 'Machine' }}</th>
+                            <th>{{ 'الماكينة' if current_locale == 'ar' else 'Machine' }}</th>
                             <td>{{ pipe.machine.machine_code if pipe.machine else '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'رقم القالب' if session.get('lang') == 'ar' else 'Mold' }}</th>
+                            <th>{{ 'رقم القالب' if current_locale == 'ar' else 'Mold' }}</th>
                             <td>{{ pipe.mold_number or '-' }}</td>
                         </tr>
                         {% if pipe.production_order %}
                         <tr>
-                            <th>{{ 'أمر الإنتاج' if session.get('lang') == 'ar' else 'Order' }}</th>
+                            <th>{{ 'أمر الإنتاج' if current_locale == 'ar' else 'Order' }}</th>
                             <td>
                                 <a href="{{ url_for('production_orders.view', id=pipe.production_order.id) }}">
                                     {{ pipe.production_order.order_number }}
@@ -106,7 +106,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th>{{ 'العميل' if session.get('lang') == 'ar' else 'Customer' }}</th>
+                            <th>{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</th>
                             <td>{{ pipe.production_order.customer_name or '-' }}</td>
                         </tr>
                         {% endif %}
@@ -120,13 +120,13 @@
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-clipboard-check"></i>
-                        {{ 'أمر الإنتاج' if session.get('lang') == 'ar' else 'Production Order' }}
+                        {{ 'أمر الإنتاج' if current_locale == 'ar' else 'Production Order' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-borderless mb-0">
                         <tr>
-                            <th>{{ 'رقم الأمر' if session.get('lang') == 'ar' else 'Order #' }}</th>
+                            <th>{{ 'رقم الأمر' if current_locale == 'ar' else 'Order #' }}</th>
                             <td>
                                 <a href="{{ url_for('production_orders.view', id=pipe.production_order.id) }}">
                                     {{ pipe.production_order.order_number }}
@@ -134,11 +134,11 @@
                             </td>
                         </tr>
                         <tr>
-                            <th>{{ 'العميل' if session.get('lang') == 'ar' else 'Customer' }}</th>
+                            <th>{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</th>
                             <td>{{ pipe.production_order.customer_name or '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'التقدم' if session.get('lang') == 'ar' else 'Progress' }}</th>
+                            <th>{{ 'التقدم' if current_locale == 'ar' else 'Progress' }}</th>
                             <td>
                                 <div class="progress" style="height: 20px;">
                                     <div class="progress-bar" role="progressbar"
@@ -162,12 +162,12 @@
                 <div class="card-header bg-warning">
                     <h5 class="mb-0">
                         <i class="bi bi-flask"></i>
-                        {{ 'التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis' }}
+                        {{ 'التحليل الكيميائي' if current_locale == 'ar' else 'Chemical Analysis' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>{{ 'القرار:' if session.get('lang') == 'ar' else 'Decision:' }}</span>
+                        <span>{{ 'القرار:' if current_locale == 'ar' else 'Decision:' }}</span>
                         {% if chemical_analysis.decision == 'ACCEPT' %}
                         <span class="badge bg-success">ACCEPT</span>
                         {% elif chemical_analysis.decision == 'REJECT' %}
@@ -178,7 +178,7 @@
                     </div>
                     <a href="{{ url_for('chemical.detail', id=chemical_analysis.id) }}" class="btn btn-sm btn-outline-warning w-100">
                         <i class="bi bi-eye"></i>
-                        {{ 'عرض التفاصيل' if session.get('lang') == 'ar' else 'View Details' }}
+                        {{ 'عرض التفاصيل' if current_locale == 'ar' else 'View Details' }}
                     </a>
                 </div>
             </div>
@@ -191,7 +191,7 @@
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-list-check"></i>
-                        {{ 'مراحل الإنتاج' if session.get('lang') == 'ar' else 'Production Stages' }}
+                        {{ 'مراحل الإنتاج' if current_locale == 'ar' else 'Production Stages' }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -247,14 +247,14 @@
                         <table class="table table-bordered">
                             <thead class="table-light">
                                 <tr>
-                                    <th>{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }}</th>
-                                    <th>{{ 'الماكينة' if session.get('lang') == 'ar' else 'Machine' }}</th>
-                                    <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
-                                    <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
-                                    <th>{{ 'القياس' if session.get('lang') == 'ar' else 'Measurement' }}</th>
-                                    <th>{{ 'عيب' if session.get('lang') == 'ar' else 'Defect' }}</th>
-                                    <th>{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}</th>
-                                    <th>{{ 'إجراء' if session.get('lang') == 'ar' else 'Action' }}</th>
+                                    <th>{{ 'المرحلة' if current_locale == 'ar' else 'Stage' }}</th>
+                                    <th>{{ 'الماكينة' if current_locale == 'ar' else 'Machine' }}</th>
+                                    <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
+                                    <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                                    <th>{{ 'القياس' if current_locale == 'ar' else 'Measurement' }}</th>
+                                    <th>{{ 'عيب' if current_locale == 'ar' else 'Defect' }}</th>
+                                    <th>{{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}</th>
+                                    <th>{{ 'إجراء' if current_locale == 'ar' else 'Action' }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -272,17 +272,17 @@
                                     <td>
                                         {% if stage %}
                                             {% if stage.decision == 'ACCEPT' %}
-                                            <span class="badge bg-success">{{ 'مقبول' if session.get('lang') == 'ar' else 'ACCEPT' }}</span>
+                                            <span class="badge bg-success">{{ 'مقبول' if current_locale == 'ar' else 'ACCEPT' }}</span>
                                             {% elif stage.decision == 'REJECT' %}
-                                            <span class="badge bg-danger">{{ 'مرفوض' if session.get('lang') == 'ar' else 'REJECT' }}</span>
+                                            <span class="badge bg-danger">{{ 'مرفوض' if current_locale == 'ar' else 'REJECT' }}</span>
                                             {% elif stage.decision == 'HOLD' %}
-                                            <span class="badge bg-warning text-dark">{{ 'انتظار' if session.get('lang') == 'ar' else 'HOLD' }}</span>
+                                            <span class="badge bg-warning text-dark">{{ 'انتظار' if current_locale == 'ar' else 'HOLD' }}</span>
                                             {% elif stage.decision == 'REWORK' %}
-                                            <span class="badge bg-info">{{ 'إعادة تشغيل' if session.get('lang') == 'ar' else 'REWORK' }}</span>
+                                            <span class="badge bg-info">{{ 'إعادة تشغيل' if current_locale == 'ar' else 'REWORK' }}</span>
                                             {% elif stage.decision %}
                                             <span class="badge bg-secondary">{{ stage.decision }}</span>
                                             {% else %}
-                                            <span class="badge bg-info">{{ 'جاري' if session.get('lang') == 'ar' else 'In Progress' }}</span>
+                                            <span class="badge bg-info">{{ 'جاري' if current_locale == 'ar' else 'In Progress' }}</span>
                                             {% endif %}
                                         {% else %}
                                         <span class="text-muted">-</span>
@@ -323,7 +323,7 @@
                                             </button>
                                             <button type="button" class="btn btn-outline-info"
                                                     onclick="viewStageHistory('{{ stage_name }}')"
-                                                    title="{{ 'سجل التغييرات' if session.get('lang') == 'ar' else 'View History' }}">
+                                                    title="{{ 'سجل التغييرات' if current_locale == 'ar' else 'View History' }}">
                                                 <i class="bi bi-clock-history"></i>
                                             </button>
                                         </div>
@@ -350,74 +350,74 @@
                 <div class="modal-header">
                     <h5 class="modal-title">
                         <i class="bi bi-pencil"></i>
-                        {{ 'تحديث المرحلة' if session.get('lang') == 'ar' else 'Update Stage' }}:
+                        {{ 'تحديث المرحلة' if current_locale == 'ar' else 'Update Stage' }}:
                         <span id="modalStageTitle"></span>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                        <label class="form-label">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</label>
                         <select name="decision" class="form-select" id="modalDecision">
-                            <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                            <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
                             <!-- Options will be populated dynamically by JavaScript -->
                         </select>
                     </div>
                     <div class="mb-3" id="machineDiv" style="display: none;">
-                        <label class="form-label">{{ 'الماكينة' if session.get('lang') == 'ar' else 'Machine' }}</label>
+                        <label class="form-label">{{ 'الماكينة' if current_locale == 'ar' else 'Machine' }}</label>
                         <select name="machine_id" class="form-select" id="modalMachine">
-                            <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                            <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
                             <!-- Options will be populated dynamically by JavaScript -->
                         </select>
                     </div>
                     <!-- Date and Time fields (shown for Annealing) -->
                     <div class="row" id="dateTimeDiv" style="display: none;">
                         <div class="col-6 mb-3">
-                            <label class="form-label">{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</label>
+                            <label class="form-label">{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</label>
                             <input type="date" name="stage_date" class="form-control" id="modalStageDate">
                         </div>
                         <div class="col-6 mb-3">
-                            <label class="form-label">{{ 'الوقت' if session.get('lang') == 'ar' else 'Time' }}</label>
+                            <label class="form-label">{{ 'الوقت' if current_locale == 'ar' else 'Time' }}</label>
                             <input type="time" name="stage_time" class="form-control" id="modalStageTime">
                         </div>
                     </div>
                     <!-- Length field (shown for Finish) -->
                     <div class="mb-3" id="lengthDiv" style="display: none;">
-                        <label class="form-label">{{ 'الطول (متر)' if session.get('lang') == 'ar' else 'Length (meters)' }}</label>
+                        <label class="form-label">{{ 'الطول (متر)' if current_locale == 'ar' else 'Length (meters)' }}</label>
                         <input type="number" name="length_value" class="form-control" step="0.01" id="modalLength" placeholder="6.0">
                     </div>
                     <div class="mb-3" id="measurementDiv">
-                        <label class="form-label">{{ 'القياس' if session.get('lang') == 'ar' else 'Measurement' }}</label>
+                        <label class="form-label">{{ 'القياس' if current_locale == 'ar' else 'Measurement' }}</label>
                         <input type="number" name="measurement_value" class="form-control" step="0.001" id="modalMeasurement">
                     </div>
                     <div class="form-check mb-3">
                         <input type="checkbox" name="has_defect" class="form-check-input" id="modalHasDefect">
                         <label class="form-check-label" for="modalHasDefect">
-                            {{ 'يوجد عيب' if session.get('lang') == 'ar' else 'Has Defect' }}
+                            {{ 'يوجد عيب' if current_locale == 'ar' else 'Has Defect' }}
                         </label>
                     </div>
                     <div class="mb-3" id="defectTypeDiv" style="display: none;">
-                        <label class="form-label">{{ 'نوع العيب' if session.get('lang') == 'ar' else 'Defect Type' }}</label>
+                        <label class="form-label">{{ 'نوع العيب' if current_locale == 'ar' else 'Defect Type' }}</label>
                         <select name="defect_type" class="form-select" id="modalDefectType">
-                            <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                            <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
                             <!-- Options will be populated dynamically by JavaScript -->
                         </select>
                     </div>
                     <div class="mb-3" id="defectReasonDiv" style="display: none;">
-                        <label class="form-label">{{ 'سبب العيب' if session.get('lang') == 'ar' else 'Defect Reason' }}</label>
+                        <label class="form-label">{{ 'سبب العيب' if current_locale == 'ar' else 'Defect Reason' }}</label>
                         <textarea name="defect_reason" class="form-control" rows="2" id="modalDefectReason"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}</label>
+                        <label class="form-label">{{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}</label>
                         <textarea name="notes" class="form-control" rows="2" id="modalNotes"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                        {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
                     </button>
                     <button type="submit" class="btn btn-primary">
-                        {{ 'حفظ' if session.get('lang') == 'ar' else 'Save' }}
+                        {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
                     </button>
                 </div>
             </form>
@@ -432,7 +432,7 @@
             <div class="modal-header bg-info text-white">
                 <h5 class="modal-title">
                     <i class="bi bi-clock-history"></i>
-                    {{ 'سجل التغييرات' if session.get('lang') == 'ar' else 'Change History' }}:
+                    {{ 'سجل التغييرات' if current_locale == 'ar' else 'Change History' }}:
                     <span id="historyStageTitle"></span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -446,19 +446,19 @@
                 <div id="historyContent" style="display: none;">
                     <div id="historyEmpty" class="text-center py-4 text-muted" style="display: none;">
                         <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-                        <p class="mt-2">{{ 'لا يوجد سجل تغييرات' if session.get('lang') == 'ar' else 'No history found' }}</p>
+                        <p class="mt-2">{{ 'لا يوجد سجل تغييرات' if current_locale == 'ar' else 'No history found' }}</p>
                     </div>
                     <div class="table-responsive" id="historyTable" style="display: none;">
                         <table class="table table-sm table-hover">
                             <thead class="table-light">
                                 <tr>
-                                    <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
-                                    <th>{{ 'المستخدم' if session.get('lang') == 'ar' else 'User' }}</th>
-                                    <th>{{ 'الإجراء' if session.get('lang') == 'ar' else 'Action' }}</th>
-                                    <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
-                                    <th>{{ 'الماكينة' if session.get('lang') == 'ar' else 'Machine' }}</th>
-                                    <th>{{ 'العيب' if session.get('lang') == 'ar' else 'Defect' }}</th>
-                                    <th>{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}</th>
+                                    <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                                    <th>{{ 'المستخدم' if current_locale == 'ar' else 'User' }}</th>
+                                    <th>{{ 'الإجراء' if current_locale == 'ar' else 'Action' }}</th>
+                                    <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
+                                    <th>{{ 'الماكينة' if current_locale == 'ar' else 'Machine' }}</th>
+                                    <th>{{ 'العيب' if current_locale == 'ar' else 'Defect' }}</th>
+                                    <th>{{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}</th>
                                 </tr>
                             </thead>
                             <tbody id="historyTableBody">
@@ -469,7 +469,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    {{ 'إغلاق' if session.get('lang') == 'ar' else 'Close' }}
+                    {{ 'إغلاق' if current_locale == 'ar' else 'Close' }}
                 </button>
             </div>
         </div>

@@ -9,10 +9,10 @@
         <div class="col">
             <h2>
                 <i class="bi bi-qr-code"></i>
-                {{ 'طباعة الملصقات' if session.get('lang') == 'ar' else 'Sticker Printing' }}
+                {{ 'طباعة الملصقات' if current_locale == 'ar' else 'Sticker Printing' }}
             </h2>
             <p class="text-muted">
-                {{ 'إنشاء وطباعة ملصقات الأنابيب مع QR Code' if session.get('lang') == 'ar' else 'Generate and print pipe stickers with QR codes' }}
+                {{ 'إنشاء وطباعة ملصقات الأنابيب مع QR Code' if current_locale == 'ar' else 'Generate and print pipe stickers with QR codes' }}
             </p>
         </div>
     </div>
@@ -24,12 +24,12 @@
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-search"></i>
-                        {{ 'البحث عن أنبوب' if session.get('lang') == 'ar' else 'Search Pipe' }}
+                        {{ 'البحث عن أنبوب' if current_locale == 'ar' else 'Search Pipe' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">{{ 'كود الأنبوب أو معرف المغرفة' if session.get('lang') == 'ar' else 'Pipe Code or Ladle ID' }}</label>
+                        <label class="form-label">{{ 'كود الأنبوب أو معرف المغرفة' if current_locale == 'ar' else 'Pipe Code or Ladle ID' }}</label>
                         <div class="input-group">
                             <input type="text" id="searchInput" class="form-control"
                                    placeholder="N8739 or 4713012025...">
@@ -51,7 +51,7 @@
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-aspect-ratio"></i>
-                        {{ 'حجم الملصق' if session.get('lang') == 'ar' else 'Sticker Size' }}
+                        {{ 'حجم الملصق' if current_locale == 'ar' else 'Sticker Size' }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -59,42 +59,42 @@
                         <input type="radio" class="btn-check" name="stickerSize" id="sizeSmall" value="small">
                         <label class="btn btn-outline-success" for="sizeSmall">
                             <i class="bi bi-square"></i>
-                            Small (80x50mm) - {{ 'صغير' if session.get('lang') == 'ar' else 'Compact' }}
+                            Small (80x50mm) - {{ 'صغير' if current_locale == 'ar' else 'Compact' }}
                         </label>
 
                         <input type="radio" class="btn-check" name="stickerSize" id="sizeMedium" value="medium">
                         <label class="btn btn-outline-success" for="sizeMedium">
                             <i class="bi bi-square-fill"></i>
-                            Medium (100x60mm) - {{ 'متوسط' if session.get('lang') == 'ar' else 'Standard' }}
+                            Medium (100x60mm) - {{ 'متوسط' if current_locale == 'ar' else 'Standard' }}
                         </label>
 
                         <input type="radio" class="btn-check" name="stickerSize" id="sizeLarge" value="large">
                         <label class="btn btn-outline-success" for="sizeLarge">
                             <i class="bi bi-square-half"></i>
-                            Large (120x80mm) - {{ 'كبير' if session.get('lang') == 'ar' else 'Detailed' }}
+                            Large (120x80mm) - {{ 'كبير' if current_locale == 'ar' else 'Detailed' }}
                         </label>
 
                         <input type="radio" class="btn-check" name="stickerSize" id="sizeGCP" value="gcp" checked>
                         <label class="btn btn-outline-success" for="sizeGCP">
                             <i class="bi bi-award"></i>
-                            GCP Pro (140x90mm) - {{ 'احترافي' if session.get('lang') == 'ar' else 'Professional' }}
+                            GCP Pro (140x90mm) - {{ 'احترافي' if current_locale == 'ar' else 'Professional' }}
                         </label>
 
                         <input type="radio" class="btn-check" name="stickerSize" id="sizeCustom" value="custom">
                         <label class="btn btn-outline-success" for="sizeCustom">
                             <i class="bi bi-pencil-square"></i>
-                            {{ 'مخصص' if session.get('lang') == 'ar' else 'Custom Size' }}
+                            {{ 'مخصص' if current_locale == 'ar' else 'Custom Size' }}
                         </label>
                     </div>
 
                     <!-- Custom Size Inputs -->
                     <div id="customSizeInputs" class="row g-2 mt-2" style="display: none;">
                         <div class="col-6">
-                            <label class="form-label small">{{ 'العرض (مم)' if session.get('lang') == 'ar' else 'Width (mm)' }}</label>
+                            <label class="form-label small">{{ 'العرض (مم)' if current_locale == 'ar' else 'Width (mm)' }}</label>
                             <input type="number" id="customWidth" class="form-control" value="140" min="50" max="200">
                         </div>
                         <div class="col-6">
-                            <label class="form-label small">{{ 'الطول (مم)' if session.get('lang') == 'ar' else 'Height (mm)' }}</label>
+                            <label class="form-label small">{{ 'الطول (مم)' if current_locale == 'ar' else 'Height (mm)' }}</label>
                             <input type="number" id="customHeight" class="form-control" value="90" min="40" max="150">
                         </div>
                     </div>
@@ -108,16 +108,16 @@
                 <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="bi bi-eye"></i>
-                        {{ 'معاينة الملصق' if session.get('lang') == 'ar' else 'Sticker Preview' }}
+                        {{ 'معاينة الملصق' if current_locale == 'ar' else 'Sticker Preview' }}
                     </h5>
                     <div id="previewActions" style="display: none;">
                         <button type="button" class="btn btn-light btn-sm" onclick="downloadSticker()">
                             <i class="bi bi-download"></i>
-                            {{ 'تحميل' if session.get('lang') == 'ar' else 'Download' }}
+                            {{ 'تحميل' if current_locale == 'ar' else 'Download' }}
                         </button>
                         <button type="button" class="btn btn-warning btn-sm" onclick="printSticker()">
                             <i class="bi bi-printer"></i>
-                            {{ 'طباعة' if session.get('lang') == 'ar' else 'Print' }}
+                            {{ 'طباعة' if current_locale == 'ar' else 'Print' }}
                         </button>
                     </div>
                 </div>
@@ -126,10 +126,10 @@
                         <div class="py-5">
                             <i class="bi bi-qr-code text-muted" style="font-size: 100px;"></i>
                             <h5 class="text-muted mt-3">
-                                {{ 'ابحث عن أنبوب لمعاينة الملصق' if session.get('lang') == 'ar' else 'Search for a pipe to preview sticker' }}
+                                {{ 'ابحث عن أنبوب لمعاينة الملصق' if current_locale == 'ar' else 'Search for a pipe to preview sticker' }}
                             </h5>
                             <p class="text-muted small">
-                                {{ 'الملصق يتضمن: كود المنتج، وصف المنتج، أمر البيع، رقم الأنبوب، كود الأنبوب، العميل، أمر الإنتاج' if session.get('lang') == 'ar' else 'Sticker includes: Product Code, Description, Sales Order, Pipe No., Pipe Code, Customer, Production Order' }}
+                                {{ 'الملصق يتضمن: كود المنتج، وصف المنتج، أمر البيع، رقم الأنبوب، كود الأنبوب، العميل، أمر الإنتاج' if current_locale == 'ar' else 'Sticker includes: Product Code, Description, Sales Order, Pipe No., Pipe Code, Customer, Production Order' }}
                             </p>
                         </div>
                     </div>
@@ -223,23 +223,23 @@ function selectPipe(pipe) {
     document.getElementById('pipeInfo').innerHTML = `
         <div class="row">
             <div class="col-6">
-                <h6 class="text-primary mb-2"><i class="bi bi-info-circle"></i> {{ 'معلومات الأنبوب' if session.get('lang') == 'ar' else 'Pipe Info' }}</h6>
+                <h6 class="text-primary mb-2"><i class="bi bi-info-circle"></i> {{ 'معلومات الأنبوب' if current_locale == 'ar' else 'Pipe Info' }}</h6>
                 <table class="table table-sm table-borderless mb-0">
-                    <tr><th class="text-muted" width="40%">{{ 'رقم الأنبوب' if session.get('lang') == 'ar' else 'Pipe No.' }}:</th><td><strong>${pipe.no_code}</strong></td></tr>
-                    <tr><th class="text-muted">{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'Pipe Code' }}:</th><td><code>${pipe.pipe_code || 'N/A'}</code></td></tr>
-                    <tr><th class="text-muted">{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}:</th><td>${pipe.ladle_id || 'N/A'}</td></tr>
-                    <tr><th class="text-muted">{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}:</th><td>DN${pipe.diameter}</td></tr>
-                    <tr><th class="text-muted">{{ 'الصنف' if session.get('lang') == 'ar' else 'Class' }}:</th><td>${pipe.pipe_class || 'N/A'}</td></tr>
+                    <tr><th class="text-muted" width="40%">{{ 'رقم الأنبوب' if current_locale == 'ar' else 'Pipe No.' }}:</th><td><strong>${pipe.no_code}</strong></td></tr>
+                    <tr><th class="text-muted">{{ 'كود الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}:</th><td><code>${pipe.pipe_code || 'N/A'}</code></td></tr>
+                    <tr><th class="text-muted">{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}:</th><td>${pipe.ladle_id || 'N/A'}</td></tr>
+                    <tr><th class="text-muted">{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}:</th><td>DN${pipe.diameter}</td></tr>
+                    <tr><th class="text-muted">{{ 'الصنف' if current_locale == 'ar' else 'Class' }}:</th><td>${pipe.pipe_class || 'N/A'}</td></tr>
                 </table>
             </div>
             <div class="col-6">
-                <h6 class="text-success mb-2"><i class="bi bi-briefcase"></i> {{ 'معلومات الطلب' if session.get('lang') == 'ar' else 'Order Info' }}</h6>
+                <h6 class="text-success mb-2"><i class="bi bi-briefcase"></i> {{ 'معلومات الطلب' if current_locale == 'ar' else 'Order Info' }}</h6>
                 <table class="table table-sm table-borderless mb-0">
-                    <tr><th class="text-muted" width="40%">{{ 'كود المنتج' if session.get('lang') == 'ar' else 'Product Code' }}:</th><td><strong>${pipe.product_code || 'Auto'}</strong></td></tr>
-                    <tr><th class="text-muted">{{ 'أمر الإنتاج' if session.get('lang') == 'ar' else 'Production' }}:</th><td>${pipe.order_number || 'N/A'}</td></tr>
-                    <tr><th class="text-muted">{{ 'أمر البيع' if session.get('lang') == 'ar' else 'Sales Order' }}:</th><td>${pipe.sales_order || 'N/A'}</td></tr>
-                    <tr><th class="text-muted">{{ 'العميل' if session.get('lang') == 'ar' else 'Customer' }}:</th><td>${pipe.customer || 'N/A'}</td></tr>
-                    <tr><th class="text-muted">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}:</th><td class="${decisionClass}"><strong>${pipe.decision}</strong></td></tr>
+                    <tr><th class="text-muted" width="40%">{{ 'كود المنتج' if current_locale == 'ar' else 'Product Code' }}:</th><td><strong>${pipe.product_code || 'Auto'}</strong></td></tr>
+                    <tr><th class="text-muted">{{ 'أمر الإنتاج' if current_locale == 'ar' else 'Production' }}:</th><td>${pipe.order_number || 'N/A'}</td></tr>
+                    <tr><th class="text-muted">{{ 'أمر البيع' if current_locale == 'ar' else 'Sales Order' }}:</th><td>${pipe.sales_order || 'N/A'}</td></tr>
+                    <tr><th class="text-muted">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}:</th><td>${pipe.customer || 'N/A'}</td></tr>
+                    <tr><th class="text-muted">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}:</th><td class="${decisionClass}"><strong>${pipe.decision}</strong></td></tr>
                 </table>
             </div>
         </div>

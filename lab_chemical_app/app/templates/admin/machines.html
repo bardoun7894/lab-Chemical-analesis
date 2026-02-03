@@ -1,22 +1,22 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ 'إدارة الماكينات' if session.get('lang') == 'ar' else 'Manage Machines' }}{% endblock %}
+{% block title %}{{ 'إدارة الماكينات' if current_locale == 'ar' else 'Manage Machines' }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>
             <i class="bi bi-gear-fill"></i>
-            {{ 'إدارة الماكينات' if session.get('lang') == 'ar' else 'Machine Management' }}
+            {{ 'إدارة الماكينات' if current_locale == 'ar' else 'Machine Management' }}
         </h2>
         <div>
             <a href="{{ url_for('admin.add_machine') }}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i>
-                {{ 'إضافة ماكينة' if session.get('lang') == 'ar' else 'Add Machine' }}
+                {{ 'إضافة ماكينة' if current_locale == 'ar' else 'Add Machine' }}
             </a>
             <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i>
-                {{ 'رجوع' if session.get('lang') == 'ar' else 'Back' }}
+                {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
             </a>
         </div>
     </div>
@@ -26,9 +26,9 @@
         <div class="card-body">
             <form method="GET" class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label">{{ 'تصفية حسب المرحلة' if session.get('lang') == 'ar' else 'Filter by Stage' }}</label>
+                    <label class="form-label">{{ 'تصفية حسب المرحلة' if current_locale == 'ar' else 'Filter by Stage' }}</label>
                     <select name="stage" class="form-select" onchange="this.form.submit()">
-                        <option value="">{{ 'جميع المراحل' if session.get('lang') == 'ar' else 'All Stages' }}</option>
+                        <option value="">{{ 'جميع المراحل' if current_locale == 'ar' else 'All Stages' }}</option>
                         {% for stage in stages %}
                         <option value="{{ stage }}" {{ 'selected' if selected_stage == stage }}>{{ stage }}</option>
                         {% endfor %}
@@ -45,11 +45,11 @@
                 <table class="table table-hover">
                     <thead class="table-light">
                         <tr>
-                            <th>{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }}</th>
-                            <th>{{ 'رمز الماكينة' if session.get('lang') == 'ar' else 'Machine Code' }}</th>
-                            <th>{{ 'اسم الماكينة' if session.get('lang') == 'ar' else 'Machine Name' }}</th>
-                            <th>{{ 'الحالة' if session.get('lang') == 'ar' else 'Status' }}</th>
-                            <th>{{ 'إجراءات' if session.get('lang') == 'ar' else 'Actions' }}</th>
+                            <th>{{ 'المرحلة' if current_locale == 'ar' else 'Stage' }}</th>
+                            <th>{{ 'رمز الماكينة' if current_locale == 'ar' else 'Machine Code' }}</th>
+                            <th>{{ 'اسم الماكينة' if current_locale == 'ar' else 'Machine Name' }}</th>
+                            <th>{{ 'الحالة' if current_locale == 'ar' else 'Status' }}</th>
+                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -60,9 +60,9 @@
                             <td>{{ machine.machine_name or '-' }}</td>
                             <td>
                                 {% if machine.is_active %}
-                                <span class="badge bg-success">{{ 'نشط' if session.get('lang') == 'ar' else 'Active' }}</span>
+                                <span class="badge bg-success">{{ 'نشط' if current_locale == 'ar' else 'Active' }}</span>
                                 {% else %}
-                                <span class="badge bg-secondary">{{ 'غير نشط' if session.get('lang') == 'ar' else 'Inactive' }}</span>
+                                <span class="badge bg-secondary">{{ 'غير نشط' if current_locale == 'ar' else 'Inactive' }}</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -71,7 +71,7 @@
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <form method="POST" action="{{ url_for('admin.delete_machine', id=machine.id) }}"
-                                          onsubmit="return confirm('{{ 'هل أنت متأكد من الحذف؟' if session.get('lang') == 'ar' else 'Are you sure you want to delete?' }}');" style="display: inline;">
+                                          onsubmit="return confirm('{{ 'هل أنت متأكد من الحذف؟' if current_locale == 'ar' else 'Are you sure you want to delete?' }}');" style="display: inline;">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-outline-danger">
                                             <i class="bi bi-trash"></i>
@@ -87,7 +87,7 @@
                 {% if not machines %}
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-                    <p class="mt-3">{{ 'لا توجد ماكينات' if session.get('lang') == 'ar' else 'No machines found' }}</p>
+                    <p class="mt-3">{{ 'لا توجد ماكينات' if current_locale == 'ar' else 'No machines found' }}</p>
                 </div>
                 {% endif %}
             </div>

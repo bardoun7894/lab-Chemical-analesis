@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ 'تعديل قواعد' if session.get('lang') == 'ar' else 'Edit Rules for' }} {{ element }}{% endblock %}
+{% block title %}{{ 'تعديل قواعد' if current_locale == 'ar' else 'Edit Rules for' }} {{ element }}{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -9,16 +9,16 @@
         <div>
             <h2>
                 <i class="bi bi-pencil-square"></i>
-                {{ 'تعديل قواعد العنصر' if session.get('lang') == 'ar' else 'Edit Element Rules' }}:
+                {{ 'تعديل قواعد العنصر' if current_locale == 'ar' else 'Edit Element Rules' }}:
                 <span class="text-primary">{{ element }}</span>
             </h2>
             <p class="text-muted mb-0">
-                {{ 'تحديد نطاقات القيم والقرارات المرتبطة' if session.get('lang') == 'ar' else 'Define value ranges and associated decisions' }}
+                {{ 'تحديد نطاقات القيم والقرارات المرتبطة' if current_locale == 'ar' else 'Define value ranges and associated decisions' }}
             </p>
         </div>
         <a href="{{ url_for('admin.element_rules') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-{{ 'left' if session.get('lang') != 'ar' else 'right' }}"></i>
-            {{ 'رجوع' if session.get('lang') == 'ar' else 'Back' }}
+            <i class="bi bi-arrow-{{ 'left' if current_locale != 'ar' else 'right' }}"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
         </a>
     </div>
 
@@ -30,17 +30,17 @@
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="bi bi-list-ol"></i>
-                    {{ 'نطاقات القيم' if session.get('lang') == 'ar' else 'Value Ranges' }}
+                    {{ 'نطاقات القيم' if current_locale == 'ar' else 'Value Ranges' }}
                 </h5>
                 <button type="button" class="btn btn-light btn-sm" onclick="addRange()">
                     <i class="bi bi-plus"></i>
-                    {{ 'إضافة نطاق' if session.get('lang') == 'ar' else 'Add Range' }}
+                    {{ 'إضافة نطاق' if current_locale == 'ar' else 'Add Range' }}
                 </button>
             </div>
             <div class="card-body">
                 <div class="alert alert-info mb-3">
                     <i class="bi bi-info-circle"></i>
-                    {{ 'ترتيب القرارات من الأفضل للأسوأ:' if session.get('lang') == 'ar' else 'Decision priority (best to worst):' }}
+                    {{ 'ترتيب القرارات من الأفضل للأسوأ:' if current_locale == 'ar' else 'Decision priority (best to worst):' }}
                     <strong>فحص أخيرة فقط</strong> →
                     <strong>فحص أولى وأخيرة</strong> →
                     <strong>فحص الشحنة 100%</strong> →
@@ -51,17 +51,17 @@
                     {% for range in rule.ranges %}
                     <div class="range-row row g-3 mb-3 align-items-end" data-index="{{ loop.index0 }}">
                         <div class="col-md-3">
-                            <label class="form-label">{{ 'الحد الأدنى' if session.get('lang') == 'ar' else 'Min Value' }}</label>
+                            <label class="form-label">{{ 'الحد الأدنى' if current_locale == 'ar' else 'Min Value' }}</label>
                             <input type="number" name="min_{{ loop.index0 }}" class="form-control"
                                    step="0.0001" value="{{ range.min }}" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">{{ 'الحد الأقصى' if session.get('lang') == 'ar' else 'Max Value' }}</label>
+                            <label class="form-label">{{ 'الحد الأقصى' if current_locale == 'ar' else 'Max Value' }}</label>
                             <input type="number" name="max_{{ loop.index0 }}" class="form-control"
                                    step="0.0001" value="{{ range.max }}" required>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                            <label class="form-label">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</label>
                             <select name="decision_{{ loop.index0 }}" class="form-select decision-select" required>
                                 {% for decision in decisions %}
                                 <option value="{{ decision }}" {{ 'selected' if range.decision == decision }}>
@@ -82,7 +82,7 @@
                 {% if not rule.ranges %}
                 <div class="text-center text-muted py-4" id="emptyMessage">
                     <i class="bi bi-inbox display-6"></i>
-                    <p>{{ 'لا توجد نطاقات. أضف نطاق جديد.' if session.get('lang') == 'ar' else 'No ranges defined. Add a new range.' }}</p>
+                    <p>{{ 'لا توجد نطاقات. أضف نطاق جديد.' if current_locale == 'ar' else 'No ranges defined. Add a new range.' }}</p>
                 </div>
                 {% endif %}
             </div>
@@ -93,7 +93,7 @@
             <div class="card-header bg-info text-white">
                 <h5 class="mb-0">
                     <i class="bi bi-eye"></i>
-                    {{ 'معاينة' if session.get('lang') == 'ar' else 'Preview' }}
+                    {{ 'معاينة' if current_locale == 'ar' else 'Preview' }}
                 </h5>
             </div>
             <div class="card-body">
@@ -101,8 +101,8 @@
                     <table class="table table-bordered" id="previewTable">
                         <thead class="table-light">
                             <tr>
-                                <th>{{ 'النطاق' if session.get('lang') == 'ar' else 'Range' }}</th>
-                                <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                                <th>{{ 'النطاق' if current_locale == 'ar' else 'Range' }}</th>
+                                <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
                             </tr>
                         </thead>
                         <tbody id="previewBody">
@@ -116,11 +116,11 @@
         <!-- Submit -->
         <div class="d-flex gap-2 justify-content-end mb-4">
             <a href="{{ url_for('admin.element_rules') }}" class="btn btn-outline-secondary">
-                {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
             </a>
             <button type="submit" class="btn btn-primary btn-lg">
                 <i class="bi bi-check-lg"></i>
-                {{ 'حفظ التغييرات' if session.get('lang') == 'ar' else 'Save Changes' }}
+                {{ 'حفظ التغييرات' if current_locale == 'ar' else 'Save Changes' }}
             </button>
         </div>
     </form>
@@ -145,17 +145,17 @@ function addRange() {
     const html = `
         <div class="range-row row g-3 mb-3 align-items-end" data-index="${rangeIndex}">
             <div class="col-md-3">
-                <label class="form-label">{{ 'الحد الأدنى' if session.get('lang') == 'ar' else 'Min Value' }}</label>
+                <label class="form-label">{{ 'الحد الأدنى' if current_locale == 'ar' else 'Min Value' }}</label>
                 <input type="number" name="min_${rangeIndex}" class="form-control"
                        step="0.0001" value="0" required>
             </div>
             <div class="col-md-3">
-                <label class="form-label">{{ 'الحد الأقصى' if session.get('lang') == 'ar' else 'Max Value' }}</label>
+                <label class="form-label">{{ 'الحد الأقصى' if current_locale == 'ar' else 'Max Value' }}</label>
                 <input type="number" name="max_${rangeIndex}" class="form-control"
                        step="0.0001" value="1" required>
             </div>
             <div class="col-md-4">
-                <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                <label class="form-label">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</label>
                 <select name="decision_${rangeIndex}" class="form-select decision-select" required>
                     ${decisions.map(d => `<option value="${d}">${d}</option>`).join('')}
                 </select>

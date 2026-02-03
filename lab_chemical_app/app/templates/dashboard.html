@@ -9,14 +9,14 @@
         <div class="col">
             <h2>
                 <i class="bi bi-speedometer2"></i>
-                {% if session.get('lang') == 'ar' %}
+                {% if current_locale == 'ar' %}
                 لوحة التحكم
                 {% else %}
                 Dashboard
                 {% endif %}
             </h2>
             <p class="text-muted">
-                {% if session.get('lang') == 'ar' %}
+                {% if current_locale == 'ar' %}
                 مرحباً {{ current_user.full_name_ar or current_user.full_name or current_user.username }}!
                 {% else %}
                 Welcome {{ current_user.full_name or current_user.username }}!
@@ -34,7 +34,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="text-muted mb-2">
-                                {{ 'تحليلات اليوم' if session.get('lang') == 'ar' else 'Analyses Today' }}
+                                {{ 'تحليلات اليوم' if current_locale == 'ar' else 'Analyses Today' }}
                             </h6>
                             <h2 class="mb-0">{{ stats.chem_today }}</h2>
                         </div>
@@ -43,7 +43,7 @@
                         </div>
                     </div>
                     <a href="{{ url_for('chemical.list') }}" class="text-decoration-none small">
-                        {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View all' }} →
+                        {{ 'عرض الكل' if current_locale == 'ar' else 'View all' }} →
                     </a>
                 </div>
             </div>
@@ -56,7 +56,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="text-muted mb-2">
-                                {{ 'أنابيب اليوم' if session.get('lang') == 'ar' else 'Pipes Today' }}
+                                {{ 'أنابيب اليوم' if current_locale == 'ar' else 'Pipes Today' }}
                             </h6>
                             <h2 class="mb-0">{{ stats.pipes_today }}</h2>
                         </div>
@@ -65,7 +65,7 @@
                         </div>
                     </div>
                     <a href="{{ url_for('stages.list') }}" class="text-decoration-none small">
-                        {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View all' }} →
+                        {{ 'عرض الكل' if current_locale == 'ar' else 'View all' }} →
                     </a>
                 </div>
             </div>
@@ -78,7 +78,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="text-muted mb-2">
-                                {{ 'اختبارات ميكانيكية' if session.get('lang') == 'ar' else 'Mech Tests Today' }}
+                                {{ 'اختبارات ميكانيكية' if current_locale == 'ar' else 'Mech Tests Today' }}
                             </h6>
                             <h2 class="mb-0">{{ stats.mech_today }}</h2>
                         </div>
@@ -87,7 +87,7 @@
                         </div>
                     </div>
                     <a href="{{ url_for('mechanical.list') }}" class="text-decoration-none small">
-                        {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View all' }} →
+                        {{ 'عرض الكل' if current_locale == 'ar' else 'View all' }} →
                     </a>
                 </div>
             </div>
@@ -100,7 +100,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="text-muted mb-2">
-                                {{ 'عيوب هذا الأسبوع' if session.get('lang') == 'ar' else 'Defects This Week' }}
+                                {{ 'عيوب هذا الأسبوع' if current_locale == 'ar' else 'Defects This Week' }}
                             </h6>
                             <h2 class="mb-0 text-danger">{{ stats.defects_week }}</h2>
                         </div>
@@ -109,7 +109,7 @@
                         </div>
                     </div>
                     <a href="{{ url_for('reports.defect_summary') }}" class="text-decoration-none small">
-                        {{ 'عرض التقرير' if session.get('lang') == 'ar' else 'View report' }} →
+                        {{ 'عرض التقرير' if current_locale == 'ar' else 'View report' }} →
                     </a>
                 </div>
             </div>
@@ -123,35 +123,35 @@
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="bi bi-robot"></i>
-                        {{ 'ملخص الذكاء الاصطناعي' if session.get('lang') == 'ar' else 'AI Daily Summary' }}
+                        {{ 'ملخص الذكاء الاصطناعي' if current_locale == 'ar' else 'AI Daily Summary' }}
                     </h5>
                     <button type="button" class="btn btn-sm btn-light" id="aiSummaryRefresh">
                         <i class="bi bi-magic"></i>
-                        {{ 'تحليل' if session.get('lang') == 'ar' else 'Analyze' }}
+                        {{ 'تحليل' if current_locale == 'ar' else 'Analyze' }}
                     </button>
                 </div>
                 <div class="card-body">
                     <div id="aiSummaryInitial" class="text-center py-3">
                         <i class="bi bi-robot display-4 text-muted"></i>
-                        <p class="text-muted mt-2 mb-0">{{ 'انقر على زر التحليل للحصول على ملخص الذكاء الاصطناعي' if session.get('lang') == 'ar' else 'Click Analyze button to get AI summary' }}</p>
+                        <p class="text-muted mt-2 mb-0">{{ 'انقر على زر التحليل للحصول على ملخص الذكاء الاصطناعي' if current_locale == 'ar' else 'Click Analyze button to get AI summary' }}</p>
                     </div>
                     <div id="aiSummaryLoading" class="text-center py-3" style="display: none;">
                         <div class="spinner-border text-primary" role="status"></div>
-                        <p class="text-muted mt-2 mb-0">{{ 'جاري تحليل البيانات...' if session.get('lang') == 'ar' else 'Analyzing data...' }}</p>
+                        <p class="text-muted mt-2 mb-0">{{ 'جاري تحليل البيانات...' if current_locale == 'ar' else 'Analyzing data...' }}</p>
                     </div>
                     <div id="aiSummaryContent" style="display: none;">
                         <div class="row">
                             <div class="col-md-6">
-                                <h6><i class="bi bi-chat-text text-primary"></i> {{ 'الملخص' if session.get('lang') == 'ar' else 'Summary' }}</h6>
+                                <h6><i class="bi bi-chat-text text-primary"></i> {{ 'الملخص' if current_locale == 'ar' else 'Summary' }}</h6>
                                 <p id="aiSummaryText" class="mb-3"></p>
 
                                 <div id="aiAlertsSection">
-                                    <h6><i class="bi bi-exclamation-triangle text-warning"></i> {{ 'التنبيهات' if session.get('lang') == 'ar' else 'Alerts' }}</h6>
+                                    <h6><i class="bi bi-exclamation-triangle text-warning"></i> {{ 'التنبيهات' if current_locale == 'ar' else 'Alerts' }}</h6>
                                     <ul id="aiAlertsList" class="list-unstyled mb-0"></ul>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <h6><i class="bi bi-lightbulb text-success"></i> {{ 'التوصيات' if session.get('lang') == 'ar' else 'Recommendations' }}</h6>
+                                <h6><i class="bi bi-lightbulb text-success"></i> {{ 'التوصيات' if current_locale == 'ar' else 'Recommendations' }}</h6>
                                 <ul id="aiRecommendationsList" class="list-unstyled mb-0"></ul>
                             </div>
                         </div>
@@ -171,7 +171,7 @@
                 <div class="card-header bg-white">
                     <h5 class="mb-0">
                         <i class="bi bi-lightning"></i>
-                        {{ 'إجراءات سريعة' if session.get('lang') == 'ar' else 'Quick Actions' }}
+                        {{ 'إجراءات سريعة' if current_locale == 'ar' else 'Quick Actions' }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -179,25 +179,25 @@
                         <div class="col-md-3 col-6">
                             <a href="{{ url_for('chemical.add') }}" class="btn btn-outline-primary w-100 py-3">
                                 <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
-                                {{ 'تحليل كيميائي جديد' if session.get('lang') == 'ar' else 'New Chemical Analysis' }}
+                                {{ 'تحليل كيميائي جديد' if current_locale == 'ar' else 'New Chemical Analysis' }}
                             </a>
                         </div>
                         <div class="col-md-3 col-6">
                             <a href="{{ url_for('stages.add') }}" class="btn btn-outline-success w-100 py-3">
                                 <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
-                                {{ 'تسجيل أنبوب جديد' if session.get('lang') == 'ar' else 'Register New Pipe' }}
+                                {{ 'تسجيل أنبوب جديد' if current_locale == 'ar' else 'Register New Pipe' }}
                             </a>
                         </div>
                         <div class="col-md-3 col-6">
                             <a href="{{ url_for('mechanical.add') }}" class="btn btn-outline-warning w-100 py-3">
                                 <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
-                                {{ 'اختبار ميكانيكي جديد' if session.get('lang') == 'ar' else 'New Mechanical Test' }}
+                                {{ 'اختبار ميكانيكي جديد' if current_locale == 'ar' else 'New Mechanical Test' }}
                             </a>
                         </div>
                         <div class="col-md-3 col-6">
                             <a href="{{ url_for('stickers.index') }}" class="btn btn-outline-info w-100 py-3">
                                 <i class="bi bi-qr-code fs-4 d-block mb-2"></i>
-                                {{ 'طباعة ملصقات' if session.get('lang') == 'ar' else 'Print Stickers' }}
+                                {{ 'طباعة ملصقات' if current_locale == 'ar' else 'Print Stickers' }}
                             </a>
                         </div>
                     </div>
@@ -214,10 +214,10 @@
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="bi bi-flask"></i>
-                        {{ 'آخر التحليلات الكيميائية' if session.get('lang') == 'ar' else 'Recent Chemical Analyses' }}
+                        {{ 'آخر التحليلات الكيميائية' if current_locale == 'ar' else 'Recent Chemical Analyses' }}
                     </h5>
                     <a href="{{ url_for('chemical.list') }}" class="btn btn-sm btn-outline-primary">
-                        {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View All' }}
+                        {{ 'عرض الكل' if current_locale == 'ar' else 'View All' }}
                     </a>
                 </div>
                 <div class="card-body p-0">
@@ -225,10 +225,10 @@
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
-                                    <th>{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</th>
-                                    <th>{{ 'رقم المغرفة' if session.get('lang') == 'ar' else 'Ladle#' }}</th>
-                                    <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                                    <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                                    <th>{{ 'الفرن' if current_locale == 'ar' else 'Furnace' }}</th>
+                                    <th>{{ 'رقم المغرفة' if current_locale == 'ar' else 'Ladle#' }}</th>
+                                    <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -250,7 +250,7 @@
                                 {% else %}
                                 <tr>
                                     <td colspan="4" class="text-center text-muted py-4">
-                                        {{ 'لا توجد تحليلات حديثة' if session.get('lang') == 'ar' else 'No recent analyses' }}
+                                        {{ 'لا توجد تحليلات حديثة' if current_locale == 'ar' else 'No recent analyses' }}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -267,10 +267,10 @@
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="bi bi-diagram-3"></i>
-                        {{ 'آخر الأنابيب المسجلة' if session.get('lang') == 'ar' else 'Recent Pipes' }}
+                        {{ 'آخر الأنابيب المسجلة' if current_locale == 'ar' else 'Recent Pipes' }}
                     </h5>
                     <a href="{{ url_for('stages.list') }}" class="btn btn-sm btn-outline-success">
-                        {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View All' }}
+                        {{ 'عرض الكل' if current_locale == 'ar' else 'View All' }}
                     </a>
                 </div>
                 <div class="card-body p-0">
@@ -278,10 +278,10 @@
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>{{ 'الكود' if session.get('lang') == 'ar' else 'No. Code' }}</th>
-                                    <th>{{ 'القطر' if session.get('lang') == 'ar' else 'DN' }}</th>
-                                    <th>{{ 'رقم المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
-                                    <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                                    <th>{{ 'الكود' if current_locale == 'ar' else 'No. Code' }}</th>
+                                    <th>{{ 'القطر' if current_locale == 'ar' else 'DN' }}</th>
+                                    <th>{{ 'رقم المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
+                                    <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -295,7 +295,7 @@
                                 {% else %}
                                 <tr>
                                     <td colspan="4" class="text-center text-muted py-4">
-                                        {{ 'لا توجد أنابيب حديثة' if session.get('lang') == 'ar' else 'No recent pipes' }}
+                                        {{ 'لا توجد أنابيب حديثة' if current_locale == 'ar' else 'No recent pipes' }}
                                     </td>
                                 </tr>
                                 {% endfor %}
