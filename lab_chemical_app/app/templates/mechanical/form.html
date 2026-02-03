@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Edit' if test else 'New' }} Mechanical Test{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-gear"></i>
+                {% if test %}
+                {{ 'تعديل الاختبار الميكانيكي' if session.get('lang') == 'ar' else 'Edit Mechanical Test' }}
+                {% else %}
+                {{ 'اختبار ميكانيكي جديد' if session.get('lang') == 'ar' else 'New Mechanical Test' }}
+                {% endif %}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('mechanical.index') }}">Mechanical</a></li>
+                    <li class="breadcrumb-item active">{{ 'Edit' if test else 'New' }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row">
+            <!-- Left Column - Basic Info -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle"></i>
+                            {{ 'معلومات أساسية' if session.get('lang') == 'ar' else 'Basic Information' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'تاريخ الاختبار' if session.get('lang') == 'ar' else 'Test Date' }} *</label>
+                            <input type="date" name="test_date" class="form-control" required
+                                   value="{{ test.test_date if test else today }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الكود' if session.get('lang') == 'ar' else 'Code' }}</label>
+                            <input type="text" name="code" class="form-control" placeholder="A2989"
+                                   value="{{ test.code if test else '' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter (DN)' }}</label>
+                            <select name="diameter" class="form-select">
+                                <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                <option value="300" {{ 'selected' if test and test.diameter == 300 }}>DN300</option>
+                                <option value="400" {{ 'selected' if test and test.diameter == 400 }}>DN400</option>
+                                <option value="500" {{ 'selected' if test and test.diameter == 500 }}>DN500</option>
+                                <option value="600" {{ 'selected' if test and test.diameter == 600 }}>DN600</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</label>
+                            <input type="text" name="ladle_id" class="form-control" placeholder="4713012025"
+                                   value="{{ test.ladle_id if test else '' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                            <select name="decision" class="form-select">
+                                <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                <option value="ACCEPT" {{ 'selected' if test and test.decision == 'ACCEPT' }}>Accept</option>
+                                <option value="REJECT" {{ 'selected' if test and test.decision == 'REJECT' }}>Reject</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Column - Sample Measurements -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-rulers"></i>
+                            {{ 'قياسات العينة' if session.get('lang') == 'ar' else 'Sample Measurements' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label">{{ 'السُمك' if session.get('lang') == 'ar' else 'Thickness' }}</label>
+                                <input type="number" name="sample_thickness" class="form-control" step="0.001"
+                                       value="{{ test.sample_thickness if test else '' }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">D1</label>
+                                <input type="number" name="d1" class="form-control" step="0.001"
+                                       value="{{ test.d1 if test else '' }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">D2</label>
+                                <input type="number" name="d2" class="form-control" step="0.001"
+                                       value="{{ test.d2 if test else '' }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">D3</label>
+                                <input type="number" name="d3" class="form-control" step="0.001"
+                                       value="{{ test.d3 if test else '' }}">
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label">{{ 'القوة (kgf)' if session.get('lang') == 'ar' else 'Force (kgf)' }}</label>
+                                <input type="number" name="force_kgf" class="form-control" step="0.1"
+                                       value="{{ test.force_kgf if test else '' }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">{{ 'قوة الشد (MPa)' if session.get('lang') == 'ar' else 'Tensile (MPa)' }}</label>
+                                <input type="number" name="tensile_strength" class="form-control" step="0.1"
+                                       value="{{ test.tensile_strength if test else '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">{{ 'الاستطالة (%)' if session.get('lang') == 'ar' else 'Elongation (%)' }}</label>
+                                <input type="number" name="elongation" class="form-control" step="0.1"
+                                       value="{{ test.elongation if test else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Microstructure -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-eye"></i>
+                            {{ 'البنية المجهرية' if session.get('lang') == 'ar' else 'Microstructure' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label">{{ 'النودولارية (%)' if session.get('lang') == 'ar' else 'Nodularity (%)' }}</label>
+                                <input type="number" name="nodularity_percent" class="form-control" step="0.1"
+                                       value="{{ test.nodularity_percent if test else '' }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">{{ 'عدد العقد' if session.get('lang') == 'ar' else 'Nodule Count' }}</label>
+                                <input type="number" name="nodule_count" class="form-control"
+                                       value="{{ test.nodule_count if test else '' }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">{{ 'الصلادة (HB)' if session.get('lang') == 'ar' else 'Hardness (HB)' }}</label>
+                                <input type="number" name="hardness" class="form-control" step="0.1"
+                                       value="{{ test.hardness if test else '' }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">{{ 'الكربيدات (%)' if session.get('lang') == 'ar' else 'Carbides (%)' }}</label>
+                                <input type="number" name="carbides" class="form-control" step="0.01"
+                                       value="{{ test.carbides if test else '' }}">
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'التعليقات' if session.get('lang') == 'ar' else 'Comments' }}</label>
+                            <textarea name="comments" class="form-control" rows="3">{{ test.comments if test else '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="d-flex gap-2 justify-content-end mb-4">
+            <a href="{{ url_for('mechanical.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle"></i>
+                {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+            </a>
+            <button type="submit" class="btn btn-warning">
+                <i class="bi bi-check-circle"></i>
+                {{ 'حفظ' if session.get('lang') == 'ar' else 'Save' }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

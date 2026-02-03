@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-file-earmark-bar-graph"></i>
+                {{ 'التقارير' if session.get('lang') == 'ar' else 'Reports' }}
+            </h2>
+            <p class="text-muted">
+                {{ 'اختر نوع التقرير لعرضه أو تصديره' if session.get('lang') == 'ar' else 'Select report type to view or export' }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Report Cards -->
+    <div class="row g-4">
+        <!-- Daily Production -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-calendar-day text-primary fs-1"></i>
+                    </div>
+                    <h5>{{ 'الإنتاج اليومي' if session.get('lang') == 'ar' else 'Daily Production' }}</h5>
+                    <p class="text-muted small">
+                        {{ 'تقرير إنتاج الأنابيب لكل يوم حسب الوردية' if session.get('lang') == 'ar' else 'Daily pipe production report by shift' }}
+                    </p>
+                    <a href="{{ url_for('reports.daily_production') }}" class="btn btn-primary">
+                        <i class="bi bi-eye"></i>
+                        {{ 'عرض' if session.get('lang') == 'ar' else 'View' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chemical Analysis Report -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-flask text-warning fs-1"></i>
+                    </div>
+                    <h5>{{ 'التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis' }}</h5>
+                    <p class="text-muted small">
+                        {{ 'تقرير نتائج التحليل الكيميائي مع الإحصائيات' if session.get('lang') == 'ar' else 'Chemical analysis results with statistics' }}
+                    </p>
+                    <a href="{{ url_for('reports.chemical_analysis') }}" class="btn btn-warning">
+                        <i class="bi bi-eye"></i>
+                        {{ 'عرض' if session.get('lang') == 'ar' else 'View' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Defect Summary -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-exclamation-triangle text-danger fs-1"></i>
+                    </div>
+                    <h5>{{ 'ملخص العيوب' if session.get('lang') == 'ar' else 'Defect Summary' }}</h5>
+                    <p class="text-muted small">
+                        {{ 'تحليل العيوب حسب المرحلة والنوع' if session.get('lang') == 'ar' else 'Defect analysis by stage and type' }}
+                    </p>
+                    <a href="{{ url_for('reports.defect_summary') }}" class="btn btn-danger">
+                        <i class="bi bi-eye"></i>
+                        {{ 'عرض' if session.get('lang') == 'ar' else 'View' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage Tracking -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-diagram-3 text-info fs-1"></i>
+                    </div>
+                    <h5>{{ 'متابعة المراحل' if session.get('lang') == 'ar' else 'Stage Tracking' }}</h5>
+                    <p class="text-muted small">
+                        {{ 'تتبع الأنابيب خلال مراحل الإنتاج' if session.get('lang') == 'ar' else 'Track pipes through production stages' }}
+                    </p>
+                    <a href="{{ url_for('stages.tracking') }}" class="btn btn-info">
+                        <i class="bi bi-eye"></i>
+                        {{ 'عرض' if session.get('lang') == 'ar' else 'View' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mechanical Tests -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-gear text-success fs-1"></i>
+                    </div>
+                    <h5>{{ 'الاختبارات الميكانيكية' if session.get('lang') == 'ar' else 'Mechanical Tests' }}</h5>
+                    <p class="text-muted small">
+                        {{ 'تقرير نتائج الاختبارات الميكانيكية' if session.get('lang') == 'ar' else 'Mechanical test results report' }}
+                    </p>
+                    <a href="{{ url_for('mechanical.index') }}" class="btn btn-success">
+                        <i class="bi bi-eye"></i>
+                        {{ 'عرض' if session.get('lang') == 'ar' else 'View' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Options -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100 bg-light">
+                <div class="card-body text-center">
+                    <div class="bg-secondary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-download text-secondary fs-1"></i>
+                    </div>
+                    <h5>{{ 'تصدير البيانات' if session.get('lang') == 'ar' else 'Export Data' }}</h5>
+                    <p class="text-muted small">
+                        {{ 'تصدير التقارير بصيغة PDF أو Excel' if session.get('lang') == 'ar' else 'Export reports as PDF or Excel' }}
+                    </p>
+                    <div class="btn-group">
+                        <a href="{{ url_for('reports.export_chemical_pdf') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-file-pdf"></i> PDF
+                        </a>
+                        <a href="{{ url_for('reports.export_chemical_excel') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-file-excel"></i> Excel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

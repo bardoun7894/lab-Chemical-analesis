@@ -1,0 +1,29 @@
+# Lab Chemical Analysis Application Dependencies
+# Flask Web Application
+
+# Flask Core
+Flask>=3.0.0
+Flask-SQLAlchemy>=3.1.0
+Flask-Login>=0.6.3
+Flask-WTF>=1.2.0
+Flask-Bcrypt>=1.0.1
+
+# Database
+SQLAlchemy>=2.0.0
+
+# Excel Import/Export
+openpyxl>=3.1.0
+xlsxwriter>=3.1.0
+
+# PDF Reports (Arabic support)
+reportlab>=4.0.0
+arabic-reshaper>=3.0.0
+python-bidi>=0.4.2
+
+# QR Code
+qrcode>=7.4.0
+Pillow>=10.0.0
+
+# Utilities
+python-dateutil>=2.8.0
+Werkzeug>=3.0.0

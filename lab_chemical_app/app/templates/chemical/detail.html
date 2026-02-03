@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+
+{% block title %}Chemical Analysis - {{ analysis.ladle_id }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>
+                        <i class="bi bi-flask"></i>
+                        {{ 'تفاصيل التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis Details' }}
+                    </h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ url_for('chemical.index') }}">Chemical</a></li>
+                            <li class="breadcrumb-item active">{{ analysis.ladle_id }}</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="btn-group">
+                    <a href="{{ url_for('chemical.edit', id=analysis.id) }}" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i>
+                        {{ 'تعديل' if session.get('lang') == 'ar' else 'Edit' }}
+                    </a>
+                    <button type="button" class="btn btn-outline-primary" onclick="window.print();">
+                        <i class="bi bi-printer"></i>
+                        {{ 'طباعة' if session.get('lang') == 'ar' else 'Print' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-4">
+            <!-- Basic Info -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        {{ 'معلومات أساسية' if session.get('lang') == 'ar' else 'Basic Information' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless mb-0">
+                        <tr>
+                            <th width="40%">{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                            <td>{{ analysis.test_date }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</th>
+                            <td>{{ analysis.furnace.furnace_code if analysis.furnace else '-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'رقم المغرفة' if session.get('lang') == 'ar' else 'Ladle#' }}</th>
+                            <td><strong>{{ analysis.ladle_no }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                            <td><code>{{ analysis.ladle_id }}</code></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Decision -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header {{ 'bg-success' if analysis.decision == 'ACCEPT' else 'bg-danger' if analysis.decision == 'REJECT' else 'bg-warning' }} text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-check-circle"></i>
+                        {{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        {% if analysis.decision == 'ACCEPT' %}
+                        <span class="badge bg-success fs-4 px-4 py-2">
+                            <i class="bi bi-check-lg"></i> ACCEPT / قبول
+                        </span>
+                        {% elif analysis.decision == 'REJECT' %}
+                        <span class="badge bg-danger fs-4 px-4 py-2">
+                            <i class="bi bi-x-lg"></i> REJECT / رفض
+                        </span>
+                        {% elif analysis.decision == 'HOLD' %}
+                        <span class="badge bg-warning text-dark fs-4 px-4 py-2">
+                            <i class="bi bi-pause"></i> HOLD / انتظار
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary fs-4 px-4 py-2">
+                            {{ analysis.decision or 'N/A' }}
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {% if analysis.reason %}
+                    <div class="mb-2">
+                        <strong>{{ 'السبب:' if session.get('lang') == 'ar' else 'Reason:' }}</strong>
+                        <p class="mb-0 text-muted">{{ analysis.reason }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if analysis.has_defect %}
+                    <div class="alert alert-danger mb-2">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        {{ 'يوجد عيب' if session.get('lang') == 'ar' else 'Has Defect' }}
+                        {% if analysis.defect_reason %}
+                        : {{ analysis.defect_reason }}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if analysis.notes %}
+                    <div class="mb-0">
+                        <strong>{{ 'ملاحظات:' if session.get('lang') == 'ar' else 'Notes:' }}</strong>
+                        <p class="mb-0 text-muted">{{ analysis.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Related Pipes -->
+            {% if related_pipes %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-diagram-3"></i>
+                        {{ 'الأنابيب المرتبطة' if session.get('lang') == 'ar' else 'Related Pipes' }}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for pipe in related_pipes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="{{ url_for('stages.view_pipe', id=pipe.id) }}">
+                                {{ pipe.no_code }}
+                            </a>
+                            <span class="badge bg-secondary">DN{{ pipe.diameter }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Chemical Elements -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calculator"></i>
+                        {{ 'العناصر الكيميائية (%)' if session.get('lang') == 'ar' else 'Chemical Elements (%)' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Element</th>
+                                    <th>Value</th>
+                                    <th>Min</th>
+                                    <th>Max</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set elements = [
+                                    ('C', 'Carbon', analysis.carbon, 3.0, 3.9),
+                                    ('Si', 'Silicon', analysis.silicon, 1.86, 2.7),
+                                    ('Mg', 'Magnesium', analysis.magnesium, 0.031, 0.07),
+                                    ('Cu', 'Copper', analysis.copper, None, 0.1),
+                                    ('Cr', 'Chromium', analysis.chromium, None, 0.1),
+                                    ('S', 'Sulfur', analysis.sulfur, None, 0.02),
+                                    ('Mn', 'Manganese', analysis.manganese, None, 0.4),
+                                    ('P', 'Phosphorus', analysis.phosphorus, None, 0.059),
+                                    ('Pb', 'Lead', analysis.lead, None, 0.003),
+                                    ('Al', 'Aluminum', analysis.aluminum, None, 0.049)
+                                ] %}
+
+                                {% for code, name, value, min_val, max_val in elements %}
+                                {% set out_of_spec = (value and ((min_val and value < min_val) or (max_val and value > max_val))) %}
+                                <tr class="{{ 'table-danger' if out_of_spec }}">
+                                    <td><strong>{{ code }}</strong> ({{ name }})</td>
+                                    <td class="{{ 'fw-bold text-danger' if out_of_spec }}">
+                                        {{ '%.4f'|format(value) if value else '-' }}
+                                    </td>
+                                    <td>{{ min_val if min_val else '-' }}</td>
+                                    <td>{{ max_val if max_val else '-' }}</td>
+                                    <td>
+                                        {% if value is none %}
+                                        <span class="badge bg-secondary">N/A</span>
+                                        {% elif out_of_spec %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle"></i> Out of Spec
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> OK
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <hr>
+
+                    <!-- Calculated Values -->
+                    <h6 class="mb-3">{{ 'القيم المحسوبة' if session.get('lang') == 'ar' else 'Calculated Values' }}</h6>
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <h6 class="text-muted mb-1">CE (Carbon Equivalent)</h6>
+                                <h3 class="{{ 'text-danger' if analysis.carbon_equivalent and (analysis.carbon_equivalent < 3.62 or analysis.carbon_equivalent > 4.83) else 'text-success' }}">
+                                    {{ '%.3f'|format(analysis.carbon_equivalent) if analysis.carbon_equivalent else '-' }}
+                                </h3>
+                                <small class="text-muted">Spec: 3.62 - 4.83</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <h6 class="text-muted mb-1">MnE (Mn Equivalent)</h6>
+                                <h3 class="{{ 'text-danger' if analysis.manganese_equivalent and (analysis.manganese_equivalent < 0.1 or analysis.manganese_equivalent > 0.85) else 'text-success' }}">
+                                    {{ '%.4f'|format(analysis.manganese_equivalent) if analysis.manganese_equivalent else '-' }}
+                                </h3>
+                                <small class="text-muted">Spec: 0.1 - 0.85</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <h6 class="text-muted mb-1">MgE (Mg Equivalent)</h6>
+                                <h3 class="{{ 'text-danger' if analysis.magnesium_equivalent and analysis.magnesium_equivalent < 0.023 else 'text-success' }}">
+                                    {{ '%.4f'|format(analysis.magnesium_equivalent) if analysis.magnesium_equivalent else '-' }}
+                                </h3>
+                                <small class="text-muted">Spec: min 0.023</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timestamps -->
+            <div class="text-muted small">
+                <i class="bi bi-clock"></i>
+                {{ 'تم الإنشاء:' if session.get('lang') == 'ar' else 'Created:' }}
+                {{ analysis.created_at }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

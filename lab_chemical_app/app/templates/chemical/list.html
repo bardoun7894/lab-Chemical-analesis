@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+
+{% block title %}Chemical Analysis List{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>
+                        <i class="bi bi-flask"></i>
+                        {{ 'التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis' }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        {{ 'قائمة جميع التحليلات الكيميائية' if session.get('lang') == 'ar' else 'List of all chemical analyses' }}
+                    </p>
+                </div>
+                <a href="{{ url_for('chemical.create') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i>
+                    {{ 'إضافة جديد' if session.get('lang') == 'ar' else 'Add New' }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'من تاريخ' if session.get('lang') == 'ar' else 'From Date' }}</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'إلى تاريخ' if session.get('lang') == 'ar' else 'To Date' }}</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</label>
+                    <select name="furnace_id" class="form-select">
+                        <option value="">{{ 'الكل' if session.get('lang') == 'ar' else 'All' }}</option>
+                        {% for furnace in furnaces %}
+                        <option value="{{ furnace.id }}" {{ 'selected' if furnace.id == selected_furnace }}>
+                            {{ furnace.furnace_code }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                    <select name="decision" class="form-select">
+                        <option value="">{{ 'الكل' if session.get('lang') == 'ar' else 'All' }}</option>
+                        <option value="ACCEPT" {{ 'selected' if selected_decision == 'ACCEPT' }}>Accept</option>
+                        <option value="REJECT" {{ 'selected' if selected_decision == 'REJECT' }}>Reject</option>
+                        <option value="HOLD" {{ 'selected' if selected_decision == 'HOLD' }}>Hold</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i>
+                        {{ 'بحث' if session.get('lang') == 'ar' else 'Search' }}
+                    </button>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{{ url_for('chemical.index') }}" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-x-circle"></i>
+                        {{ 'مسح' if session.get('lang') == 'ar' else 'Clear' }}
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                            <th>{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</th>
+                            <th>{{ 'رقم المغرفة' if session.get('lang') == 'ar' else 'Ladle#' }}</th>
+                            <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                            <th>C</th>
+                            <th>Si</th>
+                            <th>Mg</th>
+                            <th>S</th>
+                            <th>CE</th>
+                            <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                            <th>{{ 'إجراءات' if session.get('lang') == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for analysis in analyses %}
+                        <tr>
+                            <td>{{ analysis.test_date }}</td>
+                            <td>{{ analysis.furnace.furnace_code if analysis.furnace else '-' }}</td>
+                            <td>{{ analysis.ladle_no }}</td>
+                            <td><small class="text-muted">{{ analysis.ladle_id or '-' }}</small></td>
+                            <td class="{{ 'text-danger fw-bold' if analysis.carbon and (analysis.carbon < 3.0 or analysis.carbon > 3.9) }}">
+                                {{ '%.3f'|format(analysis.carbon) if analysis.carbon else '-' }}
+                            </td>
+                            <td class="{{ 'text-danger fw-bold' if analysis.silicon and (analysis.silicon < 1.86 or analysis.silicon > 2.7) }}">
+                                {{ '%.3f'|format(analysis.silicon) if analysis.silicon else '-' }}
+                            </td>
+                            <td class="{{ 'text-danger fw-bold' if analysis.magnesium and (analysis.magnesium < 0.031 or analysis.magnesium > 0.07) }}">
+                                {{ '%.4f'|format(analysis.magnesium) if analysis.magnesium else '-' }}
+                            </td>
+                            <td class="{{ 'text-danger fw-bold' if analysis.sulfur and analysis.sulfur > 0.02 }}">
+                                {{ '%.4f'|format(analysis.sulfur) if analysis.sulfur else '-' }}
+                            </td>
+                            <td>{{ '%.3f'|format(analysis.carbon_equivalent) if analysis.carbon_equivalent else '-' }}</td>
+                            <td>
+                                {% if analysis.decision == 'ACCEPT' %}
+                                <span class="badge bg-success">{{ analysis.decision }}</span>
+                                {% elif analysis.decision == 'REJECT' %}
+                                <span class="badge bg-danger">{{ analysis.decision }}</span>
+                                {% elif analysis.decision == 'HOLD' %}
+                                <span class="badge bg-warning text-dark">{{ analysis.decision }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ analysis.decision or '-' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('chemical.view', id=analysis.id) }}" class="btn btn-outline-info" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('chemical.edit', id=analysis.id) }}" class="btn btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger" title="Delete"
+                                            onclick="confirmDelete({{ analysis.id }}, '{{ analysis.ladle_id }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="11" class="text-center py-4 text-muted">
+                                {{ 'لا توجد نتائج' if session.get('lang') == 'ar' else 'No results found' }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if analyses %}
+        <div class="card-footer bg-white">
+            <small class="text-muted">
+                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ analyses|length }}
+                {{ 'تحليل' if session.get('lang') == 'ar' else 'analyses' }}
+            </small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ 'تأكيد الحذف' if session.get('lang') == 'ar' else 'Confirm Delete' }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {{ 'هل أنت متأكد من حذف التحليل' if session.get('lang') == 'ar' else 'Are you sure you want to delete analysis' }}
+                <strong id="deleteLadleId"></strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                </button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">
+                        {{ 'حذف' if session.get('lang') == 'ar' else 'Delete' }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(id, ladleId) {
+    document.getElementById('deleteLadleId').textContent = ladleId;
+    document.getElementById('deleteForm').action = '/chemical/' + id + '/delete';
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

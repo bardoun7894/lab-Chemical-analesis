@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}Pipes List{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>
+                        <i class="bi bi-diagram-3"></i>
+                        {{ 'قائمة الأنابيب' if session.get('lang') == 'ar' else 'Pipes List' }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        {{ 'متابعة مراحل الإنتاج' if session.get('lang') == 'ar' else 'Track production stages' }}
+                    </p>
+                </div>
+                <a href="{{ url_for('stages.create_pipe') }}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i>
+                    {{ 'تسجيل أنبوب جديد' if session.get('lang') == 'ar' else 'Register New Pipe' }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'من تاريخ' if session.get('lang') == 'ar' else 'From Date' }}</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'إلى تاريخ' if session.get('lang') == 'ar' else 'To Date' }}</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}</label>
+                    <select name="diameter" class="form-select">
+                        <option value="">{{ 'الكل' if session.get('lang') == 'ar' else 'All' }}</option>
+                        <option value="300" {{ 'selected' if selected_diameter == 300 }}>DN300</option>
+                        <option value="400" {{ 'selected' if selected_diameter == 400 }}>DN400</option>
+                        <option value="500" {{ 'selected' if selected_diameter == 500 }}>DN500</option>
+                        <option value="600" {{ 'selected' if selected_diameter == 600 }}>DN600</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'Pipe Code' }}</label>
+                    <input type="text" name="no_code" class="form-control" placeholder="N8739..."
+                           value="{{ selected_no_code }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i>
+                        {{ 'بحث' if session.get('lang') == 'ar' else 'Search' }}
+                    </button>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{{ url_for('stages.index') }}" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-x-circle"></i>
+                        {{ 'مسح' if session.get('lang') == 'ar' else 'Clear' }}
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>{{ 'كود الأنبوب' if session.get('lang') == 'ar' else 'No. Code' }}</th>
+                            <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                            <th>{{ 'القطر' if session.get('lang') == 'ar' else 'DN' }}</th>
+                            <th>{{ 'النوع' if session.get('lang') == 'ar' else 'Type' }}</th>
+                            <th>{{ 'الوزن' if session.get('lang') == 'ar' else 'Weight' }}</th>
+                            <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                            <th>{{ 'الوردية' if session.get('lang') == 'ar' else 'Shift' }}</th>
+                            <!-- Stage columns -->
+                            <th class="text-center" title="CCM">CCM</th>
+                            <th class="text-center" title="Annealing">Ann</th>
+                            <th class="text-center" title="Zinc">Zn</th>
+                            <th class="text-center" title="Cutting">Cut</th>
+                            <th class="text-center" title="Hydrotest">Hyd</th>
+                            <th class="text-center" title="Cement">Cem</th>
+                            <th class="text-center" title="Coating">Coat</th>
+                            <th class="text-center" title="Finish">Fin</th>
+                            <th>{{ 'إجراءات' if session.get('lang') == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pipe in pipes %}
+                        <tr>
+                            <td><strong>{{ pipe.no_code }}</strong></td>
+                            <td><small class="text-muted">{{ pipe.ladle_id or '-' }}</small></td>
+                            <td>DN{{ pipe.diameter or '?' }}</td>
+                            <td>{{ pipe.pipe_type or '-' }}</td>
+                            <td>{{ pipe.actual_weight|round(1) if pipe.actual_weight else '-' }} kg</td>
+                            <td>{{ pipe.production_date }}</td>
+                            <td>
+                                {% if pipe.shift %}
+                                <span class="badge bg-secondary">{{ pipe.shift }}</span>
+                                {% else %}-{% endif %}
+                            </td>
+
+                            <!-- Stage status indicators -->
+                            {% set stage_names = ['CCM', 'Annealing', 'Zinc', 'Cutting', 'Hydrotest', 'Cement', 'Coating', 'Finish'] %}
+                            {% set stage_map = {} %}
+                            {% for stage in pipe.stages %}
+                                {% set _ = stage_map.update({stage.stage_name: stage}) %}
+                            {% endfor %}
+
+                            {% for stage_name in stage_names %}
+                            <td class="text-center">
+                                {% set stage = stage_map.get(stage_name) %}
+                                {% if stage %}
+                                    {% if stage.decision == 'ACCEPT' %}
+                                    <span class="badge bg-success" title="Accept">
+                                        <i class="bi bi-check"></i>
+                                    </span>
+                                    {% elif stage.decision == 'REJECT' %}
+                                    <span class="badge bg-danger" title="Reject">
+                                        <i class="bi bi-x"></i>
+                                    </span>
+                                    {% elif stage.has_defect %}
+                                    <span class="badge bg-warning" title="Defect">
+                                        <i class="bi bi-exclamation"></i>
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-info" title="{{ stage.decision or 'In Progress' }}">
+                                        <i class="bi bi-arrow-right"></i>
+                                    </span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="badge bg-light text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('stages.view_pipe', id=pipe.id) }}" class="btn btn-outline-info" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('stages.edit_pipe', id=pipe.id) }}" class="btn btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{{ url_for('stickers.preview_sticker', pipe_id=pipe.id) }}" class="btn btn-outline-success" title="Print Sticker">
+                                        <i class="bi bi-qr-code"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="17" class="text-center py-4 text-muted">
+                                {{ 'لا توجد نتائج' if session.get('lang') == 'ar' else 'No results found' }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if pipes %}
+        <div class="card-footer bg-white">
+            <small class="text-muted">
+                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ pipes|length }}
+                {{ 'أنبوب' if session.get('lang') == 'ar' else 'pipes' }}
+            </small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="container-fluid mt-3">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body py-2">
+            <small>
+                <strong>{{ 'دليل الرموز:' if session.get('lang') == 'ar' else 'Legend:' }}</strong>
+                <span class="badge bg-success mx-1"><i class="bi bi-check"></i></span> Accept
+                <span class="badge bg-danger mx-1"><i class="bi bi-x"></i></span> Reject
+                <span class="badge bg-warning mx-1"><i class="bi bi-exclamation"></i></span> Defect
+                <span class="badge bg-info mx-1"><i class="bi bi-arrow-right"></i></span> In Progress
+                <span class="badge bg-light text-muted mx-1">-</span> Not Started
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Lab Chemical Analysis{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-speedometer2"></i>
+                {% if session.get('lang') == 'ar' %}
+                لوحة التحكم
+                {% else %}
+                Dashboard
+                {% endif %}
+            </h2>
+            <p class="text-muted">
+                {% if session.get('lang') == 'ar' %}
+                مرحباً {{ current_user.full_name_ar or current_user.full_name or current_user.username }}!
+                {% else %}
+                Welcome {{ current_user.full_name or current_user.username }}!
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Chemical Analyses Today -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">
+                                {{ 'تحليلات اليوم' if session.get('lang') == 'ar' else 'Analyses Today' }}
+                            </h6>
+                            <h2 class="mb-0">{{ stats.chem_today }}</h2>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-flask text-primary fs-3"></i>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('chemical.index') }}" class="text-decoration-none small">
+                        {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View all' }} →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pipes Today -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">
+                                {{ 'أنابيب اليوم' if session.get('lang') == 'ar' else 'Pipes Today' }}
+                            </h6>
+                            <h2 class="mb-0">{{ stats.pipes_today }}</h2>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-diagram-3 text-success fs-3"></i>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('stages.index') }}" class="text-decoration-none small">
+                        {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View all' }} →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mechanical Tests Today -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">
+                                {{ 'اختبارات ميكانيكية' if session.get('lang') == 'ar' else 'Mech Tests Today' }}
+                            </h6>
+                            <h2 class="mb-0">{{ stats.mech_today }}</h2>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-gear text-warning fs-3"></i>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('mechanical.index') }}" class="text-decoration-none small">
+                        {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View all' }} →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Defects This Week -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">
+                                {{ 'عيوب هذا الأسبوع' if session.get('lang') == 'ar' else 'Defects This Week' }}
+                            </h6>
+                            <h2 class="mb-0 text-danger">{{ stats.defects_week }}</h2>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-exclamation-triangle text-danger fs-3"></i>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('reports.defect_summary') }}" class="text-decoration-none small">
+                        {{ 'عرض التقرير' if session.get('lang') == 'ar' else 'View report' }} →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning"></i>
+                        {{ 'إجراءات سريعة' if session.get('lang') == 'ar' else 'Quick Actions' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3 col-6">
+                            <a href="{{ url_for('chemical.create') }}" class="btn btn-outline-primary w-100 py-3">
+                                <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
+                                {{ 'تحليل كيميائي جديد' if session.get('lang') == 'ar' else 'New Chemical Analysis' }}
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="{{ url_for('stages.create_pipe') }}" class="btn btn-outline-success w-100 py-3">
+                                <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
+                                {{ 'تسجيل أنبوب جديد' if session.get('lang') == 'ar' else 'Register New Pipe' }}
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="{{ url_for('mechanical.create') }}" class="btn btn-outline-warning w-100 py-3">
+                                <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
+                                {{ 'اختبار ميكانيكي جديد' if session.get('lang') == 'ar' else 'New Mechanical Test' }}
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <a href="{{ url_for('stickers.index') }}" class="btn btn-outline-info w-100 py-3">
+                                <i class="bi bi-qr-code fs-4 d-block mb-2"></i>
+                                {{ 'طباعة ملصقات' if session.get('lang') == 'ar' else 'Print Stickers' }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row g-4">
+        <!-- Recent Chemical Analyses -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-flask"></i>
+                        {{ 'آخر التحليلات الكيميائية' if session.get('lang') == 'ar' else 'Recent Chemical Analyses' }}
+                    </h5>
+                    <a href="{{ url_for('chemical.index') }}" class="btn btn-sm btn-outline-primary">
+                        {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View All' }}
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                                    <th>{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</th>
+                                    <th>{{ 'رقم المغرفة' if session.get('lang') == 'ar' else 'Ladle#' }}</th>
+                                    <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for analysis in recent_analyses %}
+                                <tr onclick="window.location='{{ url_for('chemical.view', id=analysis.id) }}';" style="cursor: pointer;">
+                                    <td>{{ analysis.test_date }}</td>
+                                    <td>{{ analysis.furnace.furnace_code if analysis.furnace else '-' }}</td>
+                                    <td>{{ analysis.ladle_no }}</td>
+                                    <td>
+                                        {% if analysis.decision == 'ACCEPT' %}
+                                        <span class="badge bg-success">{{ analysis.decision }}</span>
+                                        {% elif analysis.decision == 'REJECT' %}
+                                        <span class="badge bg-danger">{{ analysis.decision }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ analysis.decision or '-' }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        {{ 'لا توجد تحليلات حديثة' if session.get('lang') == 'ar' else 'No recent analyses' }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Pipes -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-diagram-3"></i>
+                        {{ 'آخر الأنابيب المسجلة' if session.get('lang') == 'ar' else 'Recent Pipes' }}
+                    </h5>
+                    <a href="{{ url_for('stages.index') }}" class="btn btn-sm btn-outline-success">
+                        {{ 'عرض الكل' if session.get('lang') == 'ar' else 'View All' }}
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>{{ 'الكود' if session.get('lang') == 'ar' else 'No. Code' }}</th>
+                                    <th>{{ 'القطر' if session.get('lang') == 'ar' else 'DN' }}</th>
+                                    <th>{{ 'رقم المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                                    <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pipe in recent_pipes %}
+                                <tr onclick="window.location='{{ url_for('stages.view_pipe', id=pipe.id) }}';" style="cursor: pointer;">
+                                    <td><strong>{{ pipe.no_code }}</strong></td>
+                                    <td>DN{{ pipe.diameter }}</td>
+                                    <td>{{ pipe.ladle_id or '-' }}</td>
+                                    <td>{{ pipe.production_date }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        {{ 'لا توجد أنابيب حديثة' if session.get('lang') == 'ar' else 'No recent pipes' }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

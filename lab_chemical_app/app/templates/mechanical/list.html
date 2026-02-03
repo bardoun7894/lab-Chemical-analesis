@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Mechanical Tests{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>
+                        <i class="bi bi-gear"></i>
+                        {{ 'الاختبارات الميكانيكية' if session.get('lang') == 'ar' else 'Mechanical Tests' }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        {{ 'قائمة جميع الاختبارات الميكانيكية' if session.get('lang') == 'ar' else 'List of all mechanical tests' }}
+                    </p>
+                </div>
+                <a href="{{ url_for('mechanical.create') }}" class="btn btn-warning">
+                    <i class="bi bi-plus-circle"></i>
+                    {{ 'إضافة اختبار' if session.get('lang') == 'ar' else 'Add Test' }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'من تاريخ' if session.get('lang') == 'ar' else 'From Date' }}</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'إلى تاريخ' if session.get('lang') == 'ar' else 'To Date' }}</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}</label>
+                    <select name="diameter" class="form-select">
+                        <option value="">{{ 'الكل' if session.get('lang') == 'ar' else 'All' }}</option>
+                        <option value="300" {{ 'selected' if selected_diameter == 300 }}>DN300</option>
+                        <option value="400" {{ 'selected' if selected_diameter == 400 }}>DN400</option>
+                        <option value="500" {{ 'selected' if selected_diameter == 500 }}>DN500</option>
+                        <option value="600" {{ 'selected' if selected_diameter == 600 }}>DN600</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                    <select name="decision" class="form-select">
+                        <option value="">{{ 'الكل' if session.get('lang') == 'ar' else 'All' }}</option>
+                        <option value="ACCEPT" {{ 'selected' if selected_decision == 'ACCEPT' }}>Accept</option>
+                        <option value="REJECT" {{ 'selected' if selected_decision == 'REJECT' }}>Reject</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i>
+                        {{ 'بحث' if session.get('lang') == 'ar' else 'Search' }}
+                    </button>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{{ url_for('mechanical.index') }}" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-x-circle"></i>
+                        {{ 'مسح' if session.get('lang') == 'ar' else 'Clear' }}
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
+                            <th>{{ 'الكود' if session.get('lang') == 'ar' else 'Code' }}</th>
+                            <th>{{ 'القطر' if session.get('lang') == 'ar' else 'DN' }}</th>
+                            <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
+                            <th>{{ 'قوة الشد' if session.get('lang') == 'ar' else 'Tensile' }}</th>
+                            <th>{{ 'الاستطالة' if session.get('lang') == 'ar' else 'Elongation' }}</th>
+                            <th>{{ 'الصلادة' if session.get('lang') == 'ar' else 'Hardness' }}</th>
+                            <th>{{ 'النودولارية' if session.get('lang') == 'ar' else 'Nodularity' }}</th>
+                            <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                            <th>{{ 'إجراءات' if session.get('lang') == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in tests %}
+                        <tr>
+                            <td>{{ test.test_date }}</td>
+                            <td><strong>{{ test.code or '-' }}</strong></td>
+                            <td>DN{{ test.diameter or '?' }}</td>
+                            <td><small class="text-muted">{{ test.ladle_id or '-' }}</small></td>
+                            <td>{{ '%.1f'|format(test.tensile_strength) if test.tensile_strength else '-' }} MPa</td>
+                            <td>{{ '%.1f'|format(test.elongation) if test.elongation else '-' }}%</td>
+                            <td>{{ '%.0f'|format(test.hardness) if test.hardness else '-' }} HB</td>
+                            <td>{{ '%.1f'|format(test.nodularity_percent) if test.nodularity_percent else '-' }}%</td>
+                            <td>
+                                {% if test.decision == 'ACCEPT' %}
+                                <span class="badge bg-success">{{ test.decision }}</span>
+                                {% elif test.decision == 'REJECT' %}
+                                <span class="badge bg-danger">{{ test.decision }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ test.decision or '-' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('mechanical.view', id=test.id) }}" class="btn btn-outline-info" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('mechanical.edit', id=test.id) }}" class="btn btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="10" class="text-center py-4 text-muted">
+                                {{ 'لا توجد نتائج' if session.get('lang') == 'ar' else 'No results found' }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if tests %}
+        <div class="card-footer bg-white">
+            <small class="text-muted">
+                {{ 'إجمالي:' if session.get('lang') == 'ar' else 'Total:' }} {{ tests|length }}
+                {{ 'اختبار' if session.get('lang') == 'ar' else 'tests' }}
+            </small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,278 @@
+/* Lab Chemical Analysis App - Custom Styles */
+
+/* RTL Support */
+[dir="rtl"] .ms-auto {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+}
+
+[dir="rtl"] .me-auto {
+    margin-right: 0 !important;
+    margin-left: auto !important;
+}
+
+/* General Styles */
+body {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Card Styles */
+.card {
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Table Styles */
+.table th {
+    white-space: nowrap;
+}
+
+.table-hover tbody tr {
+    cursor: pointer;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Badge Styles */
+.badge {
+    font-weight: 500;
+}
+
+/* Form Styles */
+.form-control:focus,
+.form-select:focus {
+    border-color: #4472C4;
+    box-shadow: 0 0 0 0.2rem rgba(68, 114, 196, 0.25);
+}
+
+/* Element validation highlighting */
+.element-input.is-invalid {
+    border-color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.element-input.is-valid {
+    border-color: #198754;
+}
+
+/* Navbar customization */
+.navbar-brand {
+    font-weight: 600;
+}
+
+.navbar .dropdown-menu {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Dashboard Cards */
+.dashboard-stat-card {
+    border-left: 4px solid;
+}
+
+.dashboard-stat-card.primary {
+    border-left-color: #4472C4;
+}
+
+.dashboard-stat-card.success {
+    border-left-color: #198754;
+}
+
+.dashboard-stat-card.warning {
+    border-left-color: #ffc107;
+}
+
+.dashboard-stat-card.danger {
+    border-left-color: #dc3545;
+}
+
+/* Stage Progress Indicators */
+.stage-indicator {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.stage-indicator.accept {
+    background-color: #198754;
+    color: white;
+}
+
+.stage-indicator.reject {
+    background-color: #dc3545;
+    color: white;
+}
+
+.stage-indicator.defect {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.stage-indicator.progress {
+    background-color: #0dcaf0;
+    color: white;
+}
+
+.stage-indicator.pending {
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
+/* Print Styles */
+@media print {
+    .navbar,
+    .btn,
+    .btn-group,
+    .breadcrumb,
+    footer {
+        display: none !important;
+    }
+
+    .card {
+        border: 1px solid #dee2e6 !important;
+        box-shadow: none !important;
+    }
+
+    .container,
+    .container-fluid {
+        max-width: 100%;
+        padding: 0;
+    }
+}
+
+/* Sticker Preview */
+.sticker-preview {
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Decision colors */
+.decision-accept {
+    color: #198754;
+}
+
+.decision-reject {
+    color: #dc3545;
+}
+
+.decision-hold {
+    color: #ffc107;
+}
+
+/* Loading spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+}
+
+@keyframes spinner-border {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Quick action buttons */
+.quick-action-btn {
+    transition: transform 0.2s ease-in-out;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-3px);
+}
+
+/* Chemical element highlighting */
+.element-out-of-spec {
+    background-color: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.element-in-spec {
+    color: #198754;
+}
+
+/* Modal improvements */
+.modal-content {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+/* Responsive table wrapper */
+.table-responsive {
+    border-radius: 0.375rem;
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+}
+
+/* Arabic font support */
+[lang="ar"] {
+    font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Alert improvements */
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+/* List group improvements */
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}

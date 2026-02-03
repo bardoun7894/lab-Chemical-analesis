@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+
+{% block title %}Sticker Printing{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-qr-code"></i>
+                {{ 'طباعة الملصقات' if session.get('lang') == 'ar' else 'Sticker Printing' }}
+            </h2>
+            <p class="text-muted">
+                {{ 'إنشاء وطباعة ملصقات الأنابيب مع QR Code' if session.get('lang') == 'ar' else 'Generate and print pipe stickers with QR codes' }}
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Search Section -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-search"></i>
+                        {{ 'البحث عن أنبوب' if session.get('lang') == 'ar' else 'Search Pipe' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'كود الأنبوب أو معرف المغرفة' if session.get('lang') == 'ar' else 'Pipe Code or Ladle ID' }}</label>
+                        <div class="input-group">
+                            <input type="text" id="searchInput" class="form-control"
+                                   placeholder="N8739 or 4713012025...">
+                            <button type="button" class="btn btn-primary" onclick="searchPipes()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search Results -->
+                    <div id="searchResults" class="list-group" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Results will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sticker Size Selection -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-aspect-ratio"></i>
+                        {{ 'حجم الملصق' if session.get('lang') == 'ar' else 'Sticker Size' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group-vertical w-100" role="group">
+                        <input type="radio" class="btn-check" name="stickerSize" id="sizeSmall" value="small">
+                        <label class="btn btn-outline-success" for="sizeSmall">
+                            <i class="bi bi-square"></i>
+                            Small (50x30mm) - {{ 'صغير' if session.get('lang') == 'ar' else 'Barcode style' }}
+                        </label>
+
+                        <input type="radio" class="btn-check" name="stickerSize" id="sizeMedium" value="medium" checked>
+                        <label class="btn btn-outline-success" for="sizeMedium">
+                            <i class="bi bi-square-fill"></i>
+                            Medium (70x50mm) - {{ 'متوسط' if session.get('lang') == 'ar' else 'Product label' }}
+                        </label>
+
+                        <input type="radio" class="btn-check" name="stickerSize" id="sizeLarge" value="large">
+                        <label class="btn btn-outline-success" for="sizeLarge">
+                            <i class="bi bi-square-half"></i>
+                            Large (100x70mm) - {{ 'كبير' if session.get('lang') == 'ar' else 'Detailed info' }}
+                        </label>
+
+                        <input type="radio" class="btn-check" name="stickerSize" id="sizeCustom" value="custom">
+                        <label class="btn btn-outline-success" for="sizeCustom">
+                            <i class="bi bi-pencil-square"></i>
+                            {{ 'مخصص' if session.get('lang') == 'ar' else 'Custom Size' }}
+                        </label>
+                    </div>
+
+                    <!-- Custom Size Inputs -->
+                    <div id="customSizeInputs" class="row g-2 mt-2" style="display: none;">
+                        <div class="col-6">
+                            <label class="form-label small">{{ 'العرض (مم)' if session.get('lang') == 'ar' else 'Width (mm)' }}</label>
+                            <input type="number" id="customWidth" class="form-control" value="70" min="30" max="200">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small">{{ 'الطول (مم)' if session.get('lang') == 'ar' else 'Height (mm)' }}</label>
+                            <input type="number" id="customHeight" class="form-control" value="50" min="20" max="150">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-eye"></i>
+                        {{ 'معاينة الملصق' if session.get('lang') == 'ar' else 'Sticker Preview' }}
+                    </h5>
+                    <div id="previewActions" style="display: none;">
+                        <button type="button" class="btn btn-light btn-sm" onclick="downloadSticker()">
+                            <i class="bi bi-download"></i>
+                            {{ 'تحميل' if session.get('lang') == 'ar' else 'Download' }}
+                        </button>
+                        <button type="button" class="btn btn-light btn-sm" onclick="printSticker()">
+                            <i class="bi bi-printer"></i>
+                            {{ 'طباعة' if session.get('lang') == 'ar' else 'Print' }}
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body text-center" style="min-height: 400px;">
+                    <div id="previewPlaceholder">
+                        <i class="bi bi-qr-code text-muted" style="font-size: 100px;"></i>
+                        <p class="text-muted mt-3">
+                            {{ 'ابحث عن أنبوب لمعاينة الملصق' if session.get('lang') == 'ar' else 'Search for a pipe to preview sticker' }}
+                        </p>
+                    </div>
+                    <div id="previewContainer" style="display: none;">
+                        <img id="stickerPreview" src="" alt="Sticker Preview" class="img-fluid border shadow">
+                        <div id="pipeInfo" class="mt-3 text-start"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedPipeId = null;
+
+// Show/hide custom size inputs
+document.querySelectorAll('input[name="stickerSize"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const customInputs = document.getElementById('customSizeInputs');
+        customInputs.style.display = this.value === 'custom' ? 'flex' : 'none';
+        if (selectedPipeId) updatePreview();
+    });
+});
+
+document.getElementById('customWidth').addEventListener('change', updatePreview);
+document.getElementById('customHeight').addEventListener('change', updatePreview);
+
+// Search on Enter
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') searchPipes();
+});
+
+function searchPipes() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) return;
+
+    fetch(`/stickers/search?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '';
+
+            if (data.pipes.length === 0) {
+                resultsDiv.innerHTML = '<div class="list-group-item text-muted">No pipes found</div>';
+                return;
+            }
+
+            data.pipes.forEach(pipe => {
+                const item = document.createElement('a');
+                item.href = '#';
+                item.className = 'list-group-item list-group-item-action';
+                item.onclick = (e) => { e.preventDefault(); selectPipe(pipe); };
+
+                const decisionBadge = pipe.decision === 'ACCEPT' ?
+                    '<span class="badge bg-success">ACCEPT</span>' :
+                    pipe.decision === 'REJECT' ?
+                    '<span class="badge bg-danger">REJECT</span>' :
+                    '<span class="badge bg-secondary">' + (pipe.decision || 'N/A') + '</span>';
+
+                item.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${pipe.no_code}</strong>
+                            <br><small class="text-muted">DN${pipe.diameter} | ${pipe.ladle_id || 'N/A'}</small>
+                        </div>
+                        ${decisionBadge}
+                    </div>
+                `;
+                resultsDiv.appendChild(item);
+            });
+        });
+}
+
+function selectPipe(pipe) {
+    selectedPipeId = pipe.id;
+
+    // Update preview
+    updatePreview();
+
+    // Show pipe info
+    document.getElementById('pipeInfo').innerHTML = `
+        <table class="table table-sm">
+            <tr><th>No. Code:</th><td>${pipe.no_code}</td></tr>
+            <tr><th>Ladle ID:</th><td>${pipe.ladle_id || 'N/A'}</td></tr>
+            <tr><th>Diameter:</th><td>DN${pipe.diameter}</td></tr>
+            <tr><th>Type:</th><td>${pipe.pipe_type || 'N/A'}</td></tr>
+            <tr><th>Weight:</th><td>${pipe.actual_weight || 'N/A'} kg</td></tr>
+            <tr><th>Date:</th><td>${pipe.production_date || 'N/A'}</td></tr>
+        </table>
+    `;
+}
+
+function updatePreview() {
+    if (!selectedPipeId) return;
+
+    const size = document.querySelector('input[name="stickerSize"]:checked').value;
+    let url = `/stickers/generate/${selectedPipeId}?size=${size}`;
+
+    if (size === 'custom') {
+        const width = document.getElementById('customWidth').value;
+        const height = document.getElementById('customHeight').value;
+        url += `&width=${width}&height=${height}`;
+    }
+
+    document.getElementById('stickerPreview').src = url;
+    document.getElementById('previewPlaceholder').style.display = 'none';
+    document.getElementById('previewContainer').style.display = 'block';
+    document.getElementById('previewActions').style.display = 'block';
+}
+
+function downloadSticker() {
+    if (!selectedPipeId) return;
+
+    const size = document.querySelector('input[name="stickerSize"]:checked').value;
+    let url = `/stickers/download/${selectedPipeId}?size=${size}`;
+
+    if (size === 'custom') {
+        const width = document.getElementById('customWidth').value;
+        const height = document.getElementById('customHeight').value;
+        url += `&width=${width}&height=${height}`;
+    }
+
+    window.location.href = url;
+}
+
+function printSticker() {
+    const img = document.getElementById('stickerPreview');
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+        <head><title>Print Sticker</title></head>
+        <body style="text-align: center; margin: 0; padding: 20px;">
+            <img src="${img.src}" style="max-width: 100%;">
+            <script>window.onload = function() { window.print(); window.close(); }<\/script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
+</script>
+{% endblock %}

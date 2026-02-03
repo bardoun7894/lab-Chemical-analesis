@@ -1,0 +1,343 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Edit' if analysis else 'New' }} Chemical Analysis{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-flask"></i>
+                {% if analysis %}
+                {{ 'تعديل التحليل الكيميائي' if session.get('lang') == 'ar' else 'Edit Chemical Analysis' }}
+                {% else %}
+                {{ 'تحليل كيميائي جديد' if session.get('lang') == 'ar' else 'New Chemical Analysis' }}
+                {% endif %}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('chemical.index') }}">Chemical</a></li>
+                    <li class="breadcrumb-item active">{{ 'Edit' if analysis else 'New' }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <form method="POST" id="analysisForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row">
+            <!-- Left Column - Basic Info -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle"></i>
+                            {{ 'معلومات أساسية' if session.get('lang') == 'ar' else 'Basic Information' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'تاريخ الاختبار' if session.get('lang') == 'ar' else 'Test Date' }} *</label>
+                            <input type="date" name="test_date" class="form-control" required
+                                   value="{{ analysis.test_date if analysis else today }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }} *</label>
+                            <select name="furnace_id" class="form-select" required>
+                                <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                {% for furnace in furnaces %}
+                                <option value="{{ furnace.id }}"
+                                    {{ 'selected' if analysis and analysis.furnace_id == furnace.id }}>
+                                    {{ furnace.furnace_code }} - {{ furnace.furnace_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'رقم المغرفة' if session.get('lang') == 'ar' else 'Ladle Number' }} *</label>
+                            <input type="number" name="ladle_no" class="form-control" required min="1"
+                                   value="{{ analysis.ladle_no if analysis else next_ladle_no }}">
+                            <small class="text-muted">
+                                {{ 'يبدأ من 1 كل يوم' if session.get('lang') == 'ar' else 'Resets to 1 each day' }}
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</label>
+                            <input type="text" name="ladle_id" class="form-control bg-light" readonly
+                                   value="{{ analysis.ladle_id if analysis else '' }}" id="ladleIdField">
+                            <small class="text-muted">{{ 'يتم حسابه تلقائياً' if session.get('lang') == 'ar' else 'Auto-calculated' }}</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Decision -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-check-circle"></i>
+                            {{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</label>
+                            <select name="decision" class="form-select" id="decisionSelect">
+                                <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                <option value="ACCEPT" {{ 'selected' if analysis and analysis.decision == 'ACCEPT' }}>
+                                    Accept / قبول
+                                </option>
+                                <option value="REJECT" {{ 'selected' if analysis and analysis.decision == 'REJECT' }}>
+                                    Reject / رفض
+                                </option>
+                                <option value="HOLD" {{ 'selected' if analysis and analysis.decision == 'HOLD' }}>
+                                    Hold / انتظار
+                                </option>
+                                <option value="INSPECT_100" {{ 'selected' if analysis and analysis.decision == 'INSPECT_100' }}>
+                                    Inspect 100% / فحص 100%
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'السبب' if session.get('lang') == 'ar' else 'Reason' }}</label>
+                            <textarea name="reason" class="form-control" rows="2">{{ analysis.reason if analysis else '' }}</textarea>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="has_defect" class="form-check-input" id="hasDefect"
+                                {{ 'checked' if analysis and analysis.has_defect }}>
+                            <label class="form-check-label" for="hasDefect">
+                                {{ 'يوجد عيب' if session.get('lang') == 'ar' else 'Has Defect' }}
+                            </label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}</label>
+                            <textarea name="notes" class="form-control" rows="2">{{ analysis.notes if analysis else '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Chemical Elements -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calculator"></i>
+                            {{ 'العناصر الكيميائية (%)' if session.get('lang') == 'ar' else 'Chemical Elements (%)' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Element specs reference -->
+                        <div class="alert alert-info mb-3">
+                            <small>
+                                <strong>{{ 'المواصفات:' if session.get('lang') == 'ar' else 'Specifications:' }}</strong>
+                                C: 3.0-3.9 | Si: 1.86-2.7 | Mg: 0.031-0.07 | Cu: max 0.1 | Cr: max 0.1 |
+                                S: max 0.02 | Mn: max 0.4 | P: max 0.059 | Pb: max 0.003 | Al: max 0.049
+                            </small>
+                        </div>
+
+                        <div class="row g-3">
+                            <!-- Primary Elements -->
+                            <div class="col-md-3">
+                                <label class="form-label">C (Carbon)</label>
+                                <input type="number" name="carbon" class="form-control element-input"
+                                       step="0.001" min="0" max="10" data-min="3.0" data-max="3.9"
+                                       value="{{ analysis.carbon if analysis else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Si (Silicon)</label>
+                                <input type="number" name="silicon" class="form-control element-input"
+                                       step="0.001" min="0" max="10" data-min="1.86" data-max="2.7"
+                                       value="{{ analysis.silicon if analysis else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Mg (Magnesium)</label>
+                                <input type="number" name="magnesium" class="form-control element-input"
+                                       step="0.0001" min="0" max="1" data-min="0.031" data-max="0.07"
+                                       value="{{ analysis.magnesium if analysis else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Cu (Copper)</label>
+                                <input type="number" name="copper" class="form-control element-input"
+                                       step="0.0001" min="0" max="1" data-max="0.1"
+                                       value="{{ analysis.copper if analysis else '' }}">
+                            </div>
+
+                            <!-- Secondary Elements -->
+                            <div class="col-md-3">
+                                <label class="form-label">Cr (Chromium)</label>
+                                <input type="number" name="chromium" class="form-control element-input"
+                                       step="0.0001" min="0" max="1" data-max="0.1"
+                                       value="{{ analysis.chromium if analysis else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">S (Sulfur)</label>
+                                <input type="number" name="sulfur" class="form-control element-input"
+                                       step="0.0001" min="0" max="1" data-max="0.02"
+                                       value="{{ analysis.sulfur if analysis else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Mn (Manganese)</label>
+                                <input type="number" name="manganese" class="form-control element-input"
+                                       step="0.0001" min="0" max="1" data-max="0.4"
+                                       value="{{ analysis.manganese if analysis else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">P (Phosphorus)</label>
+                                <input type="number" name="phosphorus" class="form-control element-input"
+                                       step="0.0001" min="0" max="1" data-max="0.059"
+                                       value="{{ analysis.phosphorus if analysis else '' }}">
+                            </div>
+
+                            <!-- Trace Elements -->
+                            <div class="col-md-3">
+                                <label class="form-label">Pb (Lead)</label>
+                                <input type="number" name="lead" class="form-control element-input"
+                                       step="0.0001" min="0" max="0.1" data-max="0.003"
+                                       value="{{ analysis.lead if analysis else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Al (Aluminum)</label>
+                                <input type="number" name="aluminum" class="form-control element-input"
+                                       step="0.0001" min="0" max="1" data-max="0.049"
+                                       value="{{ analysis.aluminum if analysis else '' }}">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Calculated Values -->
+                        <h6>{{ 'القيم المحسوبة' if session.get('lang') == 'ar' else 'Calculated Values' }}</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">CE (Carbon Equivalent)</label>
+                                <input type="number" name="carbon_equivalent" class="form-control bg-light"
+                                       step="0.001" id="ceField" readonly
+                                       value="{{ analysis.carbon_equivalent if analysis else '' }}">
+                                <small class="text-muted">CE = C + Si/3 (3.62-4.83)</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">MnE (Manganese Equivalent)</label>
+                                <input type="number" name="manganese_equivalent" class="form-control bg-light"
+                                       step="0.001" id="mneField" readonly
+                                       value="{{ analysis.manganese_equivalent if analysis else '' }}">
+                                <small class="text-muted">MnE = Mn - 1.7*S (0.1-0.85)</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">MgE (Magnesium Equivalent)</label>
+                                <input type="number" name="magnesium_equivalent" class="form-control bg-light"
+                                       step="0.001" id="mgeField" readonly
+                                       value="{{ analysis.magnesium_equivalent if analysis else '' }}">
+                                <small class="text-muted">MgE = Mg - 0.76*S (min 0.023)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="{{ url_for('chemical.index') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i>
+                        {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i>
+                        {{ 'حفظ' if session.get('lang') == 'ar' else 'Save' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Element inputs validation and highlighting
+    const elementInputs = document.querySelectorAll('.element-input');
+    elementInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            validateElement(this);
+            calculateEquivalents();
+        });
+        // Initial validation
+        validateElement(input);
+    });
+
+    // Auto-calculate ladle_id
+    const testDateInput = document.querySelector('input[name="test_date"]');
+    const ladleNoInput = document.querySelector('input[name="ladle_no"]');
+    const ladleIdField = document.getElementById('ladleIdField');
+
+    function updateLadleId() {
+        const dateValue = testDateInput.value;
+        const ladleNo = ladleNoInput.value;
+
+        if (dateValue && ladleNo) {
+            const date = new Date(dateValue);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            ladleIdField.value = ladleNo + day + month + year;
+        }
+    }
+
+    testDateInput.addEventListener('change', updateLadleId);
+    ladleNoInput.addEventListener('input', updateLadleId);
+
+    // Initial calculation
+    calculateEquivalents();
+});
+
+function validateElement(input) {
+    const value = parseFloat(input.value);
+    const min = parseFloat(input.dataset.min);
+    const max = parseFloat(input.dataset.max);
+
+    input.classList.remove('is-invalid', 'is-valid', 'border-danger');
+
+    if (isNaN(value)) return;
+
+    let outOfSpec = false;
+    if (!isNaN(min) && value < min) outOfSpec = true;
+    if (!isNaN(max) && value > max) outOfSpec = true;
+
+    if (outOfSpec) {
+        input.classList.add('border-danger', 'is-invalid');
+    } else {
+        input.classList.add('is-valid');
+    }
+}
+
+function calculateEquivalents() {
+    const carbon = parseFloat(document.querySelector('input[name="carbon"]').value) || 0;
+    const silicon = parseFloat(document.querySelector('input[name="silicon"]').value) || 0;
+    const manganese = parseFloat(document.querySelector('input[name="manganese"]').value) || 0;
+    const magnesium = parseFloat(document.querySelector('input[name="magnesium"]').value) || 0;
+    const sulfur = parseFloat(document.querySelector('input[name="sulfur"]').value) || 0;
+
+    // CE = C + Si/3
+    if (carbon > 0 && silicon > 0) {
+        document.getElementById('ceField').value = (carbon + silicon / 3).toFixed(3);
+    }
+
+    // MnE = Mn - 1.7*S
+    if (manganese > 0) {
+        document.getElementById('mneField').value = (manganese - 1.7 * sulfur).toFixed(4);
+    }
+
+    // MgE = Mg - 0.76*S
+    if (magnesium > 0) {
+        document.getElementById('mgeField').value = (magnesium - 0.76 * sulfur).toFixed(4);
+    }
+}
+</script>
+{% endblock %}

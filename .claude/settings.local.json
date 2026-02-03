@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(dir:*)",
+      "Bash(specify init:*)",
+      "Bash(set PYTHONUTF8=1)",
+      "Bash(set:*)",
+      "Bash(chcp:*)",
+      "Bash(cmd /c \"chcp 65001 && set NO_COLOR=1 && specify init . --ai claude\")",
+      "Bash(cmd /c \"chcp 65001 >nul && set NO_COLOR=1 && set TERM=dumb && specify init . --ai claude\")",
+      "Bash(powershell -Command:*)",
+      "Bash(Out-Null)",
+      "Bash(echo:*)",
+      "Bash(PYTHONLEGACYWINDOWSSTDIO=1 COLORTERM=truecolor FORCE_COLOR=0 specify init:*)",
+      "Bash(wt.exe:*)"
+    ]
+  }
+}

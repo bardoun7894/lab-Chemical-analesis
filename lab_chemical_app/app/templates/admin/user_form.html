@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Edit' if user else 'Create' }} User{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-person-{{ 'gear' if user else 'plus' }}"></i>
+                {% if user %}
+                {{ 'تعديل المستخدم' if session.get('lang') == 'ar' else 'Edit User' }}: {{ user.username }}
+                {% else %}
+                {{ 'إضافة مستخدم جديد' if session.get('lang') == 'ar' else 'Create New User' }}
+                {% endif %}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.users') }}">Users</a></li>
+                    <li class="breadcrumb-item active">{{ 'Edit' if user else 'Create' }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'اسم المستخدم' if session.get('lang') == 'ar' else 'Username' }} *</label>
+                            <input type="text" name="username" class="form-control" required
+                                   value="{{ user.username if user else '' }}"
+                                   {{ 'readonly' if user }}>
+                            {% if not user %}
+                            <small class="text-muted">Cannot be changed after creation</small>
+                            {% endif %}
+                        </div>
+
+                        {% if not user %}
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'كلمة المرور' if session.get('lang') == 'ar' else 'Password' }} *</label>
+                            <input type="password" name="password" class="form-control" required minlength="6">
+                            <small class="text-muted">Minimum 6 characters</small>
+                        </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'كلمة مرور جديدة' if session.get('lang') == 'ar' else 'New Password' }}</label>
+                            <input type="password" name="new_password" class="form-control" minlength="6">
+                            <small class="text-muted">Leave blank to keep current password</small>
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ 'الاسم الكامل (EN)' if session.get('lang') == 'ar' else 'Full Name (EN)' }}</label>
+                                    <input type="text" name="full_name" class="form-control"
+                                           value="{{ user.full_name if user else '' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ 'الاسم الكامل (AR)' if session.get('lang') == 'ar' else 'Full Name (AR)' }}</label>
+                                    <input type="text" name="full_name_ar" class="form-control" dir="rtl"
+                                           value="{{ user.full_name_ar if user else '' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الدور' if session.get('lang') == 'ar' else 'Role' }} *</label>
+                            <select name="role" class="form-select" required>
+                                {% for role in roles %}
+                                <option value="{{ role.value }}"
+                                    {{ 'selected' if user and user.role == role.value }}>
+                                    {{ role.label }} / {{ role.label_ar }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">
+                                Admin: Full access | Supervisor: All data + reports | Operator: Data entry | Viewer: Read only
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'القسم' if session.get('lang') == 'ar' else 'Department' }}</label>
+                            <select name="department" class="form-select">
+                                <option value="">-- {{ 'اختر' if session.get('lang') == 'ar' else 'Select' }} --</option>
+                                <option value="Lab" {{ 'selected' if user and user.department == 'Lab' }}>Lab / المختبر</option>
+                                <option value="Production" {{ 'selected' if user and user.department == 'Production' }}>Production / الإنتاج</option>
+                                <option value="QC" {{ 'selected' if user and user.department == 'QC' }}>QC / الجودة</option>
+                                <option value="IT" {{ 'selected' if user and user.department == 'IT' }}>IT / تقنية المعلومات</option>
+                            </select>
+                        </div>
+
+                        {% if user %}
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="isActive"
+                                {{ 'checked' if user.is_active }}>
+                            <label class="form-check-label" for="isActive">
+                                {{ 'نشط' if session.get('lang') == 'ar' else 'Active' }}
+                            </label>
+                        </div>
+                        {% endif %}
+
+                        <hr>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i>
+                                {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i>
+                                {{ 'حفظ' if session.get('lang') == 'ar' else 'Save' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
