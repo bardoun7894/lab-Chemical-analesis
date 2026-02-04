@@ -1,0 +1,32 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+dist/
+build/
+*.egg-info/
+
+# Databases
+*.db
+*.sqlite3
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# Tool-specific metadata
+.claude/
+.specify/
+
+# Local/Temporary assets
+Master.xlsb
+*.jpeg
+*.png
+!lab_chemical_app/app/static/**/*.png  # Keep static images if any

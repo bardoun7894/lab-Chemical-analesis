@@ -200,7 +200,7 @@ if __name__ == '__main__':
     print("\n" + "=" * 50)
     print("Lab Chemical Analysis Application")
     print("=" * 50)
-    print(f"\nStarting server at: http://127.0.0.1:5000")
+    print(f"\nStarting server at: http://127.0.0.1:9999")
     print("Default login: admin / admin123")
     print("\nPress Ctrl+C to stop the server")
     print("=" * 50 + "\n")
@@ -208,6 +208,6 @@ if __name__ == '__main__':
     # Run the development server
     app.run(
         host='0.0.0.0',
-        port=5000,
+        port=9999,
         debug=True
     )
