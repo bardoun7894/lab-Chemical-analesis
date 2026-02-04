@@ -9,12 +9,12 @@
         <div class="col">
             <h2>
                 <i class="bi bi-flask"></i>
-                {{ 'تقرير التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis Report' }}
+                {{ 'تقرير التحليل الكيميائي' if current_locale == 'ar' else 'Chemical Analysis Report' }}
             </h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('reports.index') }}">{{ 'التقارير' if session.get('lang') == 'ar' else 'Reports' }}</a></li>
-                    <li class="breadcrumb-item active">{{ 'التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis' }}</li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('reports.index') }}">{{ 'التقارير' if current_locale == 'ar' else 'Reports' }}</a></li>
+                    <li class="breadcrumb-item active">{{ 'التحليل الكيميائي' if current_locale == 'ar' else 'Chemical Analysis' }}</li>
                 </ol>
             </nav>
         </div>
@@ -25,17 +25,17 @@
         <div class="card-body">
             <form method="GET" class="row g-3 align-items-end">
                 <div class="col-md-3">
-                    <label class="form-label">{{ 'من تاريخ' if session.get('lang') == 'ar' else 'From Date' }}</label>
+                    <label class="form-label">{{ 'من تاريخ' if current_locale == 'ar' else 'From Date' }}</label>
                     <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">{{ 'إلى تاريخ' if session.get('lang') == 'ar' else 'To Date' }}</label>
+                    <label class="form-label">{{ 'إلى تاريخ' if current_locale == 'ar' else 'To Date' }}</label>
                     <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</label>
+                    <label class="form-label">{{ 'الفرن' if current_locale == 'ar' else 'Furnace' }}</label>
                     <select name="furnace_id" class="form-select">
-                        <option value="">{{ 'الكل' if session.get('lang') == 'ar' else 'All' }}</option>
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
                         {% for furnace in furnaces %}
                         <option value="{{ furnace.id }}" {{ 'selected' if selected_furnace == furnace.id }}>
                             {{ furnace.furnace_code }}
@@ -46,7 +46,7 @@
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-primary me-2">
                         <i class="bi bi-search"></i>
-                        {{ 'بحث' if session.get('lang') == 'ar' else 'Search' }}
+                        {{ 'بحث' if current_locale == 'ar' else 'Search' }}
                     </button>
                     <a href="{{ url_for('reports.export_chemical_pdf', date_from=date_from, date_to=date_to) }}" class="btn btn-outline-danger">
                         <i class="bi bi-file-pdf"></i> PDF
@@ -64,31 +64,31 @@
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
                 <i class="bi bi-robot"></i>
-                {{ 'تحليل الذكاء الاصطناعي' if session.get('lang') == 'ar' else 'AI Analysis' }}
+                {{ 'تحليل الذكاء الاصطناعي' if current_locale == 'ar' else 'AI Analysis' }}
             </h5>
             <button type="button" class="btn btn-sm btn-light" id="aiReportRefresh">
                 <i class="bi bi-magic"></i>
-                {{ 'تحليل' if session.get('lang') == 'ar' else 'Analyze' }}
+                {{ 'تحليل' if current_locale == 'ar' else 'Analyze' }}
             </button>
         </div>
         <div class="card-body">
             <div id="aiReportInitial" class="text-center py-2">
                 <i class="bi bi-robot text-muted"></i>
-                <small class="text-muted ms-2">{{ 'انقر على زر التحليل' if session.get('lang') == 'ar' else 'Click Analyze button' }}</small>
+                <small class="text-muted ms-2">{{ 'انقر على زر التحليل' if current_locale == 'ar' else 'Click Analyze button' }}</small>
             </div>
             <div id="aiReportLoading" class="text-center py-2" style="display: none;">
                 <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                <small class="text-muted ms-2">{{ 'جاري التحليل...' if session.get('lang') == 'ar' else 'Analyzing...' }}</small>
+                <small class="text-muted ms-2">{{ 'جاري التحليل...' if current_locale == 'ar' else 'Analyzing...' }}</small>
             </div>
             <div id="aiReportContent" style="display: none;">
                 <p id="aiReportSummary" class="mb-2"></p>
                 <div class="row">
                     <div class="col-md-6">
-                        <small class="text-muted"><i class="bi bi-lightbulb"></i> {{ 'الملاحظات' if session.get('lang') == 'ar' else 'Insights' }}:</small>
+                        <small class="text-muted"><i class="bi bi-lightbulb"></i> {{ 'الملاحظات' if current_locale == 'ar' else 'Insights' }}:</small>
                         <ul id="aiReportInsights" class="small mb-0"></ul>
                     </div>
                     <div class="col-md-6">
-                        <small class="text-muted"><i class="bi bi-check-circle"></i> {{ 'التوصيات' if session.get('lang') == 'ar' else 'Recommendations' }}:</small>
+                        <small class="text-muted"><i class="bi bi-check-circle"></i> {{ 'التوصيات' if current_locale == 'ar' else 'Recommendations' }}:</small>
                         <ul id="aiReportRecommendations" class="small mb-0"></ul>
                     </div>
                 </div>
@@ -105,7 +105,7 @@
             <div class="card border-0 shadow-sm bg-primary text-white">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ stats.total }}</h3>
-                    <small>{{ 'إجمالي' if session.get('lang') == 'ar' else 'Total' }}</small>
+                    <small>{{ 'إجمالي' if current_locale == 'ar' else 'Total' }}</small>
                 </div>
             </div>
         </div>
@@ -113,7 +113,7 @@
             <div class="card border-0 shadow-sm bg-success text-white">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ stats.accepted }}</h3>
-                    <small>{{ 'مقبول' if session.get('lang') == 'ar' else 'Accepted' }}</small>
+                    <small>{{ 'مقبول' if current_locale == 'ar' else 'Accepted' }}</small>
                 </div>
             </div>
         </div>
@@ -121,7 +121,7 @@
             <div class="card border-0 shadow-sm bg-danger text-white">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ stats.rejected }}</h3>
-                    <small>{{ 'مرفوض' if session.get('lang') == 'ar' else 'Rejected' }}</small>
+                    <small>{{ 'مرفوض' if current_locale == 'ar' else 'Rejected' }}</small>
                 </div>
             </div>
         </div>
@@ -129,7 +129,7 @@
             <div class="card border-0 shadow-sm bg-warning text-dark">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ stats.defects }}</h3>
-                    <small>{{ 'عيوب' if session.get('lang') == 'ar' else 'Defects' }}</small>
+                    <small>{{ 'عيوب' if current_locale == 'ar' else 'Defects' }}</small>
                 </div>
             </div>
         </div>
@@ -137,7 +137,7 @@
             <div class="card border-0 shadow-sm bg-info text-white">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ stats.rate }}%</h3>
-                    <small>{{ 'نسبة القبول' if session.get('lang') == 'ar' else 'Acceptance Rate' }}</small>
+                    <small>{{ 'نسبة القبول' if current_locale == 'ar' else 'Acceptance Rate' }}</small>
                 </div>
             </div>
         </div>
@@ -148,7 +148,7 @@
         <div class="card-header bg-light">
             <h5 class="mb-0">
                 <i class="bi bi-table"></i>
-                {{ 'نتائج التحليل' if session.get('lang') == 'ar' else 'Analysis Results' }}
+                {{ 'نتائج التحليل' if current_locale == 'ar' else 'Analysis Results' }}
             </h5>
         </div>
         <div class="card-body p-0">
@@ -157,16 +157,16 @@
                 <table class="table table-hover table-sm mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
-                            <th>{{ 'الفرن' if session.get('lang') == 'ar' else 'Furnace' }}</th>
-                            <th>{{ 'المغرفة' if session.get('lang') == 'ar' else 'Ladle' }}</th>
+                            <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                            <th>{{ 'الفرن' if current_locale == 'ar' else 'Furnace' }}</th>
+                            <th>{{ 'المغرفة' if current_locale == 'ar' else 'Ladle' }}</th>
                             <th>C</th>
                             <th>Si</th>
                             <th>Mn</th>
                             <th>Mg</th>
                             <th>S</th>
                             <th>CE</th>
-                            <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                            <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -200,7 +200,7 @@
             {% else %}
             <div class="text-center py-5">
                 <i class="bi bi-inbox display-4 text-muted"></i>
-                <p class="text-muted mt-2">{{ 'لا توجد نتائج للفترة المحددة' if session.get('lang') == 'ar' else 'No results for selected period' }}</p>
+                <p class="text-muted mt-2">{{ 'لا توجد نتائج للفترة المحددة' if current_locale == 'ar' else 'No results for selected period' }}</p>
             </div>
             {% endif %}
         </div>

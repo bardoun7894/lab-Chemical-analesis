@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ 'طباعة ملصقات' if session.get('lang') == 'ar' else 'Print Stickers' }} - {{ order.order_number }}{% endblock %}
+{% block title %}{{ 'طباعة ملصقات' if current_locale == 'ar' else 'Print Stickers' }} - {{ order.order_number }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -9,16 +9,16 @@
         <div>
             <h2>
                 <i class="bi bi-printer"></i>
-                {{ 'طباعة ملصقات أمر الإنتاج' if session.get('lang') == 'ar' else 'Print Production Order Stickers' }}
+                {{ 'طباعة ملصقات أمر الإنتاج' if current_locale == 'ar' else 'Print Production Order Stickers' }}
             </h2>
             <p class="text-muted mb-0">
-                {{ order.order_number }} - {{ order.customer_name or ('بدون عميل' if session.get('lang') == 'ar' else 'No Customer') }}
-                <span class="badge bg-secondary">{{ pipes|length }} {{ 'أنبوب' if session.get('lang') == 'ar' else 'pipes' }}</span>
+                {{ order.order_number }} - {{ order.customer_name or ('بدون عميل' if current_locale == 'ar' else 'No Customer') }}
+                <span class="badge bg-secondary">{{ pipes|length }} {{ 'أنبوب' if current_locale == 'ar' else 'pipes' }}</span>
             </p>
         </div>
         <a href="{{ url_for('production_orders.view', id=order.id) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-{{ 'left' if session.get('lang') != 'ar' else 'right' }}"></i>
-            {{ 'رجوع' if session.get('lang') == 'ar' else 'Back' }}
+            <i class="bi bi-arrow-{{ 'left' if current_locale != 'ar' else 'right' }}"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
         </a>
     </div>
 
@@ -29,26 +29,26 @@
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-gear"></i>
-                        {{ 'خيارات الطباعة' if session.get('lang') == 'ar' else 'Print Options' }}
+                        {{ 'خيارات الطباعة' if current_locale == 'ar' else 'Print Options' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">{{ 'حجم الملصق' if session.get('lang') == 'ar' else 'Sticker Size' }}</label>
+                        <label class="form-label">{{ 'حجم الملصق' if current_locale == 'ar' else 'Sticker Size' }}</label>
                         <div class="btn-group-vertical w-100" role="group">
                             <input type="radio" class="btn-check" name="stickerSize" id="sizeSmall" value="small">
                             <label class="btn btn-outline-primary" for="sizeSmall">
-                                {{ 'صغير' if session.get('lang') == 'ar' else 'Small' }} (50x30mm)
+                                {{ 'صغير' if current_locale == 'ar' else 'Small' }} (50x30mm)
                             </label>
 
                             <input type="radio" class="btn-check" name="stickerSize" id="sizeMedium" value="medium" checked>
                             <label class="btn btn-outline-primary" for="sizeMedium">
-                                {{ 'متوسط' if session.get('lang') == 'ar' else 'Medium' }} (70x50mm)
+                                {{ 'متوسط' if current_locale == 'ar' else 'Medium' }} (70x50mm)
                             </label>
 
                             <input type="radio" class="btn-check" name="stickerSize" id="sizeLarge" value="large">
                             <label class="btn btn-outline-primary" for="sizeLarge">
-                                {{ 'كبير' if session.get('lang') == 'ar' else 'Large' }} (100x70mm)
+                                {{ 'كبير' if current_locale == 'ar' else 'Large' }} (100x70mm)
                             </label>
                         </div>
                     </div>
@@ -59,11 +59,11 @@
                         <a id="downloadPdfBtn" href="{{ url_for('production_orders.generate_batch_stickers', id=order.id) }}?size=medium"
                            class="btn btn-success btn-lg">
                             <i class="bi bi-file-pdf"></i>
-                            {{ 'تحميل PDF للطباعة' if session.get('lang') == 'ar' else 'Download PDF for Print' }}
+                            {{ 'تحميل PDF للطباعة' if current_locale == 'ar' else 'Download PDF for Print' }}
                         </a>
                         <button type="button" class="btn btn-outline-primary" onclick="printSelected()">
                             <i class="bi bi-printer"></i>
-                            {{ 'طباعة المحددة' if session.get('lang') == 'ar' else 'Print Selected' }}
+                            {{ 'طباعة المحددة' if current_locale == 'ar' else 'Print Selected' }}
                         </button>
                     </div>
                 </div>
@@ -73,25 +73,25 @@
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-info-circle"></i>
-                        {{ 'معلومات الأمر' if session.get('lang') == 'ar' else 'Order Info' }}
+                        {{ 'معلومات الأمر' if current_locale == 'ar' else 'Order Info' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm mb-0">
                         <tr>
-                            <th>{{ 'رقم الأمر' if session.get('lang') == 'ar' else 'Order #' }}</th>
+                            <th>{{ 'رقم الأمر' if current_locale == 'ar' else 'Order #' }}</th>
                             <td>{{ order.order_number }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'العميل' if session.get('lang') == 'ar' else 'Customer' }}</th>
+                            <th>{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</th>
                             <td>{{ order.customer_name or '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}</th>
+                            <th>{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</th>
                             <td>DN{{ order.diameter }} {{ order.pipe_class or '' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'عدد الأنابيب' if session.get('lang') == 'ar' else 'Pipes Count' }}</th>
+                            <th>{{ 'عدد الأنابيب' if current_locale == 'ar' else 'Pipes Count' }}</th>
                             <td>{{ pipes|length }} / {{ order.target_quantity }}</td>
                         </tr>
                     </table>
@@ -105,14 +105,14 @@
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="bi bi-list-check"></i>
-                        {{ 'اختيار الأنابيب' if session.get('lang') == 'ar' else 'Select Pipes' }}
+                        {{ 'اختيار الأنابيب' if current_locale == 'ar' else 'Select Pipes' }}
                     </h5>
                     <div>
                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAll()">
-                            {{ 'اختيار الكل' if session.get('lang') == 'ar' else 'Select All' }}
+                            {{ 'اختيار الكل' if current_locale == 'ar' else 'Select All' }}
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAll()">
-                            {{ 'إلغاء الكل' if session.get('lang') == 'ar' else 'Deselect All' }}
+                            {{ 'إلغاء الكل' if current_locale == 'ar' else 'Deselect All' }}
                         </button>
                     </div>
                 </div>
@@ -123,12 +123,12 @@
                                 <th style="width: 40px;">
                                     <input type="checkbox" class="form-check-input" id="selectAllCheck" onchange="toggleAll(this)">
                                 </th>
-                                <th>{{ 'الكود' if session.get('lang') == 'ar' else 'Code' }}</th>
-                                <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
-                                <th>{{ 'القطر' if session.get('lang') == 'ar' else 'DN' }}</th>
-                                <th>{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }}</th>
-                                <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
-                                <th>{{ 'معاينة' if session.get('lang') == 'ar' else 'Preview' }}</th>
+                                <th>{{ 'الكود' if current_locale == 'ar' else 'Code' }}</th>
+                                <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
+                                <th>{{ 'القطر' if current_locale == 'ar' else 'DN' }}</th>
+                                <th>{{ 'المرحلة' if current_locale == 'ar' else 'Stage' }}</th>
+                                <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
+                                <th>{{ 'معاينة' if current_locale == 'ar' else 'Preview' }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -143,9 +143,9 @@
                                 <td><span class="badge bg-info">{{ pipe.current_stage }}</span></td>
                                 <td>
                                     {% if pipe.final_decision == 'ACCEPT' %}
-                                        <span class="badge bg-success">{{ 'مقبول' if session.get('lang') == 'ar' else 'ACCEPT' }}</span>
+                                        <span class="badge bg-success">{{ 'مقبول' if current_locale == 'ar' else 'ACCEPT' }}</span>
                                     {% elif pipe.final_decision == 'REJECT' %}
-                                        <span class="badge bg-danger">{{ 'مرفوض' if session.get('lang') == 'ar' else 'REJECT' }}</span>
+                                        <span class="badge bg-danger">{{ 'مرفوض' if current_locale == 'ar' else 'REJECT' }}</span>
                                     {% else %}
                                         <span class="badge bg-secondary">-</span>
                                     {% endif %}
@@ -160,7 +160,7 @@
                             {% else %}
                             <tr>
                                 <td colspan="7" class="text-center text-muted py-4">
-                                    {{ 'لا توجد أنابيب' if session.get('lang') == 'ar' else 'No pipes found' }}
+                                    {{ 'لا توجد أنابيب' if current_locale == 'ar' else 'No pipes found' }}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -204,7 +204,7 @@ function printSelected() {
     });
 
     if (selectedIds.length === 0) {
-        alert("{{ 'الرجاء اختيار أنابيب للطباعة' if session.get('lang') == 'ar' else 'Please select pipes to print' }}");
+        alert("{{ 'الرجاء اختيار أنابيب للطباعة' if current_locale == 'ar' else 'Please select pipes to print' }}");
         return;
     }
 

@@ -555,7 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading, hide error
         aiLoadingSpinner.style.display = 'block';
         aiErrorAlert.style.display = 'none';
-        aiStatusText.textContent = '{{ "جاري التحليل..." if session.get("lang") == "ar" else "Analyzing..." }}';
+        aiStatusText.textContent = '{{ "جاري التحليل..." if current_locale == 'ar' else "Analyzing..." }}';
         aiStatusText.className = 'text-primary small';
         aiRefreshBtn.classList.remove('btn-pulse');
 
@@ -605,7 +605,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     aiErrorAlert.style.display = 'block';
                                     if (data.error.includes('429')) {
                                         aiRateLimited = true;
-                                        aiErrorMessage.innerHTML = '{{ "تم تجاوز الحد" if session.get("lang") == "ar" else "Rate limited" }}';
+                                        aiErrorMessage.innerHTML = '{{ "تم تجاوز الحد" if current_locale == 'ar' else "Rate limited" }}';
                                         // Extend cooldown by 30 seconds after rate limit error
                                         lastAiCallTime = Date.now() + 25000;
                                         startCooldownTimer();
@@ -636,7 +636,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     // Update status after typing is done
                                     const totalDelay = reasonDelay + (data.result.notes || '').length * 20 + 200;
                                     setTimeout(() => {
-                                        aiStatusText.textContent = '{{ "تم التحليل ✓" if session.get("lang") == "ar" else "Analysis complete ✓" }}';
+                                        aiStatusText.textContent = '{{ "تم التحليل ✓" if current_locale == 'ar' else "Analysis complete ✓" }}';
                                         aiStatusText.className = 'text-success small';
                                     }, totalDelay);
                                 }
@@ -686,15 +686,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const inCooldown = timeSinceLastCall < AI_COOLDOWN;
 
         if (isReady && !inCooldown) {
-            aiStatusText.textContent = '{{ "جاهز للتحليل" if session.get("lang") == "ar" else "Ready to analyze" }}';
+            aiStatusText.textContent = '{{ "جاهز للتحليل" if current_locale == 'ar' else "Ready to analyze" }}';
             aiStatusText.className = 'text-success small';
             aiRefreshBtn.classList.add('btn-pulse');
         } else if (isReady && inCooldown) {
-            aiStatusText.textContent = '{{ "انتظر..." if session.get("lang") == "ar" else "Waiting..." }}';
+            aiStatusText.textContent = '{{ "انتظر..." if current_locale == 'ar' else "Waiting..." }}';
             aiStatusText.className = 'text-muted small';
             aiRefreshBtn.classList.remove('btn-pulse');
         } else {
-            aiStatusText.textContent = '{{ "أكمل الحقول المطلوبة" if session.get("lang") == "ar" else "Fill required fields" }}';
+            aiStatusText.textContent = '{{ "أكمل الحقول المطلوبة" if current_locale == 'ar' else "Fill required fields" }}';
             aiStatusText.className = 'text-muted small';
             aiRefreshBtn.classList.remove('btn-pulse');
         }

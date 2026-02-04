@@ -40,6 +40,27 @@
             </div>
         </div>
 
+        <!-- Mechanical Property Rules -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-gear display-4 text-warning"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'قواعد الخواص الميكانيكية' if current_locale == 'ar' else 'Mechanical Property Rules' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'تكوين نطاقات القرارات لكل خاصية ميكانيكية' if current_locale == 'ar' else 'Configure decision ranges for each mechanical property' }}
+                    </p>
+                    <a href="{{ url_for('admin.mechanical_rules') }}" class="btn btn-warning">
+                        <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة القواعد' if current_locale == 'ar' else 'Manage Rules' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- User Management -->
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card border-0 shadow-sm h-100">

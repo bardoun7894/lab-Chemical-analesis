@@ -9,6 +9,7 @@ from app.models.mechanical import MechanicalTest
 from app.models.chemical import ChemicalAnalysis
 from app.models.pipe import Pipe
 from app.services.ai_service import generate_mechanical_analysis, generate_mechanical_stream
+from app.services import mechanical_decision_service
 
 mechanical_bp = Blueprint('mechanical', __name__)
 
@@ -272,3 +273,39 @@ def api_ai_analysis_stream():
             'X-Accel-Buffering': 'no'
         }
     )
+
+
+@mechanical_bp.route('/api/validate', methods=['POST'])
+@login_required
+def api_validate():
+    """API endpoint to validate mechanical property values"""
+    data = request.get_json()
+
+    results = {}
+    for property_code, value in data.items():
+        if value is not None and value != '':
+            validation = mechanical_decision_service.validate_property(property_code, value)
+            results[property_code] = validation
+
+    return jsonify(results)
+
+
+@mechanical_bp.route('/api/auto-decision', methods=['POST'])
+@login_required
+def api_auto_decision():
+    """API endpoint to calculate auto-decision based on mechanical properties"""
+    data = request.get_json()
+
+    # Extract property values
+    property_values = {}
+    for field_name, value in data.items():
+        if value is not None and value != '':
+            try:
+                property_values[field_name] = float(value)
+            except (TypeError, ValueError):
+                pass
+
+    # Calculate decision
+    result = mechanical_decision_service.calculate_auto_decision(property_values)
+
+    return jsonify(result)

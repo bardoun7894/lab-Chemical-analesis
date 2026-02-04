@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ 'أمر الإنتاج' if session.get('lang') == 'ar' else 'Production Order' }} - {{ order.order_number }}{% endblock %}
+{% block title %}{{ 'أمر الإنتاج' if current_locale == 'ar' else 'Production Order' }} - {{ order.order_number }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -11,32 +11,32 @@
                 <i class="bi bi-clipboard-check"></i>
                 {{ order.order_number }}
                 {% if order.status == 'pending' %}
-                    <span class="badge bg-warning text-dark">{{ 'قيد الانتظار' if session.get('lang') == 'ar' else 'Pending' }}</span>
+                    <span class="badge bg-warning text-dark">{{ 'قيد الانتظار' if current_locale == 'ar' else 'Pending' }}</span>
                 {% elif order.status == 'in_progress' %}
-                    <span class="badge bg-primary">{{ 'جاري التنفيذ' if session.get('lang') == 'ar' else 'In Progress' }}</span>
+                    <span class="badge bg-primary">{{ 'جاري التنفيذ' if current_locale == 'ar' else 'In Progress' }}</span>
                 {% elif order.status == 'completed' %}
-                    <span class="badge bg-success">{{ 'مكتمل' if session.get('lang') == 'ar' else 'Completed' }}</span>
+                    <span class="badge bg-success">{{ 'مكتمل' if current_locale == 'ar' else 'Completed' }}</span>
                 {% elif order.status == 'cancelled' %}
-                    <span class="badge bg-danger">{{ 'ملغي' if session.get('lang') == 'ar' else 'Cancelled' }}</span>
+                    <span class="badge bg-danger">{{ 'ملغي' if current_locale == 'ar' else 'Cancelled' }}</span>
                 {% endif %}
             </h2>
             <p class="text-muted mb-0">
-                {{ order.customer_name or ('بدون عميل' if session.get('lang') == 'ar' else 'No Customer') }}
+                {{ order.customer_name or ('بدون عميل' if current_locale == 'ar' else 'No Customer') }}
             </p>
         </div>
         <div class="btn-group">
             <a href="{{ url_for('production_orders.progress', id=order.id) }}" class="btn btn-info">
-                <i class="bi bi-graph-up"></i> {{ 'تتبع التقدم' if session.get('lang') == 'ar' else 'Track Progress' }}
+                <i class="bi bi-graph-up"></i> {{ 'تتبع التقدم' if current_locale == 'ar' else 'Track Progress' }}
             </a>
             <a href="{{ url_for('production_orders.edit', id=order.id) }}" class="btn btn-warning">
-                <i class="bi bi-pencil"></i> {{ 'تعديل' if session.get('lang') == 'ar' else 'Edit' }}
+                <i class="bi bi-pencil"></i> {{ 'تعديل' if current_locale == 'ar' else 'Edit' }}
             </a>
             <a href="{{ url_for('production_orders.print_stickers', id=order.id) }}" class="btn btn-success">
-                <i class="bi bi-printer"></i> {{ 'طباعة الملصقات' if session.get('lang') == 'ar' else 'Print Stickers' }}
+                <i class="bi bi-printer"></i> {{ 'طباعة الملصقات' if current_locale == 'ar' else 'Print Stickers' }}
             </a>
             <a href="{{ url_for('production_orders.index') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-{{ 'left' if session.get('lang') != 'ar' else 'right' }}"></i>
-                {{ 'رجوع' if session.get('lang') == 'ar' else 'Back' }}
+                <i class="bi bi-arrow-{{ 'left' if current_locale != 'ar' else 'right' }}"></i>
+                {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
             </a>
         </div>
     </div>
@@ -48,36 +48,36 @@
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-info-circle"></i>
-                        {{ 'معلومات الأمر' if session.get('lang') == 'ar' else 'Order Information' }}
+                        {{ 'معلومات الأمر' if current_locale == 'ar' else 'Order Information' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm">
                         <tr>
-                            <th>{{ 'رقم الأمر' if session.get('lang') == 'ar' else 'Order #' }}</th>
+                            <th>{{ 'رقم الأمر' if current_locale == 'ar' else 'Order #' }}</th>
                             <td>{{ order.order_number }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'العميل' if session.get('lang') == 'ar' else 'Customer' }}</th>
+                            <th>{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</th>
                             <td>{{ order.customer_name or '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'كود العميل' if session.get('lang') == 'ar' else 'Customer Code' }}</th>
+                            <th>{{ 'كود العميل' if current_locale == 'ar' else 'Customer Code' }}</th>
                             <td>{{ order.customer_code or '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}</th>
+                            <th>{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</th>
                             <td>DN{{ order.diameter }} {{ order.pipe_class or '' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'الأولوية' if session.get('lang') == 'ar' else 'Priority' }}</th>
+                            <th>{{ 'الأولوية' if current_locale == 'ar' else 'Priority' }}</th>
                             <td>
                                 {% if order.priority == 'urgent' %}
-                                    <span class="badge bg-danger">{{ 'عاجل' if session.get('lang') == 'ar' else 'Urgent' }}</span>
+                                    <span class="badge bg-danger">{{ 'عاجل' if current_locale == 'ar' else 'Urgent' }}</span>
                                 {% elif order.priority == 'high' %}
-                                    <span class="badge bg-warning">{{ 'عالي' if session.get('lang') == 'ar' else 'High' }}</span>
+                                    <span class="badge bg-warning">{{ 'عالي' if current_locale == 'ar' else 'High' }}</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">{{ 'عادي' if session.get('lang') == 'ar' else 'Normal' }}</span>
+                                    <span class="badge bg-secondary">{{ 'عادي' if current_locale == 'ar' else 'Normal' }}</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -89,25 +89,25 @@
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-calendar3"></i>
-                        {{ 'التواريخ' if session.get('lang') == 'ar' else 'Dates' }}
+                        {{ 'التواريخ' if current_locale == 'ar' else 'Dates' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm">
                         <tr>
-                            <th>{{ 'تاريخ الأمر' if session.get('lang') == 'ar' else 'Order Date' }}</th>
+                            <th>{{ 'تاريخ الأمر' if current_locale == 'ar' else 'Order Date' }}</th>
                             <td>{{ order.order_date.strftime('%Y-%m-%d') if order.order_date else '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'تاريخ البدء' if session.get('lang') == 'ar' else 'Start Date' }}</th>
+                            <th>{{ 'تاريخ البدء' if current_locale == 'ar' else 'Start Date' }}</th>
                             <td>{{ order.start_date.strftime('%Y-%m-%d') if order.start_date else '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'الانتهاء المتوقع' if session.get('lang') == 'ar' else 'Expected End' }}</th>
+                            <th>{{ 'الانتهاء المتوقع' if current_locale == 'ar' else 'Expected End' }}</th>
                             <td>{{ order.expected_end_date.strftime('%Y-%m-%d') if order.expected_end_date else '-' }}</td>
                         </tr>
                         <tr>
-                            <th>{{ 'الانتهاء الفعلي' if session.get('lang') == 'ar' else 'Actual End' }}</th>
+                            <th>{{ 'الانتهاء الفعلي' if current_locale == 'ar' else 'Actual End' }}</th>
                             <td>{{ order.actual_end_date.strftime('%Y-%m-%d') if order.actual_end_date else '-' }}</td>
                         </tr>
                     </table>
@@ -119,16 +119,16 @@
                 <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-chat-left-text"></i>
-                        {{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}
+                        {{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     {% if order.specifications %}
-                    <p><strong>{{ 'المواصفات:' if session.get('lang') == 'ar' else 'Specifications:' }}</strong></p>
+                    <p><strong>{{ 'المواصفات:' if current_locale == 'ar' else 'Specifications:' }}</strong></p>
                     <p>{{ order.specifications }}</p>
                     {% endif %}
                     {% if order.notes %}
-                    <p><strong>{{ 'ملاحظات:' if session.get('lang') == 'ar' else 'Notes:' }}</strong></p>
+                    <p><strong>{{ 'ملاحظات:' if current_locale == 'ar' else 'Notes:' }}</strong></p>
                     <p>{{ order.notes }}</p>
                     {% endif %}
                 </div>
@@ -143,26 +143,26 @@
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-graph-up"></i>
-                        {{ 'التقدم' if session.get('lang') == 'ar' else 'Progress' }}
+                        {{ 'التقدم' if current_locale == 'ar' else 'Progress' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
                         <div class="col-md-3">
                             <h3 class="mb-0">{{ order.target_quantity }}</h3>
-                            <small class="text-muted">{{ 'الكمية المطلوبة' if session.get('lang') == 'ar' else 'Target' }}</small>
+                            <small class="text-muted">{{ 'الكمية المطلوبة' if current_locale == 'ar' else 'Target' }}</small>
                         </div>
                         <div class="col-md-3">
                             <h3 class="mb-0 text-primary">{{ order.produced_quantity }}</h3>
-                            <small class="text-muted">{{ 'تم الإنتاج' if session.get('lang') == 'ar' else 'Produced' }}</small>
+                            <small class="text-muted">{{ 'تم الإنتاج' if current_locale == 'ar' else 'Produced' }}</small>
                         </div>
                         <div class="col-md-3">
                             <h3 class="mb-0 text-success">{{ order.completed_quantity }}</h3>
-                            <small class="text-muted">{{ 'مكتمل' if session.get('lang') == 'ar' else 'Completed' }}</small>
+                            <small class="text-muted">{{ 'مكتمل' if current_locale == 'ar' else 'Completed' }}</small>
                         </div>
                         <div class="col-md-3">
                             <h3 class="mb-0 text-danger">{{ order.rejected_quantity }}</h3>
-                            <small class="text-muted">{{ 'مرفوض' if session.get('lang') == 'ar' else 'Rejected' }}</small>
+                            <small class="text-muted">{{ 'مرفوض' if current_locale == 'ar' else 'Rejected' }}</small>
                         </div>
                     </div>
                     <div class="progress mt-3" style="height: 25px;">
@@ -183,23 +183,23 @@
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="bi bi-list-ul"></i>
-                        {{ 'الأنابيب' if session.get('lang') == 'ar' else 'Pipes' }}
+                        {{ 'الأنابيب' if current_locale == 'ar' else 'Pipes' }}
                         <span class="badge bg-secondary">{{ pipes|length }}</span>
                     </h5>
                     <a href="{{ url_for('stages.add') }}?order_id={{ order.id }}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus"></i> {{ 'إضافة أنبوب' if session.get('lang') == 'ar' else 'Add Pipe' }}
+                        <i class="bi bi-plus"></i> {{ 'إضافة أنبوب' if current_locale == 'ar' else 'Add Pipe' }}
                     </a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>{{ 'الكود' if session.get('lang') == 'ar' else 'Code' }}</th>
-                                <th>{{ 'معرف المغرفة' if session.get('lang') == 'ar' else 'Ladle ID' }}</th>
-                                <th>{{ 'القطر' if session.get('lang') == 'ar' else 'DN' }}</th>
-                                <th>{{ 'المرحلة الحالية' if session.get('lang') == 'ar' else 'Current Stage' }}</th>
-                                <th>{{ 'القرار النهائي' if session.get('lang') == 'ar' else 'Final Decision' }}</th>
-                                <th>{{ 'الإجراءات' if session.get('lang') == 'ar' else 'Actions' }}</th>
+                                <th>{{ 'الكود' if current_locale == 'ar' else 'Code' }}</th>
+                                <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
+                                <th>{{ 'القطر' if current_locale == 'ar' else 'DN' }}</th>
+                                <th>{{ 'المرحلة الحالية' if current_locale == 'ar' else 'Current Stage' }}</th>
+                                <th>{{ 'القرار النهائي' if current_locale == 'ar' else 'Final Decision' }}</th>
+                                <th>{{ 'الإجراءات' if current_locale == 'ar' else 'Actions' }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -217,11 +217,11 @@
                                 </td>
                                 <td>
                                     {% if pipe.final_decision == 'ACCEPT' %}
-                                        <span class="badge bg-success">{{ 'مقبول' if session.get('lang') == 'ar' else 'ACCEPT' }}</span>
+                                        <span class="badge bg-success">{{ 'مقبول' if current_locale == 'ar' else 'ACCEPT' }}</span>
                                     {% elif pipe.final_decision == 'REJECT' %}
-                                        <span class="badge bg-danger">{{ 'مرفوض' if session.get('lang') == 'ar' else 'REJECT' }}</span>
+                                        <span class="badge bg-danger">{{ 'مرفوض' if current_locale == 'ar' else 'REJECT' }}</span>
                                     {% else %}
-                                        <span class="badge bg-secondary">{{ 'قيد المعالجة' if session.get('lang') == 'ar' else 'In Progress' }}</span>
+                                        <span class="badge bg-secondary">{{ 'قيد المعالجة' if current_locale == 'ar' else 'In Progress' }}</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -239,7 +239,7 @@
                             <tr>
                                 <td colspan="6" class="text-center text-muted py-4">
                                     <i class="bi bi-inbox display-6"></i>
-                                    <p class="mt-2">{{ 'لا توجد أنابيب في هذا الأمر' if session.get('lang') == 'ar' else 'No pipes in this order' }}</p>
+                                    <p class="mt-2">{{ 'لا توجد أنابيب في هذا الأمر' if current_locale == 'ar' else 'No pipes in this order' }}</p>
                                 </td>
                             </tr>
                             {% endfor %}

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-{{ 'تعديل أمر الإنتاج' if order else 'أمر إنتاج جديد' if session.get('lang') == 'ar' else 'Edit Production Order' if order else 'New Production Order' }}
+{{ 'تعديل أمر الإنتاج' if order else 'أمر إنتاج جديد' if current_locale == 'ar' else 'Edit Production Order' if order else 'New Production Order' }}
 {% endblock %}
 
 {% block content %}
@@ -12,16 +12,16 @@
             <h2>
                 <i class="bi bi-clipboard-plus"></i>
                 {% if order %}
-                    {{ 'تعديل أمر الإنتاج' if session.get('lang') == 'ar' else 'Edit Production Order' }}
+                    {{ 'تعديل أمر الإنتاج' if current_locale == 'ar' else 'Edit Production Order' }}
                     <small class="text-muted">{{ order.order_number }}</small>
                 {% else %}
-                    {{ 'أمر إنتاج جديد' if session.get('lang') == 'ar' else 'New Production Order' }}
+                    {{ 'أمر إنتاج جديد' if current_locale == 'ar' else 'New Production Order' }}
                 {% endif %}
             </h2>
         </div>
         <a href="{{ url_for('production_orders.index') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-{{ 'left' if session.get('lang') != 'ar' else 'right' }}"></i>
-            {{ 'رجوع' if session.get('lang') == 'ar' else 'Back' }}
+            <i class="bi bi-arrow-{{ 'left' if current_locale != 'ar' else 'right' }}"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
         </a>
     </div>
 
@@ -34,47 +34,47 @@
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-info-circle"></i>
-                            {{ 'معلومات الأمر' if session.get('lang') == 'ar' else 'Order Information' }}
+                            {{ 'معلومات الأمر' if current_locale == 'ar' else 'Order Information' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    {{ 'رقم أمر الإنتاج' if session.get('lang') == 'ar' else 'Order Number' }}
+                                    {{ 'رقم أمر الإنتاج' if current_locale == 'ar' else 'Order Number' }}
                                 </label>
                                 <input type="text" name="order_number" class="form-control"
                                        value="{{ order.order_number if order else '' }}"
-                                       placeholder="{{ 'اتركه فارغاً للتوليد التلقائي' if session.get('lang') == 'ar' else 'Leave empty for auto-generate' }}">
+                                       placeholder="{{ 'اتركه فارغاً للتوليد التلقائي' if current_locale == 'ar' else 'Leave empty for auto-generate' }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    {{ 'اسم العميل' if session.get('lang') == 'ar' else 'Customer Name' }}
+                                    {{ 'اسم العميل' if current_locale == 'ar' else 'Customer Name' }}
                                 </label>
                                 <input type="text" name="customer_name" class="form-control"
                                        value="{{ order.customer_name if order else '' }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    {{ 'كود العميل' if session.get('lang') == 'ar' else 'Customer Code' }}
+                                    {{ 'كود العميل' if current_locale == 'ar' else 'Customer Code' }}
                                 </label>
                                 <input type="text" name="customer_code" class="form-control"
                                        value="{{ order.customer_code if order else '' }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    {{ 'الكمية المطلوبة' if session.get('lang') == 'ar' else 'Target Quantity' }} *
+                                    {{ 'الكمية المطلوبة' if current_locale == 'ar' else 'Target Quantity' }} *
                                 </label>
                                 <input type="number" name="target_quantity" class="form-control" required min="1"
                                        value="{{ order.target_quantity if order else '' }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    {{ 'رقم أمر البيع' if session.get('lang') == 'ar' else 'Sales Number' }}
+                                    {{ 'رقم أمر البيع' if current_locale == 'ar' else 'Sales Number' }}
                                 </label>
                                 <input type="text" name="sales_number" class="form-control"
                                        value="{{ order.sales_number if order else '' }}"
-                                       placeholder="{{ 'رقم أمر البيع' if session.get('lang') == 'ar' else 'Sales Order Number' }}">
+                                       placeholder="{{ 'رقم أمر البيع' if current_locale == 'ar' else 'Sales Order Number' }}">
                             </div>
                         </div>
                     </div>
@@ -84,25 +84,25 @@
                     <div class="card-header bg-info text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-gear"></i>
-                            {{ 'مواصفات المنتج' if session.get('lang') == 'ar' else 'Product Specifications' }}
+                            {{ 'مواصفات المنتج' if current_locale == 'ar' else 'Product Specifications' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    {{ 'كود المنتج' if session.get('lang') == 'ar' else 'Product Code' }}
+                                    {{ 'كود المنتج' if current_locale == 'ar' else 'Product Code' }}
                                 </label>
                                 <input type="text" name="product_code" class="form-control"
                                        value="{{ order.product_code if order else '' }}"
-                                       placeholder="{{ 'كود المنتج' if session.get('lang') == 'ar' else 'Product Code' }}">
+                                       placeholder="{{ 'كود المنتج' if current_locale == 'ar' else 'Product Code' }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    {{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}
+                                    {{ 'القطر' if current_locale == 'ar' else 'Diameter' }}
                                 </label>
                                 <select name="diameter" class="form-select">
-                                    <option value="">{{ 'اختر القطر' if session.get('lang') == 'ar' else 'Select Diameter' }}</option>
+                                    <option value="">{{ 'اختر القطر' if current_locale == 'ar' else 'Select Diameter' }}</option>
                                     <option value="300" {{ 'selected' if order and order.diameter == 300 }}>DN300</option>
                                     <option value="500" {{ 'selected' if order and order.diameter == 500 }}>DN500</option>
                                     <option value="600" {{ 'selected' if order and order.diameter == 600 }}>DN600</option>
@@ -110,10 +110,10 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    {{ 'صنف الأنبوب' if session.get('lang') == 'ar' else 'Pipe Class' }}
+                                    {{ 'صنف الأنبوب' if current_locale == 'ar' else 'Pipe Class' }}
                                 </label>
                                 <select name="pipe_class" class="form-select">
-                                    <option value="">{{ 'اختر الصنف' if session.get('lang') == 'ar' else 'Select Class' }}</option>
+                                    <option value="">{{ 'اختر الصنف' if current_locale == 'ar' else 'Select Class' }}</option>
                                     <option value="K9" {{ 'selected' if order and order.pipe_class == 'K9' }}>K9</option>
                                     <option value="C25" {{ 'selected' if order and order.pipe_class == 'C25' }}>C25</option>
                                     <option value="Fittings" {{ 'selected' if order and order.pipe_class == 'Fittings' }}>Fittings</option>
@@ -121,30 +121,30 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    {{ 'الوزن (كجم)' if session.get('lang') == 'ar' else 'Weight (kg)' }}
+                                    {{ 'الوزن (كجم)' if current_locale == 'ar' else 'Weight (kg)' }}
                                 </label>
                                 <input type="number" step="0.01" name="product_weight" class="form-control"
                                        value="{{ order.product_weight if order and order.product_weight else '' }}"
-                                       placeholder="{{ 'الوزن بالكيلوجرام' if session.get('lang') == 'ar' else 'Weight in kg' }}">
+                                       placeholder="{{ 'الوزن بالكيلوجرام' if current_locale == 'ar' else 'Weight in kg' }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    {{ 'الطول (متر)' if session.get('lang') == 'ar' else 'Length (m)' }}
+                                    {{ 'الطول (متر)' if current_locale == 'ar' else 'Length (m)' }}
                                 </label>
                                 <input type="number" step="0.01" name="product_length" class="form-control"
                                        value="{{ order.product_length if order and order.product_length else '' }}"
-                                       placeholder="{{ 'الطول بالمتر' if session.get('lang') == 'ar' else 'Length in meters' }}">
+                                       placeholder="{{ 'الطول بالمتر' if current_locale == 'ar' else 'Length in meters' }}">
                             </div>
                             <div class="col-12">
                                 <label class="form-label">
-                                    {{ 'وصف المنتج' if session.get('lang') == 'ar' else 'Product Description' }}
+                                    {{ 'وصف المنتج' if current_locale == 'ar' else 'Product Description' }}
                                 </label>
                                 <textarea name="product_description" class="form-control" rows="2"
-                                          placeholder="{{ 'وصف المنتج...' if session.get('lang') == 'ar' else 'Product description...' }}">{{ order.product_description if order else '' }}</textarea>
+                                          placeholder="{{ 'وصف المنتج...' if current_locale == 'ar' else 'Product description...' }}">{{ order.product_description if order else '' }}</textarea>
                             </div>
                             <div class="col-12">
                                 <label class="form-label">
-                                    {{ 'مواصفات إضافية' if session.get('lang') == 'ar' else 'Additional Specifications' }}
+                                    {{ 'مواصفات إضافية' if current_locale == 'ar' else 'Additional Specifications' }}
                                 </label>
                                 <textarea name="specifications" class="form-control" rows="3">{{ order.specifications if order else '' }}</textarea>
                             </div>
@@ -156,12 +156,12 @@
                     <div class="card-header bg-secondary text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-chat-left-text"></i>
-                            {{ 'ملاحظات' if session.get('lang') == 'ar' else 'Notes' }}
+                            {{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <textarea name="notes" class="form-control" rows="3"
-                                  placeholder="{{ 'أي ملاحظات إضافية...' if session.get('lang') == 'ar' else 'Any additional notes...' }}">{{ order.notes if order else '' }}</textarea>
+                                  placeholder="{{ 'أي ملاحظات إضافية...' if current_locale == 'ar' else 'Any additional notes...' }}">{{ order.notes if order else '' }}</textarea>
                     </div>
                 </div>
             </div>
@@ -172,27 +172,27 @@
                     <div class="card-header bg-success text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-calendar3"></i>
-                            {{ 'التواريخ' if session.get('lang') == 'ar' else 'Dates' }}
+                            {{ 'التواريخ' if current_locale == 'ar' else 'Dates' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label">
-                                {{ 'تاريخ الأمر' if session.get('lang') == 'ar' else 'Order Date' }} *
+                                {{ 'تاريخ الأمر' if current_locale == 'ar' else 'Order Date' }} *
                             </label>
                             <input type="date" name="order_date" class="form-control" required
                                    value="{{ order.order_date.strftime('%Y-%m-%d') if order and order.order_date else '' }}">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
-                                {{ 'تاريخ البدء' if session.get('lang') == 'ar' else 'Start Date' }}
+                                {{ 'تاريخ البدء' if current_locale == 'ar' else 'Start Date' }}
                             </label>
                             <input type="date" name="start_date" class="form-control"
                                    value="{{ order.start_date.strftime('%Y-%m-%d') if order and order.start_date else '' }}">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
-                                {{ 'تاريخ الانتهاء المتوقع' if session.get('lang') == 'ar' else 'Expected End Date' }}
+                                {{ 'تاريخ الانتهاء المتوقع' if current_locale == 'ar' else 'Expected End Date' }}
                             </label>
                             <input type="date" name="expected_end_date" class="form-control"
                                    value="{{ order.expected_end_date.strftime('%Y-%m-%d') if order and order.expected_end_date else '' }}">
@@ -200,7 +200,7 @@
                         {% if order %}
                         <div class="mb-3">
                             <label class="form-label">
-                                {{ 'تاريخ الانتهاء الفعلي' if session.get('lang') == 'ar' else 'Actual End Date' }}
+                                {{ 'تاريخ الانتهاء الفعلي' if current_locale == 'ar' else 'Actual End Date' }}
                             </label>
                             <input type="date" name="actual_end_date" class="form-control"
                                    value="{{ order.actual_end_date.strftime('%Y-%m-%d') if order and order.actual_end_date else '' }}">
@@ -213,45 +213,45 @@
                     <div class="card-header bg-warning">
                         <h5 class="mb-0">
                             <i class="bi bi-flag"></i>
-                            {{ 'الحالة والأولوية' if session.get('lang') == 'ar' else 'Status & Priority' }}
+                            {{ 'الحالة والأولوية' if current_locale == 'ar' else 'Status & Priority' }}
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label">
-                                {{ 'الحالة' if session.get('lang') == 'ar' else 'Status' }}
+                                {{ 'الحالة' if current_locale == 'ar' else 'Status' }}
                             </label>
                             <select name="status" class="form-select">
                                 <option value="pending" {{ 'selected' if not order or order.status == 'pending' }}>
-                                    {{ 'قيد الانتظار' if session.get('lang') == 'ar' else 'Pending' }}
+                                    {{ 'قيد الانتظار' if current_locale == 'ar' else 'Pending' }}
                                 </option>
                                 <option value="in_progress" {{ 'selected' if order and order.status == 'in_progress' }}>
-                                    {{ 'جاري التنفيذ' if session.get('lang') == 'ar' else 'In Progress' }}
+                                    {{ 'جاري التنفيذ' if current_locale == 'ar' else 'In Progress' }}
                                 </option>
                                 <option value="completed" {{ 'selected' if order and order.status == 'completed' }}>
-                                    {{ 'مكتمل' if session.get('lang') == 'ar' else 'Completed' }}
+                                    {{ 'مكتمل' if current_locale == 'ar' else 'Completed' }}
                                 </option>
                                 <option value="cancelled" {{ 'selected' if order and order.status == 'cancelled' }}>
-                                    {{ 'ملغي' if session.get('lang') == 'ar' else 'Cancelled' }}
+                                    {{ 'ملغي' if current_locale == 'ar' else 'Cancelled' }}
                                 </option>
                             </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
-                                {{ 'الأولوية' if session.get('lang') == 'ar' else 'Priority' }}
+                                {{ 'الأولوية' if current_locale == 'ar' else 'Priority' }}
                             </label>
                             <select name="priority" class="form-select">
                                 <option value="low" {{ 'selected' if order and order.priority == 'low' }}>
-                                    {{ 'منخفض' if session.get('lang') == 'ar' else 'Low' }}
+                                    {{ 'منخفض' if current_locale == 'ar' else 'Low' }}
                                 </option>
                                 <option value="normal" {{ 'selected' if not order or order.priority == 'normal' }}>
-                                    {{ 'عادي' if session.get('lang') == 'ar' else 'Normal' }}
+                                    {{ 'عادي' if current_locale == 'ar' else 'Normal' }}
                                 </option>
                                 <option value="high" {{ 'selected' if order and order.priority == 'high' }}>
-                                    {{ 'عالي' if session.get('lang') == 'ar' else 'High' }}
+                                    {{ 'عالي' if current_locale == 'ar' else 'High' }}
                                 </option>
                                 <option value="urgent" {{ 'selected' if order and order.priority == 'urgent' }}>
-                                    {{ 'عاجل' if session.get('lang') == 'ar' else 'Urgent' }}
+                                    {{ 'عاجل' if current_locale == 'ar' else 'Urgent' }}
                                 </option>
                             </select>
                         </div>
@@ -262,10 +262,10 @@
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-primary btn-lg">
                         <i class="bi bi-check-lg"></i>
-                        {{ 'حفظ التغييرات' if order else 'إنشاء الأمر' if session.get('lang') == 'ar' else 'Save Changes' if order else 'Create Order' }}
+                        {{ 'حفظ التغييرات' if order else 'إنشاء الأمر' if current_locale == 'ar' else 'Save Changes' if order else 'Create Order' }}
                     </button>
                     <a href="{{ url_for('production_orders.index') }}" class="btn btn-outline-secondary">
-                        {{ 'إلغاء' if session.get('lang') == 'ar' else 'Cancel' }}
+                        {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
                     </a>
                 </div>
             </div>

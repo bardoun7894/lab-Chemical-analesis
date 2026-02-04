@@ -1,0 +1,202 @@
+{
+  "sheet_name": "Lab Mechanical Properties",
+  "columns": {
+    "test_date": "تاريخ الإختبار",
+    "test_no": "رقم الإختبار",
+    "diameter": "Diameter (mm)",
+    "cood2": "Cood2",
+    "pipe_no": "Pipe No.",
+    "ladle_no": "Ladle#",
+    "ladle_heat_no": "Ladle No.",
+    "day": "DAY",
+    "month": "MONTH",
+    "year": "YEAR",
+    "sample_thickness": "Sampl thickness (mm.)",
+    "d1": "D1 (mm)",
+    "d2": "D2 (mm)",
+    "d3": "D3 (mm)",
+    "average_diameter": "AV.D (mm)",
+    "lo": "Lo (mm)",
+    "lf": "Lƒ (mm)",
+    "area": "A = (π / 4) D² (mm²)",
+    "force": "F = Kgf",
+    "tensile_strength": "Tensile Strength σ = F/A (KgF/mm²)",
+    "elongation": "Elongation E = [(Lƒ - Lo) / Lo] × 100",
+    "nd": "%Nd",
+    "ferrite": "%F",
+    "nc": "NC",
+    "carbides": "Carbides",
+    "hardness": "HARDNESS",
+    "shift": "Shift",
+    "inspector": "إسم القائم بالإختبار"
+  },
+  "calculations": {
+    "average_diameter": {
+      "property": "AV.D (mm)",
+      "equation": "(D1 + D2 + D3) / 3",
+      "inputs": ["D1 (mm)", "D2 (mm)", "D3 (mm)"],
+      "unit": "mm"
+    },
+    "gauge_length": {
+      "property": "Lo (mm)",
+      "equation": "AV.D (mm) * 5",
+      "inputs": ["AV.D (mm)"],
+      "unit": "mm"
+    },
+    "cross_section_area": {
+      "property": "A = (π / 4) D² (mm²)",
+      "equation": "AV.D (mm) * AV.D (mm) * 0.7854",
+      "inputs": ["AV.D (mm)"],
+      "unit": "mm²"
+    },
+    "tensile_strength": {
+      "property": "Tensile Strength σ",
+      "equation": "F = Kgf / A (mm²)",
+      "inputs": ["F = Kgf", "A (mm²)"],
+      "unit": "KgF/mm²"
+    },
+    "elongation": {
+      "property": "Elongation %",
+      "equation": "((Lƒ (mm) - Lo (mm)) / Lo (mm)) * 100",
+      "inputs": ["Lƒ (mm)", "Lo (mm)"],
+      "unit": "%"
+    }
+  },
+  "rules": [
+    {
+      "property": "tensile_strength",
+      "name": "Tensile Strength",
+      "name_ar": "قوة الشد",
+      "unit": "KgF/mm²",
+      "ranges": [
+        { "min": 0, "max": 38, "decision": "تالف" },
+        { "min": 38.01, "max": 40, "decision": "فحص الشحنة 100%" },
+        { "min": 40.01, "max": 42.49, "decision": "فحص أولى وأخيرة" },
+        { "min": 42.5, "max": 60, "decision": "فحص أخيرة فقط" },
+        { "min": 60.01, "max": 70, "decision": "فحص أولى وأخيرة" },
+        { "min": 70.01, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "property": "elongation",
+      "name": "Elongation",
+      "name_ar": "الاستطالة",
+      "unit": "%",
+      "ranges": [
+        { "min": 0, "max": 7, "decision": "تالف" },
+        { "min": 7.01, "max": 8.5, "decision": "فحص الشحنة 100%" },
+        { "min": 8.51, "max": 9.99, "decision": "فحص أولى وأخيرة" },
+        { "min": 10, "max": 30, "decision": "فحص أخيرة فقط" },
+        { "min": 30.01, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "property": "nodularity_percent",
+      "name": "Nodularity %Nd",
+      "name_ar": "النودولارية",
+      "unit": "%",
+      "ranges": [
+        { "min": 0, "max": 70, "decision": "تالف" },
+        { "min": 70.01, "max": 80, "decision": "فحص الشحنة 100%" },
+        { "min": 80.01, "max": 84.99, "decision": "فحص أولى وأخيرة" },
+        { "min": 85, "max": 100, "decision": "فحص أخيرة فقط" }
+      ]
+    },
+    {
+      "property": "ferrite",
+      "name": "Ferrite %F",
+      "name_ar": "الفيريت",
+      "unit": "%",
+      "ranges": [
+        { "min": 0, "max": 55, "decision": "تالف" },
+        { "min": 55.01, "max": 65, "decision": "فحص الشحنة 100%" },
+        { "min": 65.01, "max": 69.99, "decision": "فحص أولى وأخيرة" },
+        { "min": 70, "max": 100, "decision": "فحص أخيرة فقط" }
+      ]
+    },
+    {
+      "property": "nodule_count",
+      "name": "Nodule Count NC",
+      "name_ar": "عدد العقد",
+      "unit": "count",
+      "ranges": [
+        { "min": 0, "max": 250, "decision": "تالف" },
+        { "min": 251, "max": 350, "decision": "فحص الشحنة 100%" },
+        { "min": 351, "max": 399, "decision": "فحص أولى وأخيرة" },
+        { "min": 400, "max": 2000, "decision": "فحص أخيرة فقط" }
+      ]
+    },
+    {
+      "property": "carbides",
+      "name": "Carbides",
+      "name_ar": "الكربيدات",
+      "unit": "%",
+      "ranges": [
+        { "min": 0, "max": 0.99, "decision": "فحص أخيرة فقط" },
+        { "min": 1, "max": 1.5, "decision": "فحص أولى وأخيرة" },
+        { "min": 1.51, "max": 2, "decision": "فحص الشحنة 100%" },
+        { "min": 2.01, "max": 100, "decision": "تالف" }
+      ]
+    },
+    {
+      "property": "hardness",
+      "name": "Hardness",
+      "name_ar": "الصلادة",
+      "unit": "HB",
+      "ranges": [
+        { "min": 0, "max": 120, "decision": "تالف" },
+        { "min": 121, "max": 135, "decision": "فحص أولى وأخيرة" },
+        { "min": 136, "max": 229, "decision": "فحص أخيرة فقط" },
+        { "min": 230, "max": 250, "decision": "فحص أولى وأخيرة" },
+        { "min": 251, "max": 270, "decision": "فحص الشحنة 100%" },
+        { "min": 271, "max": 1000, "decision": "تالف" }
+      ]
+    }
+  ],
+  "acceptance_criteria": {
+    "tensile_strength": {
+      "property": "Tensile Strength σ",
+      "condition": ">= 42.50",
+      "unit": "KgF/mm²"
+    },
+    "elongation": {
+      "property": "Elongation %",
+      "condition": ">= 10",
+      "unit": "%"
+    },
+    "nd": {
+      "property": "%Nd",
+      "condition": ">= 85",
+      "unit": "%"
+    },
+    "ferrite": {
+      "property": "%F",
+      "condition": ">= 70",
+      "unit": "%"
+    },
+    "nc": {
+      "property": "NC",
+      "condition": ">= 400",
+      "unit": "count"
+    },
+    "carbides": {
+      "property": "Carbides",
+      "condition": "< 1",
+      "unit": "%"
+    },
+    "hardness": {
+      "property": "HARDNESS",
+      "condition": "< 230",
+      "unit": "HB"
+    }
+  },
+  "overall_evaluation": {
+    "logic": "PASS if all acceptance criteria are satisfied",
+    "fail_rule": "If any criterion fails → FAIL"
+  },
+  "notes": [
+    "All equations are derived exactly from the sheet headers",
+    "Acceptance criteria are taken from buff-colored cells",
+    "No Excel cell references are used"
+  ]
+}

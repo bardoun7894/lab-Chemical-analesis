@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'تعديل قاعدة' if current_locale == 'ar' else 'Edit Rule' }} - {{ rule.name_ar if current_locale == 'ar' else rule.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-pencil-square"></i>
+                {{ 'تعديل قاعدة:' if current_locale == 'ar' else 'Edit Rule:' }}
+                {{ rule.name_ar if current_locale == 'ar' else rule.name }}
+            </h2>
+            <p class="text-muted mb-0">
+                <strong>{{ 'الوحدة:' if current_locale == 'ar' else 'Unit:' }}</strong> {{ rule.unit }}
+            </p>
+        </div>
+        <a href="{{ url_for('admin.mechanical_rules') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-{{ 'left' if current_locale != 'ar' else 'right' }}"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+        </a>
+    </div>
+
+    <!-- Decision Info -->
+    <div class="alert alert-info mb-4">
+        <h6 class="mb-2">{{ 'مفتاح القرارات:' if current_locale == 'ar' else 'Decision Key:' }}</h6>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge bg-success">فحص أخيرة فقط - {{ 'الأفضل' if current_locale == 'ar' else 'Best' }}</span>
+            <span class="badge bg-info">فحص أولى وأخيرة</span>
+            <span class="badge bg-warning text-dark">فحص الشحنة 100%</span>
+            <span class="badge bg-danger">تالف - {{ 'مرفوض' if current_locale == 'ar' else 'Rejected' }}</span>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <form method="POST" id="editForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="range_count" id="rangeCount" value="{{ rule.ranges|length }}">
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="bi bi-sliders"></i>
+                    {{ 'نطاقات القرارات' if current_locale == 'ar' else 'Decision Ranges' }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="rangesContainer">
+                    {% for range in rule.ranges %}
+                    <div class="row mb-3 range-row" data-index="{{ loop.index0 }}">
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'الحد الأدنى' if current_locale == 'ar' else 'Min' }}</label>
+                            <input type="number" name="min_{{ loop.index0 }}" class="form-control"
+                                   value="{{ range.min }}" step="0.01" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'الحد الأقصى' if current_locale == 'ar' else 'Max' }}</label>
+                            <input type="number" name="max_{{ loop.index0 }}" class="form-control"
+                                   value="{{ range.max }}" step="0.01" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</label>
+                            <select name="decision_{{ loop.index0 }}" class="form-select" required>
+                                {% for decision in decisions %}
+                                <option value="{{ decision }}" {{ 'selected' if decision == range.decision }}>
+                                    {{ decision }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-danger w-100" onclick="removeRange(this)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mt-3">
+                    <button type="button" class="btn btn-success" onclick="addRange()">
+                        <i class="bi bi-plus-circle"></i>
+                        {{ 'إضافة نطاق' if current_locale == 'ar' else 'Add Range' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="d-flex gap-2 justify-content-end">
+            <a href="{{ url_for('admin.mechanical_rules') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle"></i>
+                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+            </a>
+            <button type="submit" class="btn btn-warning">
+                <i class="bi bi-check-circle"></i>
+                {{ 'حفظ التغييرات' if current_locale == 'ar' else 'Save Changes' }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let rangeIndex = {{ rule.ranges|length }};
+
+function addRange() {
+    const container = document.getElementById('rangesContainer');
+    const newRow = document.createElement('div');
+    newRow.className = 'row mb-3 range-row';
+    newRow.dataset.index = rangeIndex;
+
+    newRow.innerHTML = `
+        <div class="col-md-3">
+            <label class="form-label">{{ 'الحد الأدنى' if current_locale == 'ar' else 'Min' }}</label>
+            <input type="number" name="min_${rangeIndex}" class="form-control"
+                   value="0" step="0.01" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">{{ 'الحد الأقصى' if current_locale == 'ar' else 'Max' }}</label>
+            <input type="number" name="max_${rangeIndex}" class="form-control"
+                   value="100" step="0.01" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</label>
+            <select name="decision_${rangeIndex}" class="form-select" required>
+                {% for decision in decisions %}
+                <option value="{{ decision }}">{{ decision }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-danger w-100" onclick="removeRange(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+
+    container.appendChild(newRow);
+    rangeIndex++;
+    updateRangeCount();
+}
+
+function removeRange(button) {
+    const row = button.closest('.range-row');
+    row.remove();
+    updateRangeCount();
+}
+
+function updateRangeCount() {
+    const count = document.querySelectorAll('.range-row').length;
+    document.getElementById('rangeCount').value = count;
+
+    // Update indices
+    document.querySelectorAll('.range-row').forEach((row, idx) => {
+        const inputs = row.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            const name = input.name.replace(/_\d+$/, `_${idx}`);
+            input.name = name;
+        });
+        row.dataset.index = idx;
+    });
+
+    rangeIndex = count;
+}
+
+// Validate form before submit
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    const ranges = document.querySelectorAll('.range-row');
+    if (ranges.length === 0) {
+        e.preventDefault();
+        alert("{{ 'الرجاء إضافة نطاق واحد على الأقل' if current_locale == 'ar' else 'Please add at least one range' }}");
+        return false;
+    }
+});
+</script>
+{% endblock %}

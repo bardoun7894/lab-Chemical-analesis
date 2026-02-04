@@ -9,12 +9,12 @@
         <div class="col">
             <h2>
                 <i class="bi bi-calendar-day"></i>
-                {{ 'تقرير الإنتاج اليومي' if session.get('lang') == 'ar' else 'Daily Production Report' }}
+                {{ 'تقرير الإنتاج اليومي' if current_locale == 'ar' else 'Daily Production Report' }}
             </h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('reports.index') }}">{{ 'التقارير' if session.get('lang') == 'ar' else 'Reports' }}</a></li>
-                    <li class="breadcrumb-item active">{{ 'الإنتاج اليومي' if session.get('lang') == 'ar' else 'Daily Production' }}</li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('reports.index') }}">{{ 'التقارير' if current_locale == 'ar' else 'Reports' }}</a></li>
+                    <li class="breadcrumb-item active">{{ 'الإنتاج اليومي' if current_locale == 'ar' else 'Daily Production' }}</li>
                 </ol>
             </nav>
         </div>
@@ -25,13 +25,13 @@
         <div class="card-body">
             <form method="GET" class="row g-3 align-items-end">
                 <div class="col-md-4">
-                    <label class="form-label">{{ 'تاريخ التقرير' if session.get('lang') == 'ar' else 'Report Date' }}</label>
+                    <label class="form-label">{{ 'تاريخ التقرير' if current_locale == 'ar' else 'Report Date' }}</label>
                     <input type="date" name="date" class="form-control" value="{{ report_date }}">
                 </div>
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-search"></i>
-                        {{ 'عرض' if session.get('lang') == 'ar' else 'View' }}
+                        {{ 'عرض' if current_locale == 'ar' else 'View' }}
                     </button>
                 </div>
             </form>
@@ -44,7 +44,7 @@
             <div class="card border-0 shadow-sm bg-primary text-white">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ total }}</h3>
-                    <small>{{ 'إجمالي الأنابيب' if session.get('lang') == 'ar' else 'Total Pipes' }}</small>
+                    <small>{{ 'إجمالي الأنابيب' if current_locale == 'ar' else 'Total Pipes' }}</small>
                 </div>
             </div>
         </div>
@@ -52,7 +52,7 @@
             <div class="card border-0 shadow-sm bg-success text-white">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ by_shift[1]|length }}</h3>
-                    <small>{{ 'الوردية الأولى' if session.get('lang') == 'ar' else 'Shift 1' }}</small>
+                    <small>{{ 'الوردية الأولى' if current_locale == 'ar' else 'Shift 1' }}</small>
                 </div>
             </div>
         </div>
@@ -60,7 +60,7 @@
             <div class="card border-0 shadow-sm bg-warning text-dark">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ by_shift[2]|length }}</h3>
-                    <small>{{ 'الوردية الثانية' if session.get('lang') == 'ar' else 'Shift 2' }}</small>
+                    <small>{{ 'الوردية الثانية' if current_locale == 'ar' else 'Shift 2' }}</small>
                 </div>
             </div>
         </div>
@@ -68,7 +68,7 @@
             <div class="card border-0 shadow-sm bg-info text-white">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ by_shift[3]|length }}</h3>
-                    <small>{{ 'الوردية الثالثة' if session.get('lang') == 'ar' else 'Shift 3' }}</small>
+                    <small>{{ 'الوردية الثالثة' if current_locale == 'ar' else 'Shift 3' }}</small>
                 </div>
             </div>
         </div>
@@ -80,7 +80,7 @@
         <div class="card-header bg-light">
             <h5 class="mb-0">
                 <i class="bi bi-circle"></i>
-                {{ 'حسب القطر' if session.get('lang') == 'ar' else 'By Diameter' }}
+                {{ 'حسب القطر' if current_locale == 'ar' else 'By Diameter' }}
             </h5>
         </div>
         <div class="card-body">
@@ -89,7 +89,7 @@
                 <div class="col-md-2 col-4 mb-2">
                     <div class="border rounded p-2 text-center">
                         <strong>DN {{ diameter }}</strong>
-                        <div class="text-muted">{{ count }} {{ 'أنبوب' if session.get('lang') == 'ar' else 'pipes' }}</div>
+                        <div class="text-muted">{{ count }} {{ 'أنبوب' if current_locale == 'ar' else 'pipes' }}</div>
                     </div>
                 </div>
                 {% endfor %}
@@ -103,7 +103,7 @@
         <div class="card-header bg-light">
             <h5 class="mb-0">
                 <i class="bi bi-table"></i>
-                {{ 'تفاصيل الأنابيب' if session.get('lang') == 'ar' else 'Pipe Details' }}
+                {{ 'تفاصيل الأنابيب' if current_locale == 'ar' else 'Pipe Details' }}
             </h5>
         </div>
         <div class="card-body p-0">
@@ -112,11 +112,11 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>{{ 'الوردية' if session.get('lang') == 'ar' else 'Shift' }}</th>
-                            <th>{{ 'الرقم' if session.get('lang') == 'ar' else 'No.' }}</th>
-                            <th>{{ 'القطر' if session.get('lang') == 'ar' else 'Diameter' }}</th>
-                            <th>{{ 'الطول' if session.get('lang') == 'ar' else 'Length' }}</th>
-                            <th>{{ 'الحالة' if session.get('lang') == 'ar' else 'Status' }}</th>
+                            <th>{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</th>
+                            <th>{{ 'الرقم' if current_locale == 'ar' else 'No.' }}</th>
+                            <th>{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</th>
+                            <th>{{ 'الطول' if current_locale == 'ar' else 'Length' }}</th>
+                            <th>{{ 'الحالة' if current_locale == 'ar' else 'Status' }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -149,7 +149,7 @@
             {% else %}
             <div class="text-center py-5">
                 <i class="bi bi-inbox display-4 text-muted"></i>
-                <p class="text-muted mt-2">{{ 'لا يوجد إنتاج لهذا اليوم' if session.get('lang') == 'ar' else 'No production for this date' }}</p>
+                <p class="text-muted mt-2">{{ 'لا يوجد إنتاج لهذا اليوم' if current_locale == 'ar' else 'No production for this date' }}</p>
             </div>
             {% endif %}
         </div>

@@ -9,12 +9,12 @@
         <div class="col">
             <h2>
                 <i class="bi bi-exclamation-triangle"></i>
-                {{ 'تقرير ملخص العيوب' if session.get('lang') == 'ar' else 'Defect Summary Report' }}
+                {{ 'تقرير ملخص العيوب' if current_locale == 'ar' else 'Defect Summary Report' }}
             </h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('reports.index') }}">{{ 'التقارير' if session.get('lang') == 'ar' else 'Reports' }}</a></li>
-                    <li class="breadcrumb-item active">{{ 'ملخص العيوب' if session.get('lang') == 'ar' else 'Defect Summary' }}</li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('reports.index') }}">{{ 'التقارير' if current_locale == 'ar' else 'Reports' }}</a></li>
+                    <li class="breadcrumb-item active">{{ 'ملخص العيوب' if current_locale == 'ar' else 'Defect Summary' }}</li>
                 </ol>
             </nav>
         </div>
@@ -25,17 +25,17 @@
         <div class="card-body">
             <form method="GET" class="row g-3 align-items-end">
                 <div class="col-md-4">
-                    <label class="form-label">{{ 'من تاريخ' if session.get('lang') == 'ar' else 'From Date' }}</label>
+                    <label class="form-label">{{ 'من تاريخ' if current_locale == 'ar' else 'From Date' }}</label>
                     <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">{{ 'إلى تاريخ' if session.get('lang') == 'ar' else 'To Date' }}</label>
+                    <label class="form-label">{{ 'إلى تاريخ' if current_locale == 'ar' else 'To Date' }}</label>
                     <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
                 </div>
                 <div class="col-md-4">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-search"></i>
-                        {{ 'بحث' if session.get('lang') == 'ar' else 'Search' }}
+                        {{ 'بحث' if current_locale == 'ar' else 'Search' }}
                     </button>
                 </div>
             </form>
@@ -47,31 +47,31 @@
         <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
                 <i class="bi bi-robot"></i>
-                {{ 'تحليل العيوب بالذكاء الاصطناعي' if session.get('lang') == 'ar' else 'AI Defect Analysis' }}
+                {{ 'تحليل العيوب بالذكاء الاصطناعي' if current_locale == 'ar' else 'AI Defect Analysis' }}
             </h5>
             <button type="button" class="btn btn-sm btn-light" id="aiDefectRefresh">
                 <i class="bi bi-magic"></i>
-                {{ 'تحليل' if session.get('lang') == 'ar' else 'Analyze' }}
+                {{ 'تحليل' if current_locale == 'ar' else 'Analyze' }}
             </button>
         </div>
         <div class="card-body">
             <div id="aiDefectInitial" class="text-center py-2">
                 <i class="bi bi-robot text-muted"></i>
-                <small class="text-muted ms-2">{{ 'انقر على زر التحليل' if session.get('lang') == 'ar' else 'Click Analyze button' }}</small>
+                <small class="text-muted ms-2">{{ 'انقر على زر التحليل' if current_locale == 'ar' else 'Click Analyze button' }}</small>
             </div>
             <div id="aiDefectLoading" class="text-center py-2" style="display: none;">
                 <div class="spinner-border spinner-border-sm text-danger" role="status"></div>
-                <small class="text-muted ms-2">{{ 'جاري التحليل...' if session.get('lang') == 'ar' else 'Analyzing defects...' }}</small>
+                <small class="text-muted ms-2">{{ 'جاري التحليل...' if current_locale == 'ar' else 'Analyzing defects...' }}</small>
             </div>
             <div id="aiDefectContent" style="display: none;">
                 <p id="aiDefectSummary" class="mb-2 fw-bold"></p>
                 <div class="row">
                     <div class="col-md-6">
-                        <small class="text-muted"><i class="bi bi-search"></i> {{ 'الأسباب المحتملة' if session.get('lang') == 'ar' else 'Possible Causes' }}:</small>
+                        <small class="text-muted"><i class="bi bi-search"></i> {{ 'الأسباب المحتملة' if current_locale == 'ar' else 'Possible Causes' }}:</small>
                         <ul id="aiDefectInsights" class="small mb-0"></ul>
                     </div>
                     <div class="col-md-6">
-                        <small class="text-muted"><i class="bi bi-tools"></i> {{ 'الحلول المقترحة' if session.get('lang') == 'ar' else 'Suggested Solutions' }}:</small>
+                        <small class="text-muted"><i class="bi bi-tools"></i> {{ 'الحلول المقترحة' if current_locale == 'ar' else 'Suggested Solutions' }}:</small>
                         <ul id="aiDefectRecommendations" class="small mb-0"></ul>
                     </div>
                 </div>
@@ -88,7 +88,7 @@
             <div class="card border-0 shadow-sm bg-danger text-white">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ chem_defects|length }}</h3>
-                    <small>{{ 'عيوب التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis Defects' }}</small>
+                    <small>{{ 'عيوب التحليل الكيميائي' if current_locale == 'ar' else 'Chemical Analysis Defects' }}</small>
                 </div>
             </div>
         </div>
@@ -96,7 +96,7 @@
             <div class="card border-0 shadow-sm bg-warning text-dark">
                 <div class="card-body text-center">
                     <h3 class="mb-0">{{ stage_defects|length }}</h3>
-                    <small>{{ 'عيوب مراحل الإنتاج' if session.get('lang') == 'ar' else 'Production Stage Defects' }}</small>
+                    <small>{{ 'عيوب مراحل الإنتاج' if current_locale == 'ar' else 'Production Stage Defects' }}</small>
                 </div>
             </div>
         </div>
@@ -108,7 +108,7 @@
         <div class="card-header bg-light">
             <h5 class="mb-0">
                 <i class="bi bi-bar-chart"></i>
-                {{ 'العيوب حسب المرحلة' if session.get('lang') == 'ar' else 'Defects by Stage' }}
+                {{ 'العيوب حسب المرحلة' if current_locale == 'ar' else 'Defects by Stage' }}
             </h5>
         </div>
         <div class="card-body">
@@ -133,7 +133,7 @@
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-flask"></i>
-                        {{ 'عيوب التحليل الكيميائي' if session.get('lang') == 'ar' else 'Chemical Analysis Defects' }}
+                        {{ 'عيوب التحليل الكيميائي' if current_locale == 'ar' else 'Chemical Analysis Defects' }}
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -142,9 +142,9 @@
                         <table class="table table-hover table-sm mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>{{ 'التاريخ' if session.get('lang') == 'ar' else 'Date' }}</th>
-                                    <th>{{ 'المغرفة' if session.get('lang') == 'ar' else 'Ladle' }}</th>
-                                    <th>{{ 'القرار' if session.get('lang') == 'ar' else 'Decision' }}</th>
+                                    <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                                    <th>{{ 'المغرفة' if current_locale == 'ar' else 'Ladle' }}</th>
+                                    <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -165,7 +165,7 @@
                     {% else %}
                     <div class="text-center py-4">
                         <i class="bi bi-check-circle text-success display-4"></i>
-                        <p class="text-muted mt-2">{{ 'لا توجد عيوب' if session.get('lang') == 'ar' else 'No defects found' }}</p>
+                        <p class="text-muted mt-2">{{ 'لا توجد عيوب' if current_locale == 'ar' else 'No defects found' }}</p>
                     </div>
                     {% endif %}
                 </div>
@@ -178,7 +178,7 @@
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0">
                         <i class="bi bi-diagram-3"></i>
-                        {{ 'عيوب مراحل الإنتاج' if session.get('lang') == 'ar' else 'Production Stage Defects' }}
+                        {{ 'عيوب مراحل الإنتاج' if current_locale == 'ar' else 'Production Stage Defects' }}
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -187,9 +187,9 @@
                         <table class="table table-hover table-sm mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>{{ 'الأنبوب' if session.get('lang') == 'ar' else 'Pipe' }}</th>
-                                    <th>{{ 'المرحلة' if session.get('lang') == 'ar' else 'Stage' }}</th>
-                                    <th>{{ 'السبب' if session.get('lang') == 'ar' else 'Reason' }}</th>
+                                    <th>{{ 'الأنبوب' if current_locale == 'ar' else 'Pipe' }}</th>
+                                    <th>{{ 'المرحلة' if current_locale == 'ar' else 'Stage' }}</th>
+                                    <th>{{ 'السبب' if current_locale == 'ar' else 'Reason' }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -210,7 +210,7 @@
                     {% else %}
                     <div class="text-center py-4">
                         <i class="bi bi-check-circle text-success display-4"></i>
-                        <p class="text-muted mt-2">{{ 'لا توجد عيوب' if session.get('lang') == 'ar' else 'No defects found' }}</p>
+                        <p class="text-muted mt-2">{{ 'لا توجد عيوب' if current_locale == 'ar' else 'No defects found' }}</p>
                     </div>
                     {% endif %}
                 </div>

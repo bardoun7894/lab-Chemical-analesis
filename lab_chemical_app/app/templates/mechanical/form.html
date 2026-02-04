@@ -85,7 +85,7 @@
                     </div>
                 </div>
 
-                <!-- Decision Card with AI -->
+                <!-- Decision Card with AI and Auto-Decision -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
@@ -97,6 +97,21 @@
                         </span>
                     </div>
                     <div class="card-body">
+                        <!-- Auto-Decision Section -->
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-sm btn-outline-success w-100" id="autoDecisionBtn">
+                                <i class="bi bi-calculator"></i>
+                                {{ 'حساب القرار التلقائي' if current_locale == 'ar' else 'Calculate Auto-Decision' }}
+                            </button>
+                            <div id="autoDecisionResult" class="mt-2" style="display: none;">
+                                <div class="alert alert-sm py-2 mb-0" id="autoDecisionAlert">
+                                    <strong>{{ 'القرار الموصى به:' if current_locale == 'ar' else 'Recommended Decision:' }}</strong>
+                                    <span id="autoDecisionText" class="badge"></span>
+                                    <small class="d-block mt-1 text-muted" id="autoDecisionDetails"></small>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
                         <!-- AI Refresh Button -->
                         <div class="mb-3">
                             <div class="d-flex align-items-center gap-2">
@@ -393,15 +408,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const inCooldown = (now - lastAiCallTime) < AI_COOLDOWN;
 
         if (isReady && !inCooldown) {
-            aiStatusText.textContent = '{{ "جاهز للتحليل" if session.get("lang") == "ar" else "Ready to analyze" }}';
+            aiStatusText.textContent = '{{ "جاهز للتحليل" if current_locale == 'ar' else "Ready to analyze" }}';
             aiStatusText.className = 'text-success small';
             aiRefreshBtn.classList.add('btn-pulse');
         } else if (isReady && inCooldown) {
-            aiStatusText.textContent = '{{ "انتظر..." if session.get("lang") == "ar" else "Waiting..." }}';
+            aiStatusText.textContent = '{{ "انتظر..." if current_locale == 'ar' else "Waiting..." }}';
             aiStatusText.className = 'text-muted small';
             aiRefreshBtn.classList.remove('btn-pulse');
         } else {
-            aiStatusText.textContent = '{{ "أدخل قوة الشد والاستطالة" if session.get("lang") == "ar" else "Enter tensile & elongation" }}';
+            aiStatusText.textContent = '{{ "أدخل قوة الشد والاستطالة" if current_locale == 'ar' else "Enter tensile & elongation" }}';
             aiStatusText.className = 'text-muted small';
             aiRefreshBtn.classList.remove('btn-pulse');
         }
@@ -434,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading
         aiLoadingSpinner.style.display = 'block';
         aiErrorAlert.style.display = 'none';
-        aiStatusText.textContent = '{{ "جاري التحليل..." if session.get("lang") == "ar" else "Analyzing..." }}';
+        aiStatusText.textContent = '{{ "جاري التحليل..." if current_locale == 'ar' else "Analyzing..." }}';
         aiRefreshBtn.classList.remove('btn-pulse');
 
         // Clear fields
@@ -500,7 +515,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     // Update status
                                     const totalDelay = reasonDelay + (data.result.comments || '').length * 20 + 200;
                                     setTimeout(() => {
-                                        aiStatusText.textContent = '{{ "تم التحليل ✓" if session.get("lang") == "ar" else "Analysis complete ✓" }}';
+                                        aiStatusText.textContent = '{{ "تم التحليل ✓" if current_locale == 'ar' else "Analysis complete ✓" }}';
                                         aiStatusText.className = 'text-success small';
                                     }, totalDelay);
                                 }
@@ -542,6 +557,160 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial status
     updateAiStatus();
+
+    // ========================================================================
+    // Auto-Decision Functionality
+    // ========================================================================
+
+    const autoDecisionBtn = document.getElementById('autoDecisionBtn');
+    const autoDecisionResult = document.getElementById('autoDecisionResult');
+    const autoDecisionAlert = document.getElementById('autoDecisionAlert');
+    const autoDecisionText = document.getElementById('autoDecisionText');
+    const autoDecisionDetails = document.getElementById('autoDecisionDetails');
+
+    // Auto-decision calculation
+    function calculateAutoDecision() {
+        // Collect property values
+        const propertyValues = {};
+        const fields = ['tensile_strength', 'elongation', 'nodularity_percent',
+                       'ferrite', 'nodule_count', 'carbides', 'hardness'];
+
+        fields.forEach(name => {
+            const input = document.querySelector(`input[name="${name}"]`);
+            if (input && input.value) {
+                propertyValues[name] = parseFloat(input.value);
+            }
+        });
+
+        if (Object.keys(propertyValues).length === 0) {
+            alert('{{ "الرجاء إدخال قيمة واحدة على الأقل" if current_locale == "ar" else "Please enter at least one property value" }}');
+            return;
+        }
+
+        // Show loading
+        autoDecisionBtn.disabled = true;
+        autoDecisionBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> {{ "جاري الحساب..." if current_locale == "ar" else "Calculating..." }}';
+
+        // Call API
+        fetch('{{ url_for("mechanical.api_auto_decision") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(propertyValues)
+        })
+        .then(response => response.json())
+        .then(data => {
+            autoDecisionBtn.disabled = false;
+            autoDecisionBtn.innerHTML = '<i class="bi bi-calculator"></i> {{ "حساب القرار التلقائي" if current_locale == "ar" else "Calculate Auto-Decision" }}';
+
+            if (data.recommended_decision) {
+                // Show result
+                autoDecisionResult.style.display = 'block';
+                autoDecisionText.textContent = data.recommended_decision;
+
+                // Set color based on decision
+                autoDecisionAlert.className = 'alert alert-sm py-2 mb-0';
+                autoDecisionText.className = 'badge';
+
+                if (data.recommended_decision === 'فحص أخيرة فقط') {
+                    autoDecisionAlert.classList.add('alert-success');
+                    autoDecisionText.classList.add('bg-success');
+                } else if (data.recommended_decision === 'فحص أولى وأخيرة') {
+                    autoDecisionAlert.classList.add('alert-info');
+                    autoDecisionText.classList.add('bg-info');
+                } else if (data.recommended_decision === 'فحص الشحنة 100%') {
+                    autoDecisionAlert.classList.add('alert-warning');
+                    autoDecisionText.classList.add('bg-warning', 'text-dark');
+                } else if (data.recommended_decision === 'تالف') {
+                    autoDecisionAlert.classList.add('alert-danger');
+                    autoDecisionText.classList.add('bg-danger');
+                }
+
+                // Show which properties caused the decision
+                if (data.worst_properties && data.worst_properties.length > 0) {
+                    const propertyNames = data.worst_properties.map(prop => {
+                        const propData = data.property_decisions[prop];
+                        return `${propData.name_ar || propData.name}: ${propData.value} ${propData.unit}`;
+                    }).join(', ');
+                    autoDecisionDetails.textContent = '{{ "بناءً على:" if current_locale == "ar" else "Based on:" }} ' + propertyNames;
+                } else {
+                    autoDecisionDetails.textContent = '';
+                }
+
+                // Optionally set the decision field
+                if (confirm('{{ "هل تريد تطبيق هذا القرار؟" if current_locale == "ar" else "Apply this decision?" }}')) {
+                    // Map decision to ACCEPT/REJECT
+                    if (data.recommended_decision === 'فحص أخيرة فقط') {
+                        decisionSelect.value = 'ACCEPT';
+                    } else {
+                        decisionSelect.value = 'REJECT';
+                    }
+
+                    // Set reason
+                    reasonField.value = `Auto-decision: ${data.recommended_decision}. ${propertyNames || ''}`;
+                }
+            } else {
+                autoDecisionResult.style.display = 'none';
+                alert('{{ "لا يمكن حساب القرار" if current_locale == "ar" else "Cannot calculate decision" }}');
+            }
+        })
+        .catch(error => {
+            autoDecisionBtn.disabled = false;
+            autoDecisionBtn.innerHTML = '<i class="bi bi-calculator"></i> {{ "حساب القرار التلقائي" if current_locale == "ar" else "Calculate Auto-Decision" }}';
+            alert('Error: ' + error.message);
+        });
+    }
+
+    // Bind auto-decision button
+    autoDecisionBtn.addEventListener('click', calculateAutoDecision);
+
+    // Real-time validation for properties
+    const propertyInputs = document.querySelectorAll('[name="tensile_strength"], [name="elongation"], [name="nodularity_percent"], [name="ferrite"], [name="nodule_count"], [name="carbides"], [name="hardness"]');
+
+    propertyInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.value) {
+                validateProperty(this.name, this.value, this);
+            }
+        });
+    });
+
+    function validateProperty(propertyName, value, inputElement) {
+        fetch('{{ url_for("mechanical.api_validate") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({[propertyName]: value})
+        })
+        .then(response => response.json())
+        .then(data => {
+            const result = data[propertyName];
+            if (result) {
+                inputElement.classList.remove('is-valid', 'is-invalid');
+                if (result.valid) {
+                    inputElement.classList.add('is-valid');
+                } else {
+                    inputElement.classList.add('is-invalid');
+                }
+
+                // Update badge if exists
+                const badgeId = inputElement.id.replace('Field', 'Badge');
+                const badge = document.getElementById(badgeId);
+                if (badge) {
+                    badge.style.display = 'inline-block';
+                    badge.textContent = result.valid ? 'OK' : 'Out';
+                    badge.className = 'result-badge badge ' + (result.valid ? 'bg-success' : 'bg-danger');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Validation error:', error);
+        });
+    }
 
     // Pipe Code Search functionality
     const pipeSearchInput = document.getElementById('pipeSearchInput');

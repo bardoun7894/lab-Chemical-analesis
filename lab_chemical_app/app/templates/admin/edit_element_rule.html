@@ -226,7 +226,7 @@ function updatePreview() {
     });
 
     if (rows.length === 0) {
-        previewBody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">{{ "لا توجد نطاقات" if session.get("lang") == "ar" else "No ranges" }}</td></tr>';
+        previewBody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">{{ "لا توجد نطاقات" if current_locale == 'ar' else "No ranges" }}</td></tr>';
     }
 }
 

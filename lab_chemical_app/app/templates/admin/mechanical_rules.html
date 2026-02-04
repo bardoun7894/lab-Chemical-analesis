@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'إعدادات قواعد الخواص الميكانيكية' if current_locale == 'ar' else 'Mechanical Property Rules Settings' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-gear"></i>
+                {{ 'إعدادات قواعد الخواص الميكانيكية' if current_locale == 'ar' else 'Mechanical Property Rules Settings' }}
+            </h2>
+            <p class="text-muted mb-0">
+                {{ 'تعديل نطاقات القرارات لكل خاصية ميكانيكية' if current_locale == 'ar' else 'Configure decision ranges for each mechanical property' }}
+            </p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPropertyModal">
+                <i class="bi bi-plus-lg"></i>
+                {{ 'إضافة خاصية' if current_locale == 'ar' else 'Add Property' }}
+            </button>
+            <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-{{ 'left' if current_locale != 'ar' else 'right' }}"></i>
+                {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Decision Legend -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h6 class="mb-3">{{ 'مفتاح القرارات:' if current_locale == 'ar' else 'Decision Legend:' }}</h6>
+            <div class="d-flex flex-wrap gap-3">
+                <span class="badge bg-success fs-6">فحص أخيرة فقط - {{ 'الأفضل' if current_locale == 'ar' else 'Best' }}</span>
+                <span class="badge bg-info fs-6">فحص أولى وأخيرة</span>
+                <span class="badge bg-warning text-dark fs-6">فحص الشحنة 100%</span>
+                <span class="badge bg-danger fs-6">تالف - {{ 'مرفوض' if current_locale == 'ar' else 'Rejected' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Properties Grid -->
+    <div class="row">
+        {% for rule in rules.rules %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-speedometer2"></i>
+                        {{ rule.name_ar if current_locale == 'ar' else rule.name }}
+                    </h5>
+                    <div class="btn-group btn-group-sm">
+                        <a href="{{ url_for('admin.edit_mechanical_rule', property_code=rule.property) }}"
+                           class="btn btn-light btn-sm" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <button type="button" class="btn btn-danger btn-sm"
+                                onclick="deleteProperty('{{ rule.property }}')" title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="p-2 bg-light border-bottom">
+                        <small class="text-muted">
+                            <strong>{{ 'الوحدة:' if current_locale == 'ar' else 'Unit:' }}</strong> {{ rule.unit }}
+                        </small>
+                    </div>
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{{ 'من' if current_locale == 'ar' else 'Min' }}</th>
+                                <th>{{ 'إلى' if current_locale == 'ar' else 'Max' }}</th>
+                                <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for range in rule.ranges %}
+                            <tr>
+                                <td>{{ range.min }}</td>
+                                <td>{{ range.max }}</td>
+                                <td>
+                                    {% if range.decision == 'فحص أخيرة فقط' %}
+                                        <span class="badge bg-success">{{ range.decision }}</span>
+                                    {% elif range.decision == 'فحص أولى وأخيرة' %}
+                                        <span class="badge bg-info">{{ range.decision }}</span>
+                                    {% elif range.decision == 'فحص الشحنة 100%' %}
+                                        <span class="badge bg-warning text-dark">{{ range.decision }}</span>
+                                    {% elif range.decision == 'تالف' %}
+                                        <span class="badge bg-danger">{{ range.decision }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ range.decision }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                {{ 'لا توجد قواعد خواص. أضف خاصية جديدة للبدء.' if current_locale == 'ar' else 'No property rules found. Add a new property to get started.' }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Add Property Modal -->
+<div class="modal fade" id="addPropertyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle"></i>
+                    {{ 'إضافة خاصية جديدة' if current_locale == 'ar' else 'Add New Property' }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">{{ 'كود الخاصية' if current_locale == 'ar' else 'Property Code' }}</label>
+                    <input type="text" id="newPropertyCode" class="form-control" placeholder="tensile_strength_2">
+                    <small class="text-muted">
+                        {{ 'استخدم اسماً فريداً بالإنجليزية' if current_locale == 'ar' else 'Use a unique English name' }}
+                    </small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{{ 'الاسم (English)' if current_locale == 'ar' else 'Name (English)' }}</label>
+                    <input type="text" id="newPropertyName" class="form-control" placeholder="Tensile Strength 2">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{{ 'الاسم (عربي)' if current_locale == 'ar' else 'Name (Arabic)' }}</label>
+                    <input type="text" id="newPropertyNameAr" class="form-control" placeholder="قوة الشد 2">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{{ 'الوحدة' if current_locale == 'ar' else 'Unit' }}</label>
+                    <input type="text" id="newPropertyUnit" class="form-control" placeholder="MPa, %, HB...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+                </button>
+                <button type="button" class="btn btn-success" onclick="addProperty()">
+                    <i class="bi bi-plus"></i>
+                    {{ 'إضافة' if current_locale == 'ar' else 'Add' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addProperty() {
+    const propertyCode = document.getElementById('newPropertyCode').value.trim().toLowerCase();
+    const propertyName = document.getElementById('newPropertyName').value.trim();
+    const propertyNameAr = document.getElementById('newPropertyNameAr').value.trim();
+    const propertyUnit = document.getElementById('newPropertyUnit').value.trim();
+
+    if (!propertyCode) {
+        alert("{{ 'الرجاء إدخال كود الخاصية' if current_locale == 'ar' else 'Please enter property code' }}");
+        return;
+    }
+
+    fetch('/admin/api/mechanical-rules/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            property: propertyCode,
+            name: propertyName || propertyCode,
+            name_ar: propertyNameAr || propertyCode,
+            unit: propertyUnit,
+            ranges: [
+                { min: 0, max: 50, decision: 'فحص أخيرة فقط' },
+                { min: 50.01, max: 100, decision: 'تالف' }
+            ]
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+
+function deleteProperty(propertyCode) {
+    if (!confirm("{{ 'هل أنت متأكد من حذف خاصية ' if current_locale == 'ar' else 'Are you sure you want to delete ' }}" + propertyCode + "?")) {
+        return;
+    }
+
+    fetch('/admin/api/mechanical-rules/' + propertyCode, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+</script>
+{% endblock %}

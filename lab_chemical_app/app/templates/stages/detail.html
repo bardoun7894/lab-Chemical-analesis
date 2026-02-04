@@ -521,7 +521,7 @@ function openStageModal(stageName, stageId, decision, hasDefect, notes, defectTy
 
     // Populate decision dropdown based on stage
     const decisionSelect = document.getElementById('modalDecision');
-    decisionSelect.innerHTML = '<option value="">-- {{ "اختر" if session.get("lang") == "ar" else "Select" }} --</option>';
+    decisionSelect.innerHTML = '<option value="">-- {{ "اختر" if current_locale == 'ar' else "Select" }} --</option>';
 
     const decisions = stageDecisions[stageName] || [];
     decisions.forEach(function(d) {
@@ -536,7 +536,7 @@ function openStageModal(stageName, stageId, decision, hasDefect, notes, defectTy
 
     // Populate defect dropdown based on stage
     const defectSelect = document.getElementById('modalDefectType');
-    defectSelect.innerHTML = '<option value="">-- {{ "اختر" if session.get("lang") == "ar" else "Select" }} --</option>';
+    defectSelect.innerHTML = '<option value="">-- {{ "اختر" if current_locale == 'ar' else "Select" }} --</option>';
 
     const defects = stageDefects[stageName] || [];
     defects.forEach(function(defect) {
@@ -552,7 +552,7 @@ function openStageModal(stageName, stageId, decision, hasDefect, notes, defectTy
     // Populate machine dropdown based on stage
     const machineSelect = document.getElementById('modalMachine');
     const machineDiv = document.getElementById('machineDiv');
-    machineSelect.innerHTML = '<option value="">-- {{ "اختر" if session.get("lang") == "ar" else "Select" }} --</option>';
+    machineSelect.innerHTML = '<option value="">-- {{ "اختر" if current_locale == 'ar' else "Select" }} --</option>';
 
     const machines = stageMachines[stageName] || [];
     if (machines.length > 0) {
@@ -666,11 +666,11 @@ document.getElementById('stageForm').addEventListener('submit', function(e) {
             bootstrap.Modal.getInstance(document.getElementById('stageModal')).hide();
             location.reload();
         } else {
-            alert('{{ "خطأ: " if session.get("lang") == "ar" else "Error: " }}' + data.error);
+            alert('{{ "خطأ: " if current_locale == 'ar' else "Error: " }}' + data.error);
         }
     })
     .catch(error => {
-        alert('{{ "حدث خطأ" if session.get("lang") == "ar" else "An error occurred" }}');
+        alert('{{ "حدث خطأ" if current_locale == 'ar' else "An error occurred" }}');
         console.error(error);
     });
 });
@@ -700,8 +700,8 @@ function viewStageHistory(stageName) {
 
                 data.history.forEach(function(h) {
                     const actionBadge = h.action === 'create'
-                        ? '<span class="badge bg-success">{{ "إنشاء" if session.get("lang") == "ar" else "Create" }}</span>'
-                        : '<span class="badge bg-warning text-dark">{{ "تحديث" if session.get("lang") == "ar" else "Update" }}</span>';
+                        ? '<span class="badge bg-success">{{ "إنشاء" if current_locale == 'ar' else "Create" }}</span>'
+                        : '<span class="badge bg-warning text-dark">{{ "تحديث" if current_locale == 'ar' else "Update" }}</span>';
 
                     const defectBadge = h.has_defect
                         ? '<span class="badge bg-danger">' + (h.defect_type || 'Yes') + '</span>'

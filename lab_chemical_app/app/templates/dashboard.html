@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 aiSummaryContent.style.display = 'block';
 
                 // Update summary text with typing effect
-                typeText(aiSummaryText, data.summary || '{{ "لا توجد بيانات كافية" if session.get("lang") == "ar" else "No data available" }}');
+                typeText(aiSummaryText, data.summary || '{{ "لا توجد بيانات كافية" if current_locale == 'ar' else "No data available" }}');
 
                 // Update alerts
                 aiAlertsList.innerHTML = '';

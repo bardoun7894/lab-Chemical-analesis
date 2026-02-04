@@ -15,6 +15,7 @@ from app.models.chemical import Machine
 
 # Path to element rules JSON
 ELEMENT_RULES_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'element_rules.json')
+MECHANICAL_RULES_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'mechanical_rules.json')
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -702,3 +703,177 @@ def delete_machine(id):
         flash(f'خطأ: {str(e)}', 'danger')
 
     return redirect(url_for('admin.machines'))
+
+
+# ============================================================================
+# Mechanical Rules Management
+# ============================================================================
+
+@admin_bp.route('/settings/mechanical-rules')
+@login_required
+@admin_required
+def mechanical_rules():
+    """Mechanical property rules configuration"""
+    rules = load_mechanical_rules()
+    return render_template('admin/mechanical_rules.html', rules=rules)
+
+
+@admin_bp.route('/settings/mechanical-rules/<property_code>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_mechanical_rule(property_code):
+    """Edit mechanical property rule"""
+    rules = load_mechanical_rules()
+
+    # Find the property
+    property_rule = None
+    for rule in rules.get('rules', []):
+        if rule['property'] == property_code:
+            property_rule = rule
+            break
+
+    if not property_rule:
+        flash(f'الخاصية {property_code} غير موجودة', 'error')
+        return redirect(url_for('admin.mechanical_rules'))
+
+    if request.method == 'POST':
+        try:
+            # Get ranges from form
+            new_ranges = []
+            range_count = int(request.form.get('range_count', 0))
+
+            for i in range(range_count):
+                min_val = request.form.get(f'min_{i}')
+                max_val = request.form.get(f'max_{i}')
+                decision = request.form.get(f'decision_{i}')
+
+                if min_val and max_val and decision:
+                    new_ranges.append({
+                        'min': float(min_val),
+                        'max': float(max_val),
+                        'decision': decision
+                    })
+
+            # Update the property's ranges
+            property_rule['ranges'] = new_ranges
+
+            # Save back to file
+            save_mechanical_rules(rules)
+
+            flash(f'تم تحديث قواعد {property_code} بنجاح', 'success')
+            return redirect(url_for('admin.mechanical_rules'))
+
+        except Exception as e:
+            flash(f'خطأ: {str(e)}', 'error')
+
+    decisions = [
+        'فحص أخيرة فقط',
+        'فحص أولى وأخيرة',
+        'فحص الشحنة 100%',
+        'تالف'
+    ]
+
+    return render_template('admin/edit_mechanical_rule.html',
+                          property_code=property_code,
+                          rule=property_rule,
+                          decisions=decisions)
+
+
+@admin_bp.route('/api/mechanical-rules')
+@login_required
+@admin_required
+def api_get_mechanical_rules():
+    """API: Get all mechanical rules"""
+    rules = load_mechanical_rules()
+    return jsonify(rules)
+
+
+@admin_bp.route('/api/mechanical-rules/<property_code>', methods=['PUT'])
+@csrf.exempt
+@login_required
+@admin_required
+def api_update_mechanical_rule(property_code):
+    """API: Update mechanical property rule"""
+    rules = load_mechanical_rules()
+
+    # Find the property
+    property_rule = None
+    for rule in rules.get('rules', []):
+        if rule['property'] == property_code:
+            property_rule = rule
+            break
+
+    if not property_rule:
+        return jsonify({'error': f'Property {property_code} not found'}), 404
+
+    try:
+        data = request.get_json()
+        property_rule['ranges'] = data.get('ranges', [])
+        save_mechanical_rules(rules)
+        return jsonify({'success': True, 'message': f'{property_code} rules updated'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/mechanical-rules/add', methods=['POST'])
+@csrf.exempt
+@login_required
+@admin_required
+def api_add_mechanical_property():
+    """API: Add new mechanical property"""
+    rules = load_mechanical_rules()
+    data = request.get_json()
+
+    property_code = data.get('property', '').lower()
+    if not property_code:
+        return jsonify({'error': 'Property code required'}), 400
+
+    # Check if already exists
+    for rule in rules.get('rules', []):
+        if rule['property'] == property_code:
+            return jsonify({'error': f'Property {property_code} already exists'}), 400
+
+    # Add new property
+    rules['rules'].append({
+        'property': property_code,
+        'name': data.get('name', property_code),
+        'name_ar': data.get('name_ar', property_code),
+        'unit': data.get('unit', ''),
+        'ranges': data.get('ranges', [
+            {'min': 0, 'max': 50, 'decision': 'فحص أخيرة فقط'},
+            {'min': 50.01, 'max': 100, 'decision': 'تالف'}
+        ])
+    })
+
+    save_mechanical_rules(rules)
+    return jsonify({'success': True, 'message': f'Property {property_code} added'})
+
+
+@admin_bp.route('/api/mechanical-rules/<property_code>', methods=['DELETE'])
+@csrf.exempt
+@login_required
+@admin_required
+def api_delete_mechanical_property(property_code):
+    """API: Delete mechanical property"""
+    rules = load_mechanical_rules()
+
+    # Find and remove the property
+    rules['rules'] = [r for r in rules.get('rules', []) if r['property'] != property_code]
+
+    save_mechanical_rules(rules)
+    return jsonify({'success': True, 'message': f'Property {property_code} deleted'})
+
+
+def load_mechanical_rules():
+    """Load mechanical rules from JSON file"""
+    try:
+        with open(MECHANICAL_RULES_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        return {'rules': [], 'error': str(e)}
+
+
+def save_mechanical_rules(rules):
+    """Save mechanical rules to JSON file"""
+    with open(MECHANICAL_RULES_PATH, 'w', encoding='utf-8') as f:
+        json.dump(rules, f, ensure_ascii=False, indent=2)
