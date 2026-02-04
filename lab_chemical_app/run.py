@@ -152,7 +152,7 @@ def seed_reference_data():
                 customer_code='ESC001',
                 target_quantity=100,
                 diameter=500,
-                pipe_type='K9',
+                pipe_class='K9',
                 order_date=today - timedelta(days=5),
                 start_date=today - timedelta(days=3),
                 status='in_progress',
@@ -164,7 +164,7 @@ def seed_reference_data():
                 customer_code='CWA002',
                 target_quantity=50,
                 diameter=300,
-                pipe_type='C25',
+                pipe_class='C25',
                 order_date=today - timedelta(days=2),
                 status='pending',
                 priority='normal'
