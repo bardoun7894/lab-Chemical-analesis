@@ -148,8 +148,15 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">{{ 'رقم القالب' if current_locale == 'ar' else 'Mold Number' }}</label>
-                                <input type="text" name="mold_number" class="form-control"
-                                       value="{{ pipe.mold_number if pipe else '' }}">
+                                <select name="mold_number" class="form-select">
+                                    <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
+                                    <option value="1462" {{ 'selected' if pipe and pipe.mold_number == '1462' }}>1462</option>
+                                    <option value="1465" {{ 'selected' if pipe and pipe.mold_number == '1465' }}>1465</option>
+                                    <option value="1467" {{ 'selected' if pipe and pipe.mold_number == '1467' }}>1467</option>
+                                    <option value="1468" {{ 'selected' if pipe and pipe.mold_number == '1468' }}>1468</option>
+                                    <option value="H157" {{ 'selected' if pipe and pipe.mold_number == 'H157' }}>H157</option>
+                                    <option value="T157" {{ 'selected' if pipe and pipe.mold_number == 'T157' }}>T157</option>
+                                </select>
                             </div>
                         </div>
                     </div>

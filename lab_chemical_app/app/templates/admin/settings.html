@@ -40,22 +40,22 @@
             </div>
         </div>
 
-        <!-- Mechanical Property Rules -->
+        <!-- Mechanical Acceptance Criteria -->
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body text-center">
                     <div class="mb-3">
-                        <i class="bi bi-gear display-4 text-warning"></i>
+                        <i class="bi bi-check2-square display-4 text-warning"></i>
                     </div>
                     <h5 class="card-title">
-                        {{ 'قواعد الخواص الميكانيكية' if current_locale == 'ar' else 'Mechanical Property Rules' }}
+                        {{ 'معايير القبول الميكانيكية' if current_locale == 'ar' else 'Mechanical Acceptance Criteria' }}
                     </h5>
                     <p class="card-text text-muted">
-                        {{ 'تكوين نطاقات القرارات لكل خاصية ميكانيكية' if current_locale == 'ar' else 'Configure decision ranges for each mechanical property' }}
+                        {{ 'تكوين شروط القبول - جميع المعايير يجب أن تمر' if current_locale == 'ar' else 'Configure acceptance criteria - all must pass to accept' }}
                     </p>
                     <a href="{{ url_for('admin.mechanical_rules') }}" class="btn btn-warning">
                         <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
-                        {{ 'إدارة القواعد' if current_locale == 'ar' else 'Manage Rules' }}
+                        {{ 'إدارة المعايير' if current_locale == 'ar' else 'Manage Criteria' }}
                     </a>
                 </div>
             </div>
@@ -161,6 +161,48 @@
                     <a href="{{ url_for('admin.machines') }}" class="btn btn-secondary">
                         <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
                         {{ 'إدارة الماكينات' if current_locale == 'ar' else 'Manage Machines' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Settings (Gemini) -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-robot display-4 text-purple" style="color: #6f42c1;"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'إعدادات الذكاء الاصطناعي' if current_locale == 'ar' else 'AI Settings' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'تكوين مفتاح Gemini API للتحليل التلقائي' if current_locale == 'ar' else 'Configure Gemini API key for auto-analysis' }}
+                    </p>
+                    <a href="{{ url_for('admin.ai_settings') }}" class="btn" style="background-color: #6f42c1; color: white;">
+                        <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة الإعدادات' if current_locale == 'ar' else 'Manage Settings' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sticker Design Settings -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-tag display-4 text-primary"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'إعدادات الملصقات' if current_locale == 'ar' else 'Sticker Design' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'تخصيص تصميم الملصقات والشعار ورمز إعادة التدوير' if current_locale == 'ar' else 'Customize sticker design, logo & recycler symbol' }}
+                    </p>
+                    <a href="{{ url_for('admin.sticker_settings') }}" class="btn btn-primary">
+                        <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة التصميم' if current_locale == 'ar' else 'Manage Design' }}
                     </a>
                 </div>
             </div>

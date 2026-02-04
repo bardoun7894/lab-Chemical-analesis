@@ -19,7 +19,9 @@
       "Bash(del \"C:\\\\Users\\\\Chairi\\\\Downloads\\\\lab Chemical analesis\\\\lab_chemical_app\\\\lab_chemical.db\")",
       "Bash(tree:*)",
       "Bash(findstr:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebSearch",
+      "WebFetch(domain:ai.google.dev)"
     ]
   }
 }

@@ -59,6 +59,7 @@ def create_app(config_name='default'):
     from .routes.stickers import stickers_bp
     from .routes.admin import admin_bp
     from .routes.production_orders import production_orders_bp
+    from .routes.chatbot import chatbot_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -69,6 +70,7 @@ def create_app(config_name='default'):
     app.register_blueprint(stickers_bp, url_prefix='/stickers')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(production_orders_bp, url_prefix='/orders')
+    app.register_blueprint(chatbot_bp, url_prefix='/chatbot')
 
     # Context processors
     @app.context_processor

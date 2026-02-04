@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ 'إعدادات قواعد الخواص الميكانيكية' if current_locale == 'ar' else 'Mechanical Property Rules Settings' }}{% endblock %}
+{% block title %}{{ 'إعدادات معايير القبول الميكانيكية' if current_locale == 'ar' else 'Mechanical Acceptance Criteria Settings' }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -8,149 +8,165 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2>
-                <i class="bi bi-gear"></i>
-                {{ 'إعدادات قواعد الخواص الميكانيكية' if current_locale == 'ar' else 'Mechanical Property Rules Settings' }}
+                <i class="bi bi-check2-square"></i>
+                {{ 'إعدادات معايير القبول الميكانيكية' if current_locale == 'ar' else 'Mechanical Acceptance Criteria Settings' }}
             </h2>
             <p class="text-muted mb-0">
-                {{ 'تعديل نطاقات القرارات لكل خاصية ميكانيكية' if current_locale == 'ar' else 'Configure decision ranges for each mechanical property' }}
+                {{ 'تكوين شروط القبول لكل خاصية ميكانيكية' if current_locale == 'ar' else 'Configure acceptance conditions for each mechanical property' }}
             </p>
         </div>
-        <div>
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPropertyModal">
-                <i class="bi bi-plus-lg"></i>
-                {{ 'إضافة خاصية' if current_locale == 'ar' else 'Add Property' }}
-            </button>
-            <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-{{ 'left' if current_locale != 'ar' else 'right' }}"></i>
-                {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
-            </a>
-        </div>
+        <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-{{ 'left' if current_locale != 'ar' else 'right' }}"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+        </a>
     </div>
 
-    <!-- Decision Legend -->
+    <!-- Logic Info -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <h6 class="mb-3">{{ 'مفتاح القرارات:' if current_locale == 'ar' else 'Decision Legend:' }}</h6>
-            <div class="d-flex flex-wrap gap-3">
-                <span class="badge bg-success fs-6">فحص أخيرة فقط - {{ 'الأفضل' if current_locale == 'ar' else 'Best' }}</span>
-                <span class="badge bg-info fs-6">فحص أولى وأخيرة</span>
-                <span class="badge bg-warning text-dark fs-6">فحص الشحنة 100%</span>
-                <span class="badge bg-danger fs-6">تالف - {{ 'مرفوض' if current_locale == 'ar' else 'Rejected' }}</span>
+            <h6 class="mb-3">
+                <i class="bi bi-info-circle text-info"></i>
+                {{ 'منطق التقييم:' if current_locale == 'ar' else 'Evaluation Logic:' }}
+            </h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="alert alert-success mb-0">
+                        <strong><i class="bi bi-check-circle"></i> {{ 'قبول (ACCEPT):' if current_locale == 'ar' else 'ACCEPT:' }}</strong>
+                        {{ 'جميع المعايير يجب أن تمر' if current_locale == 'ar' else 'All criteria must pass' }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-danger mb-0">
+                        <strong><i class="bi bi-x-circle"></i> {{ 'رفض (REJECT):' if current_locale == 'ar' else 'REJECT:' }}</strong>
+                        {{ 'أي معيار يفشل' if current_locale == 'ar' else 'Any criterion fails' }}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Properties Grid -->
-    <div class="row">
-        {% for rule in rules.rules %}
-        <div class="col-lg-6 col-xl-4 mb-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="bi bi-speedometer2"></i>
-                        {{ rule.name_ar if current_locale == 'ar' else rule.name }}
-                    </h5>
-                    <div class="btn-group btn-group-sm">
-                        <a href="{{ url_for('admin.edit_mechanical_rule', property_code=rule.property) }}"
-                           class="btn btn-light btn-sm" title="Edit">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <button type="button" class="btn btn-danger btn-sm"
-                                onclick="deleteProperty('{{ rule.property }}')" title="Delete">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    <div class="p-2 bg-light border-bottom">
-                        <small class="text-muted">
-                            <strong>{{ 'الوحدة:' if current_locale == 'ar' else 'Unit:' }}</strong> {{ rule.unit }}
-                        </small>
-                    </div>
-                    <table class="table table-sm table-striped mb-0">
-                        <thead class="table-light">
+    <!-- Acceptance Criteria Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="bi bi-list-check"></i>
+                {{ 'معايير القبول' if current_locale == 'ar' else 'Acceptance Criteria' }}
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>{{ 'الخاصية' if current_locale == 'ar' else 'Property' }}</th>
+                            <th>{{ 'الشرط' if current_locale == 'ar' else 'Condition' }}</th>
+                            <th>{{ 'الوحدة' if current_locale == 'ar' else 'Unit' }}</th>
+                            <th>{{ 'التفاصيل' if current_locale == 'ar' else 'Details' }}</th>
+                            <th class="text-center">{{ 'الإجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set criteria = rules.get('acceptance_criteria', {}) %}
+                        {% if criteria %}
+                            {% for key, criterion in criteria.items() %}
                             <tr>
-                                <th>{{ 'من' if current_locale == 'ar' else 'Min' }}</th>
-                                <th>{{ 'إلى' if current_locale == 'ar' else 'Max' }}</th>
-                                <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for range in rule.ranges %}
-                            <tr>
-                                <td>{{ range.min }}</td>
-                                <td>{{ range.max }}</td>
+                                <td>{{ loop.index }}</td>
                                 <td>
-                                    {% if range.decision == 'فحص أخيرة فقط' %}
-                                        <span class="badge bg-success">{{ range.decision }}</span>
-                                    {% elif range.decision == 'فحص أولى وأخيرة' %}
-                                        <span class="badge bg-info">{{ range.decision }}</span>
-                                    {% elif range.decision == 'فحص الشحنة 100%' %}
-                                        <span class="badge bg-warning text-dark">{{ range.decision }}</span>
-                                    {% elif range.decision == 'تالف' %}
-                                        <span class="badge bg-danger">{{ range.decision }}</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">{{ range.decision }}</span>
-                                    {% endif %}
+                                    <strong>{{ criterion.property }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ key }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ criterion.condition }}</span>
+                                </td>
+                                <td><code>{{ criterion.unit }}</code></td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ 'القيمة يجب أن تكون' if current_locale == 'ar' else 'Value must be' }}
+                                        <strong>{{ criterion.condition }} {{ criterion.unit }}</strong>
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                            onclick="editCriterion('{{ key }}', '{{ criterion.property }}', '{{ criterion.condition }}', '{{ criterion.unit }}')">
+                                        <i class="bi bi-pencil"></i>
+                                        {{ 'تعديل' if current_locale == 'ar' else 'Edit' }}
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    {{ 'لا توجد معايير قبول محددة' if current_locale == 'ar' else 'No acceptance criteria defined' }}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
         </div>
-        {% else %}
-        <div class="col-12">
-            <div class="alert alert-info">
-                {{ 'لا توجد قواعد خواص. أضف خاصية جديدة للبدء.' if current_locale == 'ar' else 'No property rules found. Add a new property to get started.' }}
-            </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="mt-4">
+        <div class="alert alert-info">
+            <h6 class="mb-2">{{ 'ملخص المعايير:' if current_locale == 'ar' else 'Criteria Summary:' }}</h6>
+            <ul class="mb-0">
+                {% set criteria = rules.get('acceptance_criteria', {}) %}
+                {% for key, criterion in criteria.items() %}
+                <li><strong>{{ criterion.property }}:</strong> {{ criterion.condition }} {{ criterion.unit }}</li>
+                {% endfor %}
+            </ul>
         </div>
-        {% endfor %}
     </div>
 </div>
 
-<!-- Add Property Modal -->
-<div class="modal fade" id="addPropertyModal" tabindex="-1">
+<!-- Edit Criterion Modal -->
+<div class="modal fade" id="editCriterionModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="bi bi-plus-circle"></i>
-                    {{ 'إضافة خاصية جديدة' if current_locale == 'ar' else 'Add New Property' }}
+                    <i class="bi bi-pencil-square"></i>
+                    {{ 'تعديل معيار القبول' if current_locale == 'ar' else 'Edit Acceptance Criterion' }}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">{{ 'كود الخاصية' if current_locale == 'ar' else 'Property Code' }}</label>
-                    <input type="text" id="newPropertyCode" class="form-control" placeholder="tensile_strength_2">
-                    <small class="text-muted">
-                        {{ 'استخدم اسماً فريداً بالإنجليزية' if current_locale == 'ar' else 'Use a unique English name' }}
-                    </small>
+            <form id="editCriterionForm" method="POST" action="{{ url_for('admin.update_mechanical_criterion') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="criterionKey" name="criterion_key">
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'الخاصية' if current_locale == 'ar' else 'Property' }}</label>
+                        <input type="text" id="criterionProperty" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'الشرط' if current_locale == 'ar' else 'Condition' }} *</label>
+                        <input type="text" id="criterionCondition" name="condition" class="form-control"
+                               placeholder=">= 42.50, < 230, etc." required>
+                        <small class="text-muted">
+                            {{ 'مثال: >= 42.50, < 230, > 10, <= 100' if current_locale == 'ar' else 'Example: >= 42.50, < 230, > 10, <= 100' }}
+                        </small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'الوحدة' if current_locale == 'ar' else 'Unit' }}</label>
+                        <input type="text" id="criterionUnit" name="unit" class="form-control"
+                               placeholder="KgF/mm², %, HB, etc.">
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">{{ 'الاسم (English)' if current_locale == 'ar' else 'Name (English)' }}</label>
-                    <input type="text" id="newPropertyName" class="form-control" placeholder="Tensile Strength 2">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i>
+                        {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
+                    </button>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">{{ 'الاسم (عربي)' if current_locale == 'ar' else 'Name (Arabic)' }}</label>
-                    <input type="text" id="newPropertyNameAr" class="form-control" placeholder="قوة الشد 2">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">{{ 'الوحدة' if current_locale == 'ar' else 'Unit' }}</label>
-                    <input type="text" id="newPropertyUnit" class="form-control" placeholder="MPa, %, HB...">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
-                </button>
-                <button type="button" class="btn btn-success" onclick="addProperty()">
-                    <i class="bi bi-plus"></i>
-                    {{ 'إضافة' if current_locale == 'ar' else 'Add' }}
-                </button>
-            </div>
+            </form>
         </div>
     </div>
 </div>
@@ -158,69 +174,14 @@
 
 {% block extra_js %}
 <script>
-function addProperty() {
-    const propertyCode = document.getElementById('newPropertyCode').value.trim().toLowerCase();
-    const propertyName = document.getElementById('newPropertyName').value.trim();
-    const propertyNameAr = document.getElementById('newPropertyNameAr').value.trim();
-    const propertyUnit = document.getElementById('newPropertyUnit').value.trim();
+function editCriterion(key, property, condition, unit) {
+    document.getElementById('criterionKey').value = key;
+    document.getElementById('criterionProperty').value = property;
+    document.getElementById('criterionCondition').value = condition;
+    document.getElementById('criterionUnit').value = unit;
 
-    if (!propertyCode) {
-        alert("{{ 'الرجاء إدخال كود الخاصية' if current_locale == 'ar' else 'Please enter property code' }}");
-        return;
-    }
-
-    fetch('/admin/api/mechanical-rules/add', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({
-            property: propertyCode,
-            name: propertyName || propertyCode,
-            name_ar: propertyNameAr || propertyCode,
-            unit: propertyUnit,
-            ranges: [
-                { min: 0, max: 50, decision: 'فحص أخيرة فقط' },
-                { min: 50.01, max: 100, decision: 'تالف' }
-            ]
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert(data.error);
-        }
-    })
-    .catch(error => {
-        alert('Error: ' + error);
-    });
-}
-
-function deleteProperty(propertyCode) {
-    if (!confirm("{{ 'هل أنت متأكد من حذف خاصية ' if current_locale == 'ar' else 'Are you sure you want to delete ' }}" + propertyCode + "?")) {
-        return;
-    }
-
-    fetch('/admin/api/mechanical-rules/' + propertyCode, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token() }}'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert(data.error);
-        }
-    })
-    .catch(error => {
-        alert('Error: ' + error);
-    });
+    const modal = new bootstrap.Modal(document.getElementById('editCriterionModal'));
+    modal.show();
 }
 </script>
 {% endblock %}

@@ -1,0 +1,24 @@
+{
+  "ai": {
+    "gemini_api_key": "AIzaSyBGj-YlOAtbQFoTUoJv1lB0479Qs27lt3E",
+    "gemini_model": "gemini-3-pro-preview",
+    "enabled": true
+  },
+  "sticker": {
+    "company_name": "GCP Ductile Iron Pipes",
+    "website_url": "www.gcpipes.com",
+    "website_color": "#0066CC",
+    "text_color": "#333333",
+    "sizes": {
+      "small": [80, 50],
+      "medium": [100, 60],
+      "large": [120, 80],
+      "gcp": [140, 90]
+    },
+    "show_logo": true,
+    "show_recycle": true,
+    "show_qr": true,
+    "show_website": true,
+    "dpi": 300
+  }
+}

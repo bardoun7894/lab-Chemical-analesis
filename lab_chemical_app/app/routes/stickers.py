@@ -8,6 +8,7 @@ from io import BytesIO
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
 import os
+import json
 from app import db
 from app.models.pipe import Pipe
 from app.models.chemical import ChemicalAnalysis
@@ -15,8 +16,34 @@ from app.models.production_order import ProductionOrder
 
 stickers_bp = Blueprint('stickers', __name__)
 
+# Path to app settings
+APP_SETTINGS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'app_settings.json')
 
-# Sticker sizes in mm (width, height) - Professional label sizes
+
+def load_sticker_settings():
+    """Load sticker settings from app_settings.json"""
+    try:
+        with open(APP_SETTINGS_PATH, 'r', encoding='utf-8') as f:
+            settings = json.load(f)
+            return settings.get('sticker', {})
+    except Exception:
+        return {}
+
+
+def get_sticker_sizes():
+    """Get sticker sizes from settings or use defaults"""
+    sticker_settings = load_sticker_settings()
+    sizes = sticker_settings.get('sizes', {})
+
+    return {
+        'small': tuple(sizes.get('small', [80, 50])),
+        'medium': tuple(sizes.get('medium', [100, 60])),
+        'large': tuple(sizes.get('large', [120, 80])),
+        'gcp': tuple(sizes.get('gcp', [140, 90])),
+    }
+
+
+# Default sticker sizes in mm (width, height) - can be overridden by settings
 STICKER_SIZES = {
     'small': (80, 50),      # Compact label
     'medium': (100, 60),    # Standard product label
@@ -24,7 +51,7 @@ STICKER_SIZES = {
     'gcp': (140, 90),       # GCP Professional style (like the image)
 }
 
-# Convert mm to pixels (assuming 300 DPI)
+# Convert mm to pixels (assuming 300 DPI - can be overridden by settings)
 MM_TO_PX = 300 / 25.4  # ~11.81 pixels per mm
 
 
@@ -32,7 +59,9 @@ MM_TO_PX = 300 / 25.4  # ~11.81 pixels per mm
 @login_required
 def index():
     """Sticker printing page"""
-    return render_template('stickers/index.html', sizes=STICKER_SIZES)
+    # Get dynamic sticker sizes from settings
+    sizes = get_sticker_sizes()
+    return render_template('stickers/index.html', sizes=sizes)
 
 
 @stickers_bp.route('/search')
@@ -102,11 +131,14 @@ def preview_sticker(pipe_id):
     chem = ChemicalAnalysis.query.filter_by(ladle_id=pipe.ladle_id).first()
     decision = chem.decision if chem else 'N/A'
 
+    # Get dynamic sticker sizes from settings
+    sizes = get_sticker_sizes()
+
     return render_template('stickers/preview.html',
                           pipe=pipe,
                           decision=decision,
                           size=size,
-                          sizes=STICKER_SIZES)
+                          sizes=sizes)
 
 
 @stickers_bp.route('/generate/<int:pipe_id>')
@@ -118,15 +150,21 @@ def generate_sticker(pipe_id):
     custom_width = request.args.get('width', type=int)
     custom_height = request.args.get('height', type=int)
 
+    # Get dynamic sticker sizes and settings
+    sizes = get_sticker_sizes()
+    sticker_settings = load_sticker_settings()
+    dpi = sticker_settings.get('dpi', 300)
+    mm_to_px = dpi / 25.4
+
     # Determine size
     if custom_width and custom_height:
         width_mm, height_mm = custom_width, custom_height
     else:
-        width_mm, height_mm = STICKER_SIZES.get(size, STICKER_SIZES['medium'])
+        width_mm, height_mm = sizes.get(size, sizes['medium'])
 
     # Convert to pixels
-    width_px = int(width_mm * MM_TO_PX)
-    height_px = int(height_mm * MM_TO_PX)
+    width_px = int(width_mm * mm_to_px)
+    height_px = int(height_mm * mm_to_px)
 
     # Get chemical analysis
     chem = ChemicalAnalysis.query.filter_by(ladle_id=pipe.ladle_id).first()
@@ -152,15 +190,21 @@ def download_sticker(pipe_id):
     custom_width = request.args.get('width', type=int)
     custom_height = request.args.get('height', type=int)
 
+    # Get dynamic sticker sizes and settings
+    sizes = get_sticker_sizes()
+    sticker_settings = load_sticker_settings()
+    dpi = sticker_settings.get('dpi', 300)
+    mm_to_px = dpi / 25.4
+
     # Determine size
     if custom_width and custom_height:
         width_mm, height_mm = custom_width, custom_height
     else:
-        width_mm, height_mm = STICKER_SIZES.get(size, STICKER_SIZES['medium'])
+        width_mm, height_mm = sizes.get(size, sizes['medium'])
 
     # Convert to pixels
-    width_px = int(width_mm * MM_TO_PX)
-    height_px = int(height_mm * MM_TO_PX)
+    width_px = int(width_mm * mm_to_px)
+    height_px = int(height_mm * mm_to_px)
 
     # Get chemical analysis
     chem = ChemicalAnalysis.query.filter_by(ladle_id=pipe.ladle_id).first()
@@ -271,6 +315,18 @@ def batch_print():
 
 def create_sticker_image(pipe, decision, width_px, height_px):
     """Create professional GCP-style sticker image matching the company design"""
+    # Load sticker settings
+    sticker_settings = load_sticker_settings()
+
+    # Get settings with defaults
+    website_url = sticker_settings.get('website_url', 'www.gcpipes.com')
+    website_color = sticker_settings.get('website_color', '#0066CC')
+    text_color = sticker_settings.get('text_color', '#333333')
+    show_logo = sticker_settings.get('show_logo', True)
+    show_recycle = sticker_settings.get('show_recycle', True)
+    show_qr = sticker_settings.get('show_qr', True)
+    show_website = sticker_settings.get('show_website', True)
+
     # Create white background
     img = Image.new('RGB', (width_px, height_px), 'white')
     draw = ImageDraw.Draw(img)
@@ -382,51 +438,54 @@ DEC:{decision}"""
     logo_x = margin + 5
     logo_y = int(header_height * 0.08)
 
-    if logo_loaded:
-        # Paste the actual GCP logo image
-        img.paste(logo_img, (logo_x, logo_y))
-    else:
-        # Fallback: Draw GCP text logo
-        draw.text((logo_x, logo_y), "GCP", font=font_title, fill='#000000')
-        draw.text((logo_x, logo_y + int(height_px * 0.08)), "Ductile Iron Pipes", font=font_small, fill='#666666')
+    if show_logo:
+        if logo_loaded:
+            # Paste the actual GCP logo image
+            img.paste(logo_img, (logo_x, logo_y))
+        else:
+            # Fallback: Draw GCP text logo
+            draw.text((logo_x, logo_y), "GCP", font=font_title, fill='#000000')
+            draw.text((logo_x, logo_y + int(height_px * 0.08)), "Ductile Iron Pipes", font=font_small, fill='#666666')
 
     # Center: QR Code (positioned explicitly in the middle)
-    qr_x = (width_px - qr_size) // 2
-    qr_y = int(header_height * 0.05)
-    img.paste(qr_image, (qr_x, qr_y))
+    if show_qr:
+        qr_x = (width_px - qr_size) // 2
+        qr_y = int(header_height * 0.05)
+        img.paste(qr_image, (qr_x, qr_y))
 
     # Right: Recycling symbol area
-    recycle_x = width_px - margin - int(width_px * 0.15)
-    recycle_y = int(header_height * 0.2)
-    
-    # Load and paste recycling image
-    try:
-        if 'app_root' not in locals():
-            import flask
-            app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
-        recycle_path = os.path.join(app_root, 'static', 'images', 'recycle.jpg')
-        if os.path.exists(recycle_path):
-            recycle_img = Image.open(recycle_path)
-            
-            # Calculate recycle image size (fit in right section)
-            recycle_max_width = int(width_px * 0.15)
-            recycle_max_height = int(header_height * 0.85)
-            
-            # Maintain aspect ratio
-            recycle_ratio = min(recycle_max_width / recycle_img.width, recycle_max_height / recycle_img.height)
-            recycle_new_width = int(recycle_img.width * recycle_ratio)
-            recycle_new_height = int(recycle_img.height * recycle_ratio)
-            
-            recycle_img = recycle_img.resize((recycle_new_width, recycle_new_height), Image.Resampling.LANCZOS)
-            img.paste(recycle_img, (recycle_x, recycle_y))
-        else:
-            # Fallback if image not found
+    if show_recycle:
+        recycle_x = width_px - margin - int(width_px * 0.15)
+        recycle_y = int(header_height * 0.2)
+
+        # Load and paste recycling image
+        try:
+            if 'app_root' not in locals():
+                import flask
+                app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+            recycle_path = os.path.join(app_root, 'static', 'images', 'recycle.jpg')
+            if os.path.exists(recycle_path):
+                recycle_img = Image.open(recycle_path)
+
+                # Calculate recycle image size (fit in right section)
+                recycle_max_width = int(width_px * 0.15)
+                recycle_max_height = int(header_height * 0.85)
+
+                # Maintain aspect ratio
+                recycle_ratio = min(recycle_max_width / recycle_img.width, recycle_max_height / recycle_img.height)
+                recycle_new_width = int(recycle_img.width * recycle_ratio)
+                recycle_new_height = int(recycle_img.height * recycle_ratio)
+
+                recycle_img = recycle_img.resize((recycle_new_width, recycle_new_height), Image.Resampling.LANCZOS)
+                img.paste(recycle_img, (recycle_x, recycle_y))
+            else:
+                # Fallback if image not found
+                draw.text((recycle_x, recycle_y), "♻", font=font_title, fill='#228B22')
+        except Exception as e:
+            # Fallback on error
+            print(f"Error loading recycle image: {e}")
             draw.text((recycle_x, recycle_y), "♻", font=font_title, fill='#228B22')
-    except Exception as e:
-        # Fallback on error
-        print(f"Error loading recycle image: {e}")
-        draw.text((recycle_x, recycle_y), "♻", font=font_title, fill='#228B22')
 
     # === PRODUCT CODE SECTION (below header) ===
     code_y = header_height + int(height_px * 0.02)
@@ -475,23 +534,27 @@ DEC:{decision}"""
     for i, (text, x) in enumerate(info_items):
         if i % 2 == 0 and i > 0:
             current_y += int(height_px * 0.055)
-        draw.text((x, current_y), text, font=font_small, fill='#333333')
+        draw.text((x, current_y), text, font=font_small, fill=text_color)
 
     # === FOOTER - Website ===
-    footer_y = height_px - int(height_px * 0.1)
-    draw.line([(margin, footer_y - 5), (width_px - margin, footer_y - 5)], fill='#CCCCCC', width=1)
-    website = "www.gcpipes.com"
-    try:
-        web_bbox = draw.textbbox((0, 0), website, font=font_medium)
-        web_width = web_bbox[2] - web_bbox[0]
-    except:
-        web_width = len(website) * 8
-    web_x = (width_px - web_width) // 2
-    draw.text((web_x, footer_y), website, font=font_medium, fill='#0066CC')
+    if show_website:
+        footer_y = height_px - int(height_px * 0.1)
+        draw.line([(margin, footer_y - 5), (width_px - margin, footer_y - 5)], fill='#CCCCCC', width=1)
+        website = website_url
+        try:
+            web_bbox = draw.textbbox((0, 0), website, font=font_medium)
+            web_width = web_bbox[2] - web_bbox[0]
+        except:
+            web_width = len(website) * 8
+        web_x = (width_px - web_width) // 2
+        draw.text((web_x, footer_y), website, font=font_medium, fill=website_color)
+
+    # Get DPI from settings
+    dpi = sticker_settings.get('dpi', 300)
 
     # Save to buffer
     buffer = BytesIO()
-    img.save(buffer, format='PNG', dpi=(300, 300))
+    img.save(buffer, format='PNG', dpi=(dpi, dpi))
     buffer.seek(0)
 
     return buffer

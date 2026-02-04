@@ -173,60 +173,103 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <!-- Specifications Alert -->
-                        <div class="alert alert-info py-2 mb-3">
+                        <!-- Specifications Alert - from JSON acceptance_criteria -->
+                        <div class="alert alert-warning py-2 mb-3">
                             <small>
-                                <strong>{{ 'المواصفات:' if current_locale == 'ar' else 'Specs:' }}</strong>
-                                Tensile ≥420 MPa | Elongation ≥10% | Hardness 130-230 HB
+                                <strong>{{ 'معايير القبول:' if current_locale == 'ar' else 'Acceptance Criteria:' }}</strong><br>
+                                σ ≥ 42.50 KgF/mm² | E ≥ 10%
                             </small>
                         </div>
 
-                        <div class="row g-3">
+                        <!-- Input Measurements: D1, D2, D3 -->
+                        <div class="row g-2">
                             <div class="col-6">
-                                <label class="form-label">{{ 'السُمك' if current_locale == 'ar' else 'Thickness' }}</label>
-                                <input type="number" name="sample_thickness" class="form-control test-input" step="0.001"
+                                <label class="form-label small">{{ 'السُمك' if current_locale == 'ar' else 'Thickness (mm)' }}</label>
+                                <input type="number" name="sample_thickness" class="form-control form-control-sm" step="0.01"
                                        value="{{ test.sample_thickness if test else '' }}">
                             </div>
                             <div class="col-6">
-                                <label class="form-label">D1</label>
-                                <input type="number" name="d1" class="form-control test-input" step="0.001"
+                                <label class="form-label small">D1 (mm)</label>
+                                <input type="number" name="d1" id="d1Input" class="form-control form-control-sm calc-input" step="0.01"
                                        value="{{ test.d1 if test else '' }}">
                             </div>
                             <div class="col-6">
-                                <label class="form-label">D2</label>
-                                <input type="number" name="d2" class="form-control test-input" step="0.001"
+                                <label class="form-label small">D2 (mm)</label>
+                                <input type="number" name="d2" id="d2Input" class="form-control form-control-sm calc-input" step="0.01"
                                        value="{{ test.d2 if test else '' }}">
                             </div>
                             <div class="col-6">
-                                <label class="form-label">D3</label>
-                                <input type="number" name="d3" class="form-control test-input" step="0.001"
+                                <label class="form-label small">D3 (mm)</label>
+                                <input type="number" name="d3" id="d3Input" class="form-control form-control-sm calc-input" step="0.01"
                                        value="{{ test.d3 if test else '' }}">
                             </div>
                         </div>
-                        <hr>
-                        <div class="row g-3">
+
+                        <!-- Calculated Fields: AV.D, Lo, Area -->
+                        <div class="mt-2 p-2 bg-light rounded">
+                            <small class="text-muted fw-bold">{{ 'القيم المحسوبة:' if current_locale == 'ar' else 'Calculated Values:' }}</small>
+                            <div class="row g-2 mt-1">
+                                <div class="col-4">
+                                    <label class="form-label small mb-0">AV.D (mm)</label>
+                                    <input type="number" name="avg_dimension" id="avgDimension" class="form-control form-control-sm bg-warning-subtle"
+                                           step="0.01" readonly value="{{ test.avg_dimension if test else '' }}">
+                                    <small class="text-muted" style="font-size: 0.65rem;">(D1+D2+D3)/3</small>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small mb-0">Lo (mm)</label>
+                                    <input type="number" name="original_length" id="originalLength" class="form-control form-control-sm bg-warning-subtle"
+                                           step="0.01" readonly value="{{ test.original_length if test else '' }}">
+                                    <small class="text-muted" style="font-size: 0.65rem;">AV.D × 5</small>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small mb-0">A (mm²)</label>
+                                    <input type="number" name="area_d_squared" id="areaField" class="form-control form-control-sm bg-warning-subtle"
+                                           step="0.01" readonly value="{{ test.area_d_squared if test else '' }}">
+                                    <small class="text-muted" style="font-size: 0.65rem;">π/4 × D²</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-2">
+
+                        <!-- Force and Final Length inputs -->
+                        <div class="row g-2">
                             <div class="col-6">
-                                <label class="form-label">{{ 'القوة (kgf)' if current_locale == 'ar' else 'Force (kgf)' }}</label>
-                                <input type="number" name="force_kgf" class="form-control test-input" step="0.1"
+                                <label class="form-label small">F (Kgf)</label>
+                                <input type="number" name="force_kgf" id="forceInput" class="form-control form-control-sm calc-input" step="0.1"
                                        value="{{ test.force_kgf if test else '' }}">
                             </div>
                             <div class="col-6">
-                                <label class="form-label d-flex justify-content-between">
-                                    <span>{{ 'قوة الشد' if current_locale == 'ar' else 'Tensile (MPa)' }}</span>
-                                    <span class="result-badge badge" id="tensileBadge" style="display: none;"></span>
-                                </label>
-                                <input type="number" name="tensile_strength" class="form-control test-input" step="0.1"
-                                       id="tensileField" data-min="420"
-                                       value="{{ test.tensile_strength if test else '' }}">
+                                <label class="form-label small">Lf (mm)</label>
+                                <input type="number" name="final_length" id="finalLength" class="form-control form-control-sm calc-input" step="0.01"
+                                       value="{{ test.final_length if test else '' }}">
                             </div>
-                            <div class="col-12">
-                                <label class="form-label d-flex justify-content-between">
-                                    <span>{{ 'الاستطالة (%)' if current_locale == 'ar' else 'Elongation (%)' }}</span>
-                                    <span class="result-badge badge" id="elongationBadge" style="display: none;"></span>
-                                </label>
-                                <input type="number" name="elongation" class="form-control test-input" step="0.1"
-                                       id="elongationField" data-min="10"
-                                       value="{{ test.elongation if test else '' }}">
+                        </div>
+
+                        <!-- Calculated Results: Tensile Strength & Elongation -->
+                        <div class="mt-2 p-2 bg-success-subtle rounded">
+                            <small class="text-success fw-bold">{{ 'نتائج الاختبار:' if current_locale == 'ar' else 'Test Results:' }}</small>
+                            <div class="row g-2 mt-1">
+                                <div class="col-6">
+                                    <label class="form-label small mb-0 d-flex justify-content-between">
+                                        <span>σ (KgF/mm²)</span>
+                                        <span class="result-badge badge" id="tensileBadge" style="display: none;"></span>
+                                    </label>
+                                    <input type="number" name="tensile_strength" id="tensileField"
+                                           class="form-control form-control-sm test-input bg-success-subtle fw-bold" step="0.01"
+                                           data-min="42.5" readonly value="{{ test.tensile_strength if test else '' }}">
+                                    <small class="text-muted" style="font-size: 0.65rem;">F/A (≥42.50)</small>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small mb-0 d-flex justify-content-between">
+                                        <span>E (%)</span>
+                                        <span class="result-badge badge" id="elongationBadge" style="display: none;"></span>
+                                    </label>
+                                    <input type="number" name="elongation" id="elongationField"
+                                           class="form-control form-control-sm test-input bg-success-subtle fw-bold" step="0.01"
+                                           data-min="10" readonly value="{{ test.elongation if test else '' }}">
+                                    <small class="text-muted" style="font-size: 0.65rem;">(Lf-Lo)/Lo×100 (≥10)</small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -243,46 +286,69 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <!-- Specifications Alert -->
-                        <div class="alert alert-info py-2 mb-3">
+                        <!-- Specifications Alert - from JSON acceptance_criteria -->
+                        <div class="alert alert-warning py-2 mb-3">
                             <small>
-                                <strong>{{ 'المواصفات:' if current_locale == 'ar' else 'Specs:' }}</strong>
-                                Nodularity ≥80% | Carbides &lt;2%
+                                <strong>{{ 'معايير القبول:' if current_locale == 'ar' else 'Acceptance Criteria:' }}</strong><br>
+                                %Nd ≥ 85 | %F ≥ 70 | NC ≥ 400 | Carbides < 1% | Hardness < 230 HB
                             </small>
                         </div>
 
-                        <div class="row g-3">
+                        <div class="row g-2">
+                            <!-- %Nd - Nodularity >= 85% -->
                             <div class="col-6">
-                                <label class="form-label d-flex justify-content-between">
-                                    <span>{{ 'النودولارية (%)' if current_locale == 'ar' else 'Nodularity (%)' }}</span>
+                                <label class="form-label small d-flex justify-content-between">
+                                    <span>%Nd</span>
                                     <span class="result-badge badge" id="nodularityBadge" style="display: none;"></span>
                                 </label>
-                                <input type="number" name="nodularity_percent" class="form-control test-input" step="0.1"
-                                       id="nodularityField" data-min="80"
+                                <input type="number" name="nodularity_percent" class="form-control form-control-sm test-input" step="0.1"
+                                       id="nodularityField" data-min="85"
                                        value="{{ test.nodularity_percent if test else '' }}">
+                                <small class="text-muted" style="font-size: 0.65rem;">≥ 85%</small>
                             </div>
+                            <!-- %F - Ferrite >= 70% -->
                             <div class="col-6">
-                                <label class="form-label">{{ 'عدد العقد' if current_locale == 'ar' else 'Nodule Count' }}</label>
-                                <input type="number" name="nodule_count" class="form-control test-input"
-                                       value="{{ test.nodule_count if test else '' }}">
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label d-flex justify-content-between">
-                                    <span>{{ 'الصلادة (HB)' if current_locale == 'ar' else 'Hardness (HB)' }}</span>
-                                    <span class="result-badge badge" id="hardnessBadge" style="display: none;"></span>
+                                <label class="form-label small d-flex justify-content-between">
+                                    <span>%F</span>
+                                    <span class="result-badge badge" id="ferriteBadge" style="display: none;"></span>
                                 </label>
-                                <input type="number" name="hardness" class="form-control test-input" step="0.1"
-                                       id="hardnessField" data-min="130" data-max="230"
-                                       value="{{ test.hardness if test else '' }}">
+                                <input type="number" name="ferrite" class="form-control form-control-sm test-input" step="0.1"
+                                       id="ferriteField" data-min="70"
+                                       value="{{ test.ferrite if test else '' }}">
+                                <small class="text-muted" style="font-size: 0.65rem;">≥ 70%</small>
                             </div>
+                            <!-- NC - Nodule Count >= 400 -->
                             <div class="col-6">
-                                <label class="form-label d-flex justify-content-between">
-                                    <span>{{ 'الكربيدات (%)' if current_locale == 'ar' else 'Carbides (%)' }}</span>
+                                <label class="form-label small d-flex justify-content-between">
+                                    <span>NC</span>
+                                    <span class="result-badge badge" id="noduleCountBadge" style="display: none;"></span>
+                                </label>
+                                <input type="number" name="nodule_count" class="form-control form-control-sm test-input"
+                                       id="noduleCountField" data-min="400"
+                                       value="{{ test.nodule_count if test else '' }}">
+                                <small class="text-muted" style="font-size: 0.65rem;">≥ 400</small>
+                            </div>
+                            <!-- Carbides < 1% -->
+                            <div class="col-6">
+                                <label class="form-label small d-flex justify-content-between">
+                                    <span>{{ 'الكربيدات' if current_locale == 'ar' else 'Carbides' }}</span>
                                     <span class="result-badge badge" id="carbidesBadge" style="display: none;"></span>
                                 </label>
-                                <input type="number" name="carbides" class="form-control test-input" step="0.01"
-                                       id="carbidesField" data-max="2"
+                                <input type="number" name="carbides" class="form-control form-control-sm test-input" step="0.01"
+                                       id="carbidesField" data-max="0.99"
                                        value="{{ test.carbides if test else '' }}">
+                                <small class="text-muted" style="font-size: 0.65rem;">< 1%</small>
+                            </div>
+                            <!-- Hardness < 230 HB -->
+                            <div class="col-12">
+                                <label class="form-label small d-flex justify-content-between">
+                                    <span>{{ 'الصلادة' if current_locale == 'ar' else 'Hardness (HB)' }}</span>
+                                    <span class="result-badge badge" id="hardnessBadge" style="display: none;"></span>
+                                </label>
+                                <input type="number" name="hardness" class="form-control form-control-sm test-input" step="0.1"
+                                       id="hardnessField" data-max="229"
+                                       value="{{ test.hardness if test else '' }}">
+                                <small class="text-muted" style="font-size: 0.65rem;">< 230 HB</small>
                             </div>
                         </div>
                     </div>
@@ -308,6 +374,102 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ========================================================================
+    // AUTO-CALCULATIONS (from JSON equations)
+    // ========================================================================
+
+    // Input elements for calculations
+    const d1Input = document.getElementById('d1Input');
+    const d2Input = document.getElementById('d2Input');
+    const d3Input = document.getElementById('d3Input');
+    const forceInput = document.getElementById('forceInput');
+    const finalLengthInput = document.getElementById('finalLength');
+
+    // Calculated output elements
+    const avgDimensionField = document.getElementById('avgDimension');
+    const originalLengthField = document.getElementById('originalLength');
+    const areaField = document.getElementById('areaField');
+    const tensileField = document.getElementById('tensileField');
+    const elongationField = document.getElementById('elongationField');
+
+    /**
+     * Calculate all derived values based on JSON equations:
+     * 1. AV.D = (D1 + D2 + D3) / 3
+     * 2. Lo = AV.D × 5
+     * 3. A = AV.D × AV.D × 0.7854  (π/4 × D²)
+     * 4. σ = F / A  (Tensile Strength)
+     * 5. E = ((Lf - Lo) / Lo) × 100  (Elongation %)
+     */
+    function calculateAll() {
+        const d1 = parseFloat(d1Input.value) || 0;
+        const d2 = parseFloat(d2Input.value) || 0;
+        const d3 = parseFloat(d3Input.value) || 0;
+        const force = parseFloat(forceInput.value) || 0;
+        const lf = parseFloat(finalLengthInput.value) || 0;
+
+        // 1. AV.D = (D1 + D2 + D3) / 3
+        let avgD = 0;
+        if (d1 > 0 && d2 > 0 && d3 > 0) {
+            avgD = (d1 + d2 + d3) / 3;
+            avgDimensionField.value = avgD.toFixed(2);
+        } else {
+            avgDimensionField.value = '';
+        }
+
+        // 2. Lo = AV.D × 5 (Gauge Length)
+        let lo = 0;
+        if (avgD > 0) {
+            lo = avgD * 5;
+            originalLengthField.value = lo.toFixed(2);
+        } else {
+            originalLengthField.value = '';
+        }
+
+        // 3. A = AV.D × AV.D × 0.7854 (Cross Section Area = π/4 × D²)
+        let area = 0;
+        if (avgD > 0) {
+            area = avgD * avgD * 0.7854;
+            areaField.value = area.toFixed(2);
+        } else {
+            areaField.value = '';
+        }
+
+        // 4. σ = F / A (Tensile Strength)
+        if (force > 0 && area > 0) {
+            const tensileStrength = force / area;
+            tensileField.value = tensileStrength.toFixed(2);
+            validateInput(tensileField);
+        } else {
+            tensileField.value = '';
+        }
+
+        // 5. E = ((Lf - Lo) / Lo) × 100 (Elongation %)
+        if (lf > 0 && lo > 0) {
+            const elongation = ((lf - lo) / lo) * 100;
+            elongationField.value = elongation.toFixed(2);
+            validateInput(elongationField);
+        } else {
+            elongationField.value = '';
+        }
+
+        // Update AI status after calculation
+        updateAiStatus();
+    }
+
+    // Add event listeners to all calculation inputs
+    const calcInputs = document.querySelectorAll('.calc-input');
+    calcInputs.forEach(input => {
+        input.addEventListener('input', calculateAll);
+        input.addEventListener('change', calculateAll);
+    });
+
+    // Run initial calculation on page load
+    calculateAll();
+
+    // ========================================================================
+    // VALIDATION & UI
+    // ========================================================================
+
     // Elements
     const testInputs = document.querySelectorAll('.test-input');
     const decisionSelect = document.getElementById('decisionSelect');
@@ -610,46 +772,55 @@ document.addEventListener('DOMContentLoaded', function() {
                 autoDecisionResult.style.display = 'block';
                 autoDecisionText.textContent = data.recommended_decision;
 
-                // Set color based on decision
+                // Set color - ACCEPT = green, REJECT = red
                 autoDecisionAlert.className = 'alert alert-sm py-2 mb-0';
-                autoDecisionText.className = 'badge';
+                autoDecisionText.className = 'badge fs-6';
 
-                if (data.recommended_decision === 'فحص أخيرة فقط') {
+                if (data.recommended_decision === 'ACCEPT') {
                     autoDecisionAlert.classList.add('alert-success');
                     autoDecisionText.classList.add('bg-success');
-                } else if (data.recommended_decision === 'فحص أولى وأخيرة') {
-                    autoDecisionAlert.classList.add('alert-info');
-                    autoDecisionText.classList.add('bg-info');
-                } else if (data.recommended_decision === 'فحص الشحنة 100%') {
-                    autoDecisionAlert.classList.add('alert-warning');
-                    autoDecisionText.classList.add('bg-warning', 'text-dark');
-                } else if (data.recommended_decision === 'تالف') {
+                } else {
                     autoDecisionAlert.classList.add('alert-danger');
                     autoDecisionText.classList.add('bg-danger');
                 }
 
-                // Show which properties caused the decision
-                if (data.worst_properties && data.worst_properties.length > 0) {
-                    const propertyNames = data.worst_properties.map(prop => {
-                        const propData = data.property_decisions[prop];
-                        return `${propData.name_ar || propData.name}: ${propData.value} ${propData.unit}`;
-                    }).join(', ');
-                    autoDecisionDetails.textContent = '{{ "بناءً على:" if current_locale == "ar" else "Based on:" }} ' + propertyNames;
-                } else {
-                    autoDecisionDetails.textContent = '';
+                // Build simple details
+                let detailsHTML = `<strong>${data.summary}</strong>`;
+
+                // Show failed properties if any
+                if (data.failed_properties && data.failed_properties.length > 0) {
+                    detailsHTML += '<br><small class="text-danger mt-1"><strong>{{ "فشل:" if current_locale == "ar" else "Failed:" }}</strong> ';
+                    const failedDetails = data.failed_properties.map(prop => {
+                        const result = data.property_results[prop];
+                        return `${result.property_name}: ${result.value} ${result.unit} (${result.condition})`;
+                    });
+                    detailsHTML += failedDetails.join(', ');
+                    detailsHTML += '</small>';
                 }
 
-                // Optionally set the decision field
-                if (confirm('{{ "هل تريد تطبيق هذا القرار؟" if current_locale == "ar" else "Apply this decision?" }}')) {
-                    // Map decision to ACCEPT/REJECT
-                    if (data.recommended_decision === 'فحص أخيرة فقط') {
-                        decisionSelect.value = 'ACCEPT';
-                    } else {
-                        decisionSelect.value = 'REJECT';
-                    }
+                // Show passed properties
+                if (data.passed_properties && data.passed_properties.length > 0) {
+                    detailsHTML += '<br><small class="text-success mt-1"><strong>{{ "نجح:" if current_locale == "ar" else "Passed:" }}</strong> ';
+                    detailsHTML += `${data.passed_properties.length} {{ "خصائص" if current_locale == "ar" else "properties" }}`;
+                    detailsHTML += '</small>';
+                }
 
-                    // Set reason
-                    reasonField.value = `Auto-decision: ${data.recommended_decision}. ${propertyNames || ''}`;
+                autoDecisionDetails.innerHTML = detailsHTML;
+
+                // Apply decision
+                if (confirm('{{ "هل تريد تطبيق هذا القرار؟" if current_locale == "ar" else "Apply this decision?" }}')) {
+                    decisionSelect.value = data.recommended_decision;
+
+                    // Simple reason text
+                    let reasonText = `${data.summary}`;
+                    if (data.failed_properties && data.failed_properties.length > 0) {
+                        reasonText += '\nFailed: ';
+                        reasonText += data.failed_properties.map(prop => {
+                            const result = data.property_results[prop];
+                            return `${result.property_name}: ${result.value} ${result.unit}`;
+                        }).join(', ');
+                    }
+                    reasonField.value = reasonText;
                 }
             } else {
                 autoDecisionResult.style.display = 'none';

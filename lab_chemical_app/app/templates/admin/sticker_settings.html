@@ -1,0 +1,434 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'إعدادات الملصقات' if current_locale == 'ar' else 'Sticker Settings' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-tag"></i>
+                {{ 'إعدادات الملصقات' if current_locale == 'ar' else 'Sticker Design Settings' }}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.settings') }}">Settings</a></li>
+                    <li class="breadcrumb-item active">Sticker Settings</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="{{ url_for('stickers.index') }}" class="btn btn-outline-primary">
+            <i class="bi bi-eye"></i>
+            {{ 'معاينة الملصقات' if current_locale == 'ar' else 'Preview Stickers' }}
+        </a>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="stickerSettingsForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row">
+            <!-- Left Column - Images -->
+            <div class="col-lg-6">
+                <!-- Company Logo -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-image"></i>
+                            {{ 'شعار الشركة' if current_locale == 'ar' else 'Company Logo' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ 'الشعار الحالي' if current_locale == 'ar' else 'Current Logo' }}</label>
+                                    <div class="border rounded p-3 bg-light text-center" style="min-height: 120px;">
+                                        {% if logo_exists %}
+                                        <img src="{{ url_for('static', filename='images/gcp_logo.jpg') }}?t={{ now }}"
+                                             alt="Company Logo" class="img-fluid" style="max-height: 100px;">
+                                        {% else %}
+                                        <div class="text-muted">
+                                            <i class="bi bi-image display-4"></i>
+                                            <p class="mb-0 mt-2">{{ 'لا يوجد شعار' if current_locale == 'ar' else 'No logo uploaded' }}</p>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ 'تحميل شعار جديد' if current_locale == 'ar' else 'Upload New Logo' }}</label>
+                                    <input type="file" name="logo" class="form-control" accept="image/*" id="logoInput">
+                                    <small class="text-muted">{{ 'JPG, PNG - الحد الأقصى 2MB' if current_locale == 'ar' else 'JPG, PNG - Max 2MB' }}</small>
+                                </div>
+                                <div id="logoPreview" class="mt-2" style="display: none;">
+                                    <label class="form-label small">{{ 'معاينة' if current_locale == 'ar' else 'Preview' }}</label>
+                                    <img id="logoPreviewImg" class="img-fluid border rounded" style="max-height: 80px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recycler Symbol -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-recycle"></i>
+                            {{ 'رمز إعادة التدوير' if current_locale == 'ar' else 'Recycler Symbol' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ 'الرمز الحالي' if current_locale == 'ar' else 'Current Symbol' }}</label>
+                                    <div class="border rounded p-3 bg-light text-center" style="min-height: 120px;">
+                                        {% if recycle_exists %}
+                                        <img src="{{ url_for('static', filename='images/recycle.jpg') }}?t={{ now }}"
+                                             alt="Recycle Symbol" class="img-fluid" style="max-height: 100px;">
+                                        {% else %}
+                                        <div class="text-muted">
+                                            <i class="bi bi-recycle display-4"></i>
+                                            <p class="mb-0 mt-2">{{ 'لا يوجد رمز' if current_locale == 'ar' else 'No symbol uploaded' }}</p>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ 'تحميل رمز جديد' if current_locale == 'ar' else 'Upload New Symbol' }}</label>
+                                    <input type="file" name="recycle" class="form-control" accept="image/*" id="recycleInput">
+                                    <small class="text-muted">{{ 'JPG, PNG - الحد الأقصى 2MB' if current_locale == 'ar' else 'JPG, PNG - Max 2MB' }}</small>
+                                </div>
+                                <div id="recyclePreview" class="mt-2" style="display: none;">
+                                    <label class="form-label small">{{ 'معاينة' if current_locale == 'ar' else 'Preview' }}</label>
+                                    <img id="recyclePreviewImg" class="img-fluid border rounded" style="max-height: 80px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Design Settings -->
+            <div class="col-lg-6">
+                <!-- Company Info -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-building"></i>
+                            {{ 'معلومات الشركة' if current_locale == 'ar' else 'Company Information' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'اسم الشركة' if current_locale == 'ar' else 'Company Name' }}</label>
+                            <input type="text" name="company_name" class="form-control"
+                                   value="{{ sticker_settings.company_name or 'GCP Ductile Iron Pipes' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الموقع الإلكتروني' if current_locale == 'ar' else 'Website URL' }}</label>
+                            <input type="text" name="website_url" class="form-control"
+                                   value="{{ sticker_settings.website_url or 'www.gcpipes.com' }}"
+                                   placeholder="www.example.com">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ 'لون الرابط' if current_locale == 'ar' else 'Website Link Color' }}</label>
+                                    <input type="color" name="website_color" class="form-control form-control-color w-100"
+                                           value="{{ sticker_settings.website_color or '#0066CC' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ 'لون النص' if current_locale == 'ar' else 'Text Color' }}</label>
+                                    <input type="color" name="text_color" class="form-control form-control-color w-100"
+                                           value="{{ sticker_settings.text_color or '#333333' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sticker Sizes -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0">
+                            <i class="bi bi-rulers"></i>
+                            {{ 'أحجام الملصقات' if current_locale == 'ar' else 'Sticker Sizes (mm)' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>{{ 'الحجم' if current_locale == 'ar' else 'Size' }}</th>
+                                        <th>{{ 'العرض' if current_locale == 'ar' else 'Width' }}</th>
+                                        <th>{{ 'الارتفاع' if current_locale == 'ar' else 'Height' }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Small</td>
+                                        <td><input type="number" name="size_small_w" class="form-control form-control-sm" value="{{ sticker_settings.sizes.small[0] if sticker_settings.sizes else 80 }}" min="30" max="200"></td>
+                                        <td><input type="number" name="size_small_h" class="form-control form-control-sm" value="{{ sticker_settings.sizes.small[1] if sticker_settings.sizes else 50 }}" min="20" max="150"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Medium</td>
+                                        <td><input type="number" name="size_medium_w" class="form-control form-control-sm" value="{{ sticker_settings.sizes.medium[0] if sticker_settings.sizes else 100 }}" min="30" max="200"></td>
+                                        <td><input type="number" name="size_medium_h" class="form-control form-control-sm" value="{{ sticker_settings.sizes.medium[1] if sticker_settings.sizes else 60 }}" min="20" max="150"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Large</td>
+                                        <td><input type="number" name="size_large_w" class="form-control form-control-sm" value="{{ sticker_settings.sizes.large[0] if sticker_settings.sizes else 120 }}" min="30" max="200"></td>
+                                        <td><input type="number" name="size_large_h" class="form-control form-control-sm" value="{{ sticker_settings.sizes.large[1] if sticker_settings.sizes else 80 }}" min="20" max="150"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>GCP Pro</td>
+                                        <td><input type="number" name="size_gcp_w" class="form-control form-control-sm" value="{{ sticker_settings.sizes.gcp[0] if sticker_settings.sizes else 140 }}" min="30" max="200"></td>
+                                        <td><input type="number" name="size_gcp_h" class="form-control form-control-sm" value="{{ sticker_settings.sizes.gcp[1] if sticker_settings.sizes else 90 }}" min="20" max="150"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layout Options -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-layout-text-window"></i>
+                            {{ 'خيارات التخطيط' if current_locale == 'ar' else 'Layout Options' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" name="show_logo" id="showLogo"
+                                   {{ 'checked' if sticker_settings.show_logo != false }}>
+                            <label class="form-check-label" for="showLogo">
+                                {{ 'عرض الشعار' if current_locale == 'ar' else 'Show Company Logo' }}
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" name="show_recycle" id="showRecycle"
+                                   {{ 'checked' if sticker_settings.show_recycle != false }}>
+                            <label class="form-check-label" for="showRecycle">
+                                {{ 'عرض رمز إعادة التدوير' if current_locale == 'ar' else 'Show Recycler Symbol' }}
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" name="show_qr" id="showQR"
+                                   {{ 'checked' if sticker_settings.show_qr != false }}>
+                            <label class="form-check-label" for="showQR">
+                                {{ 'عرض رمز QR' if current_locale == 'ar' else 'Show QR Code' }}
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" name="show_website" id="showWebsite"
+                                   {{ 'checked' if sticker_settings.show_website != false }}>
+                            <label class="form-check-label" for="showWebsite">
+                                {{ 'عرض الموقع الإلكتروني' if current_locale == 'ar' else 'Show Website' }}
+                            </label>
+                        </div>
+                        <hr>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'جودة الطباعة (DPI)' if current_locale == 'ar' else 'Print Quality (DPI)' }}</label>
+                            <select name="dpi" class="form-select">
+                                <option value="150" {{ 'selected' if sticker_settings.dpi == 150 }}>150 DPI (Draft)</option>
+                                <option value="300" {{ 'selected' if sticker_settings.dpi == 300 or not sticker_settings.dpi }}>300 DPI (Standard)</option>
+                                <option value="600" {{ 'selected' if sticker_settings.dpi == 600 }}>600 DPI (High Quality)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sticker Preview -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-eye"></i>
+                    {{ 'معاينة الملصق' if current_locale == 'ar' else 'Sticker Preview' }}
+                </h5>
+                <button type="button" class="btn btn-sm btn-outline-light" id="refreshPreviewBtn">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    {{ 'تحديث' if current_locale == 'ar' else 'Refresh' }}
+                </button>
+            </div>
+            <div class="card-body text-center bg-light">
+                <div class="border rounded p-4 bg-white d-inline-block" style="min-width: 400px;">
+                    <div id="stickerPreview" class="border border-dark" style="width: 350px; height: 225px; margin: auto; position: relative; background: white;">
+                        <!-- Header -->
+                        <div style="height: 28%; border-bottom: 2px solid black; display: flex; align-items: center; justify-content: space-between; padding: 5px 10px;">
+                            <div id="previewLogo" style="width: 28%;">
+                                {% if logo_exists %}
+                                <img src="{{ url_for('static', filename='images/gcp_logo.jpg') }}?t={{ now }}" style="max-height: 50px; max-width: 100%;">
+                                {% else %}
+                                <span style="font-weight: bold;">GCP</span>
+                                {% endif %}
+                            </div>
+                            <div style="width: 22%; text-align: center;">
+                                <div style="width: 50px; height: 50px; background: #eee; margin: auto; border: 1px solid #ccc;">
+                                    <small>QR</small>
+                                </div>
+                            </div>
+                            <div id="previewRecycle" style="width: 15%; text-align: right;">
+                                {% if recycle_exists %}
+                                <img src="{{ url_for('static', filename='images/recycle.jpg') }}?t={{ now }}" style="max-height: 50px; max-width: 100%;">
+                                {% else %}
+                                <span style="font-size: 24px; color: green;">♻</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <!-- Product Code -->
+                        <div style="text-align: center; font-weight: bold; padding: 5px; font-size: 14px;">
+                            P500K9Z11SCB
+                        </div>
+                        <!-- Description -->
+                        <div style="text-align: center; font-size: 11px; color: #333; padding: 0 10px;">
+                            Core Pipe DN500 Class K9 Length 6 Meters Zinc Coating 130 gm/m2
+                        </div>
+                        <!-- Info -->
+                        <div style="display: flex; font-size: 10px; padding: 5px 10px; color: #333;">
+                            <div style="width: 50%;">
+                                Pipe No: N8739<br>
+                                Pipe Code: N8739-1-4713<br>
+                                Production: ORD-2025-001
+                            </div>
+                            <div style="width: 50%;">
+                                Customer: Sample Co<br>
+                                Sales Order: SO-123<br>
+                                DN: 500 | Class: K9
+                            </div>
+                        </div>
+                        <!-- Footer -->
+                        <div style="position: absolute; bottom: 5px; width: 100%; text-align: center; border-top: 1px solid #ccc; padding-top: 3px;">
+                            <span id="previewWebsite" style="color: #0066CC; font-size: 12px;">www.gcpipes.com</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 justify-content-end mb-4">
+            <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle"></i>
+                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+            </a>
+            <button type="button" class="btn btn-outline-warning" id="resetDefaultsBtn">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                {{ 'استعادة الافتراضي' if current_locale == 'ar' else 'Reset Defaults' }}
+            </button>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i>
+                {{ 'حفظ الإعدادات' if current_locale == 'ar' else 'Save Settings' }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Logo preview
+    document.getElementById('logoInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('logoPreviewImg').src = e.target.result;
+                document.getElementById('logoPreview').style.display = 'block';
+                // Update sticker preview
+                document.querySelector('#previewLogo').innerHTML = `<img src="${e.target.result}" style="max-height: 50px; max-width: 100%;">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Recycle preview
+    document.getElementById('recycleInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('recyclePreviewImg').src = e.target.result;
+                document.getElementById('recyclePreview').style.display = 'block';
+                // Update sticker preview
+                document.querySelector('#previewRecycle').innerHTML = `<img src="${e.target.result}" style="max-height: 50px; max-width: 100%;">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Update preview website
+    document.querySelector('input[name="website_url"]').addEventListener('input', function() {
+        document.getElementById('previewWebsite').textContent = this.value || 'www.gcpipes.com';
+    });
+
+    // Update preview website color
+    document.querySelector('input[name="website_color"]').addEventListener('input', function() {
+        document.getElementById('previewWebsite').style.color = this.value;
+    });
+
+    // Reset defaults
+    document.getElementById('resetDefaultsBtn').addEventListener('click', function() {
+        if (confirm('{{ "هل أنت متأكد من استعادة الإعدادات الافتراضية؟" if current_locale == "ar" else "Are you sure you want to reset to default settings?" }}')) {
+            // Reset form values
+            document.querySelector('input[name="company_name"]').value = 'GCP Ductile Iron Pipes';
+            document.querySelector('input[name="website_url"]').value = 'www.gcpipes.com';
+            document.querySelector('input[name="website_color"]').value = '#0066CC';
+            document.querySelector('input[name="text_color"]').value = '#333333';
+
+            // Reset sizes
+            document.querySelector('input[name="size_small_w"]').value = 80;
+            document.querySelector('input[name="size_small_h"]').value = 50;
+            document.querySelector('input[name="size_medium_w"]').value = 100;
+            document.querySelector('input[name="size_medium_h"]').value = 60;
+            document.querySelector('input[name="size_large_w"]').value = 120;
+            document.querySelector('input[name="size_large_h"]').value = 80;
+            document.querySelector('input[name="size_gcp_w"]').value = 140;
+            document.querySelector('input[name="size_gcp_h"]').value = 90;
+
+            // Reset checkboxes
+            document.getElementById('showLogo').checked = true;
+            document.getElementById('showRecycle').checked = true;
+            document.getElementById('showQR').checked = true;
+            document.getElementById('showWebsite').checked = true;
+
+            // Reset DPI
+            document.querySelector('select[name="dpi"]').value = 300;
+
+            // Update preview
+            document.getElementById('previewWebsite').textContent = 'www.gcpipes.com';
+            document.getElementById('previewWebsite').style.color = '#0066CC';
+        }
+    });
+
+    // Refresh preview button
+    document.getElementById('refreshPreviewBtn').addEventListener('click', function() {
+        // Reload images with cache bust
+        const timestamp = new Date().getTime();
+        const logoImg = document.querySelector('#previewLogo img');
+        const recycleImg = document.querySelector('#previewRecycle img');
+
+        if (logoImg) {
+            const src = logoImg.src.split('?')[0];
+            logoImg.src = src + '?t=' + timestamp;
+        }
+        if (recycleImg) {
+            const src = recycleImg.src.split('?')[0];
+            recycleImg.src = src + '?t=' + timestamp;
+        }
+    });
+});
+</script>
+{% endblock %}

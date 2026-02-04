@@ -13,19 +13,50 @@ import json
 import requests
 
 
+# Path to app settings JSON
+APP_SETTINGS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'app_settings.json')
+
+
+def load_app_settings():
+    """Load app settings from JSON file"""
+    try:
+        with open(APP_SETTINGS_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {'ai': {'gemini_api_key': '', 'gemini_model': 'gemini-2.5-flash', 'enabled': True}}
+
+
+def get_gemini_model():
+    """Get Gemini model from settings"""
+    settings = load_app_settings()
+    return settings.get('ai', {}).get('gemini_model', 'gemini-2.5-flash')
+
+
 # Gemini API Configuration
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = get_gemini_model()
 GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 GEMINI_STREAM_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:streamGenerateContent"
 
 
 def get_api_key():
-    """Get Gemini API key from environment"""
-    api_key = os.environ.get('GEMINI_API_KEY')
+    """Get Gemini API key from settings file, fallback to environment variable"""
+    # First try to get from settings file
+    settings = load_app_settings()
+    api_key = settings.get('ai', {}).get('gemini_api_key', '')
+
+    # If not in settings, try environment variable
     if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable not set")
+        api_key = os.environ.get('GEMINI_API_KEY', '')
+
+    if not api_key:
+        raise ValueError("Gemini API key not configured. Please set it in Admin Settings or GEMINI_API_KEY environment variable.")
     return api_key
+
+
+def is_ai_enabled():
+    """Check if AI features are enabled"""
+    settings = load_app_settings()
+    return settings.get('ai', {}).get('enabled', True)
 
 
 # =============================================================================
@@ -619,3 +650,197 @@ def parse_gemini_response(response):
             'notes': notes,
             'error': None if reason else f'Failed to parse response: {str(e)}'
         }
+
+
+# =============================================================================
+# CHATBOT AI ASSISTANT
+# =============================================================================
+
+CHATBOT_SYSTEM_PROMPT = """أنت مساعد ذكي متخصص في نظام تحليل المعمل الكيميائي لمصنع أنابيب الحديد الدكتايل.
+
+معلومات عن النظام:
+- نظام إدارة التحليل الكيميائي والاختبارات الميكانيكية
+- تتبع أوامر الإنتاج ومراحل التصنيع
+- إنتاج تقارير الجودة والعيوب
+
+العناصر الكيميائية المتابعة: C (كربون), Si (سيليكون), Mn (منجنيز), P (فسفور), S (كبريت), Mg (مغنيسيوم), Cu (نحاس), Cr (كروم), Ni (نيكل), Sn (قصدير), CE (مكافئ الكربون)
+
+الاختبارات الميكانيكية: قوة الشد, الاستطالة, الصلادة, النودولارية, الفيرايت, عدد النودول, الكربيدات
+
+مراحل الإنتاج: الزنك, القطع, الاختبار الهيدروليكي, الأسمنت, الطلاء
+
+القرارات المتاحة للتحليل الكيميائي:
+- فحص أخيرة فقط: القيم ممتازة
+- فحص أولى وأخيرة: القيم مقبولة
+- فحص الشحنة 100%: القيم تحتاج مراجعة
+- تالف: القيم خارج النطاق
+
+أجب بشكل مختصر ومفيد. إذا سئلت بالعربية أجب بالعربية، وإذا سئلت بالإنجليزية أجب بالإنجليزية."""
+
+
+def generate_chatbot_response(message, history=None, username=None):
+    """
+    Generate chatbot response using Gemini.
+
+    Args:
+        message: User's message
+        history: List of previous messages [{role: 'user'/'assistant', content: '...'}]
+        username: Current user's name
+
+    Returns:
+        dict with 'response', 'error'
+    """
+    try:
+        api_key = get_api_key()
+    except ValueError as e:
+        return {'error': str(e), 'response': ''}
+
+    # Build conversation history
+    contents = []
+
+    # Add system context as first user message
+    system_context = CHATBOT_SYSTEM_PROMPT
+    if username:
+        system_context += f"\n\nالمستخدم الحالي: {username}"
+
+    contents.append({
+        "role": "user",
+        "parts": [{"text": f"[System Context]\n{system_context}\n\n[User Message]\nمرحباً"}]
+    })
+    contents.append({
+        "role": "model",
+        "parts": [{"text": "مرحباً! أنا مساعدك الذكي لنظام تحليل المعمل. كيف يمكنني مساعدتك اليوم؟"}]
+    })
+
+    # Add conversation history
+    if history:
+        for msg in history[-10:]:  # Keep last 10 messages for context
+            role = "user" if msg.get('role') == 'user' else "model"
+            contents.append({
+                "role": role,
+                "parts": [{"text": msg.get('content', '')}]
+            })
+
+    # Add current message
+    contents.append({
+        "role": "user",
+        "parts": [{"text": message}]
+    })
+
+    try:
+        model = get_gemini_model()
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+
+        response = requests.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            json={
+                "contents": contents,
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 2048
+                }
+            },
+            timeout=60
+        )
+
+        response.raise_for_status()
+        result = response.json()
+
+        # Extract response text
+        candidates = result.get('candidates', [])
+        if candidates:
+            text = candidates[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+            return {'response': text, 'error': None}
+        else:
+            return {'response': '', 'error': 'No response from AI'}
+
+    except Exception as e:
+        return {'response': '', 'error': str(e)}
+
+
+def generate_chatbot_stream(message, history=None, username=None):
+    """
+    Generate chatbot response with streaming.
+
+    Yields SSE formatted chunks.
+    """
+    try:
+        api_key = get_api_key()
+    except ValueError as e:
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        return
+
+    # Build conversation history
+    contents = []
+
+    # Add system context
+    system_context = CHATBOT_SYSTEM_PROMPT
+    if username:
+        system_context += f"\n\nالمستخدم الحالي: {username}"
+
+    contents.append({
+        "role": "user",
+        "parts": [{"text": f"[System Context]\n{system_context}\n\n[User Message]\nمرحباً"}]
+    })
+    contents.append({
+        "role": "model",
+        "parts": [{"text": "مرحباً! أنا مساعدك الذكي لنظام تحليل المعمل. كيف يمكنني مساعدتك اليوم؟"}]
+    })
+
+    # Add conversation history
+    if history:
+        for msg in history[-10:]:
+            role = "user" if msg.get('role') == 'user' else "model"
+            contents.append({
+                "role": role,
+                "parts": [{"text": msg.get('content', '')}]
+            })
+
+    # Add current message
+    contents.append({
+        "role": "user",
+        "parts": [{"text": message}]
+    })
+
+    try:
+        model = get_gemini_model()
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?key={api_key}&alt=sse"
+
+        response = requests.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            json={
+                "contents": contents,
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 2048
+                }
+            },
+            timeout=60,
+            stream=True
+        )
+
+        response.raise_for_status()
+
+        for line in response.iter_lines():
+            if line:
+                line = line.decode('utf-8')
+                if line.startswith('data: '):
+                    data_str = line[6:]
+                    if data_str == '[DONE]':
+                        break
+                    try:
+                        data = json.loads(data_str)
+                        candidates = data.get('candidates', [])
+                        if candidates:
+                            text = candidates[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+                            if text:
+                                yield f"data: {json.dumps({'chunk': text})}\n\n"
+                    except json.JSONDecodeError:
+                        pass
+
+        yield f"data: {json.dumps({'done': True})}\n\n"
+
+    except Exception as e:
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"

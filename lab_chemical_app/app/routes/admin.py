@@ -16,6 +16,7 @@ from app.models.chemical import Machine
 # Path to element rules JSON
 ELEMENT_RULES_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'element_rules.json')
 MECHANICAL_RULES_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'mechanical_rules.json')
+APP_SETTINGS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'app_settings.json')
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -718,65 +719,35 @@ def mechanical_rules():
     return render_template('admin/mechanical_rules.html', rules=rules)
 
 
-@admin_bp.route('/settings/mechanical-rules/<property_code>', methods=['GET', 'POST'])
+@admin_bp.route('/settings/mechanical-rules/update', methods=['POST'])
 @login_required
 @admin_required
-def edit_mechanical_rule(property_code):
-    """Edit mechanical property rule"""
+def update_mechanical_criterion():
+    """Update a mechanical acceptance criterion"""
     rules = load_mechanical_rules()
 
-    # Find the property
-    property_rule = None
-    for rule in rules.get('rules', []):
-        if rule['property'] == property_code:
-            property_rule = rule
-            break
+    criterion_key = request.form.get('criterion_key')
+    condition = request.form.get('condition')
+    unit = request.form.get('unit')
 
-    if not property_rule:
-        flash(f'الخاصية {property_code} غير موجودة', 'error')
+    if not criterion_key or criterion_key not in rules.get('acceptance_criteria', {}):
+        flash(f'المعيار {criterion_key} غير موجود', 'error')
         return redirect(url_for('admin.mechanical_rules'))
 
-    if request.method == 'POST':
-        try:
-            # Get ranges from form
-            new_ranges = []
-            range_count = int(request.form.get('range_count', 0))
+    try:
+        # Update the criterion
+        rules['acceptance_criteria'][criterion_key]['condition'] = condition
+        if unit:
+            rules['acceptance_criteria'][criterion_key]['unit'] = unit
 
-            for i in range(range_count):
-                min_val = request.form.get(f'min_{i}')
-                max_val = request.form.get(f'max_{i}')
-                decision = request.form.get(f'decision_{i}')
+        # Save back to file
+        save_mechanical_rules(rules)
 
-                if min_val and max_val and decision:
-                    new_ranges.append({
-                        'min': float(min_val),
-                        'max': float(max_val),
-                        'decision': decision
-                    })
+        flash(f'تم تحديث المعيار بنجاح', 'success')
+    except Exception as e:
+        flash(f'خطأ: {str(e)}', 'error')
 
-            # Update the property's ranges
-            property_rule['ranges'] = new_ranges
-
-            # Save back to file
-            save_mechanical_rules(rules)
-
-            flash(f'تم تحديث قواعد {property_code} بنجاح', 'success')
-            return redirect(url_for('admin.mechanical_rules'))
-
-        except Exception as e:
-            flash(f'خطأ: {str(e)}', 'error')
-
-    decisions = [
-        'فحص أخيرة فقط',
-        'فحص أولى وأخيرة',
-        'فحص الشحنة 100%',
-        'تالف'
-    ]
-
-    return render_template('admin/edit_mechanical_rule.html',
-                          property_code=property_code,
-                          rule=property_rule,
-                          decisions=decisions)
+    return redirect(url_for('admin.mechanical_rules'))
 
 
 @admin_bp.route('/api/mechanical-rules')
@@ -877,3 +848,249 @@ def save_mechanical_rules(rules):
     """Save mechanical rules to JSON file"""
     with open(MECHANICAL_RULES_PATH, 'w', encoding='utf-8') as f:
         json.dump(rules, f, ensure_ascii=False, indent=2)
+
+
+# ============================================================================
+# AI Settings Management
+# ============================================================================
+
+def load_app_settings():
+    """Load app settings from JSON file"""
+    try:
+        with open(APP_SETTINGS_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {'ai': {'gemini_api_key': '', 'gemini_model': 'gemini-2.5-flash', 'enabled': True}}
+
+
+def save_app_settings(settings):
+    """Save app settings to JSON file"""
+    with open(APP_SETTINGS_PATH, 'w', encoding='utf-8') as f:
+        json.dump(settings, f, ensure_ascii=False, indent=2)
+
+
+@admin_bp.route('/settings/ai')
+@login_required
+@admin_required
+def ai_settings():
+    """AI/Gemini settings configuration"""
+    settings = load_app_settings()
+    ai_settings = settings.get('ai', {})
+
+    # Mask the API key for display (show last 4 chars only)
+    api_key = ai_settings.get('gemini_api_key', '')
+    masked_key = ''
+    if api_key:
+        masked_key = '*' * (len(api_key) - 4) + api_key[-4:] if len(api_key) > 4 else '****'
+
+    return render_template('admin/ai_settings.html',
+                          ai_settings=ai_settings,
+                          masked_key=masked_key)
+
+
+@admin_bp.route('/settings/ai/update', methods=['POST'])
+@login_required
+@admin_required
+def update_ai_settings():
+    """Update AI settings"""
+    settings = load_app_settings()
+
+    # Get form data
+    api_key = request.form.get('gemini_api_key', '').strip()
+    model = request.form.get('gemini_model', 'gemini-2.5-flash').strip()
+    enabled = request.form.get('enabled') == 'on'
+
+    # Initialize ai settings if not exists
+    if 'ai' not in settings:
+        settings['ai'] = {}
+
+    # Only update API key if a new one is provided (not the masked version)
+    if api_key and not api_key.startswith('*'):
+        settings['ai']['gemini_api_key'] = api_key
+
+    settings['ai']['gemini_model'] = model
+    settings['ai']['enabled'] = enabled
+
+    try:
+        save_app_settings(settings)
+        flash('تم تحديث إعدادات الذكاء الاصطناعي بنجاح / AI settings updated successfully', 'success')
+    except Exception as e:
+        flash(f'خطأ: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.ai_settings'))
+
+
+# ============================================================================
+# Sticker Settings Management
+# ============================================================================
+
+STICKER_IMAGES_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images')
+
+@admin_bp.route('/settings/stickers')
+@login_required
+@admin_required
+def sticker_settings():
+    """Sticker design settings"""
+    settings = load_app_settings()
+    sticker_settings = settings.get('sticker', {})
+
+    # Check if logo and recycle images exist
+    logo_exists = os.path.exists(os.path.join(STICKER_IMAGES_PATH, 'gcp_logo.jpg'))
+    recycle_exists = os.path.exists(os.path.join(STICKER_IMAGES_PATH, 'recycle.jpg'))
+
+    import time
+    return render_template('admin/sticker_settings.html',
+                          sticker_settings=sticker_settings,
+                          logo_exists=logo_exists,
+                          recycle_exists=recycle_exists,
+                          now=int(time.time()))
+
+
+@admin_bp.route('/settings/stickers', methods=['POST'])
+@login_required
+@admin_required
+def update_sticker_settings():
+    """Update sticker settings"""
+    from werkzeug.utils import secure_filename
+
+    settings = load_app_settings()
+
+    # Initialize sticker settings if not exists
+    if 'sticker' not in settings:
+        settings['sticker'] = {}
+
+    # Handle logo upload
+    if 'logo' in request.files:
+        logo_file = request.files['logo']
+        if logo_file and logo_file.filename:
+            # Validate file type
+            allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+            ext = logo_file.filename.rsplit('.', 1)[-1].lower()
+            if ext in allowed_extensions:
+                # Ensure images directory exists
+                os.makedirs(STICKER_IMAGES_PATH, exist_ok=True)
+                # Save as gcp_logo.jpg (convert if needed)
+                from PIL import Image
+                img = Image.open(logo_file)
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+                logo_path = os.path.join(STICKER_IMAGES_PATH, 'gcp_logo.jpg')
+                img.save(logo_path, 'JPEG', quality=95)
+                flash('Logo uploaded successfully', 'success')
+            else:
+                flash('Invalid logo file type. Use JPG, PNG, or GIF.', 'warning')
+
+    # Handle recycle image upload
+    if 'recycle' in request.files:
+        recycle_file = request.files['recycle']
+        if recycle_file and recycle_file.filename:
+            # Validate file type
+            allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+            ext = recycle_file.filename.rsplit('.', 1)[-1].lower()
+            if ext in allowed_extensions:
+                # Ensure images directory exists
+                os.makedirs(STICKER_IMAGES_PATH, exist_ok=True)
+                # Save as recycle.jpg (convert if needed)
+                from PIL import Image
+                img = Image.open(recycle_file)
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+                recycle_path = os.path.join(STICKER_IMAGES_PATH, 'recycle.jpg')
+                img.save(recycle_path, 'JPEG', quality=95)
+                flash('Recycler symbol uploaded successfully', 'success')
+            else:
+                flash('Invalid recycle file type. Use JPG, PNG, or GIF.', 'warning')
+
+    # Update text settings
+    settings['sticker']['company_name'] = request.form.get('company_name', 'GCP Ductile Iron Pipes')
+    settings['sticker']['website_url'] = request.form.get('website_url', 'www.gcpipes.com')
+    settings['sticker']['website_color'] = request.form.get('website_color', '#0066CC')
+    settings['sticker']['text_color'] = request.form.get('text_color', '#333333')
+
+    # Update sizes
+    settings['sticker']['sizes'] = {
+        'small': [
+            int(request.form.get('size_small_w', 80)),
+            int(request.form.get('size_small_h', 50))
+        ],
+        'medium': [
+            int(request.form.get('size_medium_w', 100)),
+            int(request.form.get('size_medium_h', 60))
+        ],
+        'large': [
+            int(request.form.get('size_large_w', 120)),
+            int(request.form.get('size_large_h', 80))
+        ],
+        'gcp': [
+            int(request.form.get('size_gcp_w', 140)),
+            int(request.form.get('size_gcp_h', 90))
+        ]
+    }
+
+    # Update layout options
+    settings['sticker']['show_logo'] = request.form.get('show_logo') == 'on'
+    settings['sticker']['show_recycle'] = request.form.get('show_recycle') == 'on'
+    settings['sticker']['show_qr'] = request.form.get('show_qr') == 'on'
+    settings['sticker']['show_website'] = request.form.get('show_website') == 'on'
+    settings['sticker']['dpi'] = int(request.form.get('dpi', 300))
+
+    try:
+        save_app_settings(settings)
+        flash('Sticker settings updated successfully / تم تحديث إعدادات الملصقات بنجاح', 'success')
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.sticker_settings'))
+
+
+@admin_bp.route('/api/sticker-settings')
+@login_required
+def api_get_sticker_settings():
+    """API: Get sticker settings"""
+    settings = load_app_settings()
+    return jsonify(settings.get('sticker', {}))
+
+
+@admin_bp.route('/api/ai-settings/test', methods=['POST'])
+@csrf.exempt
+@login_required
+@admin_required
+def test_ai_connection():
+    """Test Gemini API connection"""
+    import requests
+
+    settings = load_app_settings()
+    api_key = settings.get('ai', {}).get('gemini_api_key', '')
+
+    # If no key in settings, try environment variable
+    if not api_key:
+        api_key = os.environ.get('GEMINI_API_KEY', '')
+
+    if not api_key:
+        return jsonify({'success': False, 'message': 'API key not configured'})
+
+    model = settings.get('ai', {}).get('gemini_model', 'gemini-2.5-flash')
+
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+        response = requests.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            json={
+                "contents": [{"parts": [{"text": "Say 'Connection successful' in Arabic"}]}],
+                "generationConfig": {"maxOutputTokens": 50}
+            },
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            text = result.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+            return jsonify({'success': True, 'message': f'Connection successful! Response: {text[:100]}'})
+        else:
+            return jsonify({'success': False, 'message': f'API Error: {response.status_code} - {response.text[:200]}'})
+
+    except requests.exceptions.Timeout:
+        return jsonify({'success': False, 'message': 'Connection timeout'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
