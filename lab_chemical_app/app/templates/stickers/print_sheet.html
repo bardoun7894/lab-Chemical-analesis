@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+{#
+  A print job of one label per page, for the sticker roll in the printer:
+  the paper IS the label, so the page is set to the label's own size and
+  carries exactly one, and the printer feeds them one after another.
+
+  Deliberately not extending base.html: the app's chrome — sidebar, navbar,
+  fonts — has no business on a page whose only job is to reach the printer,
+  and stripping it back out with print rules is how sheets end up with a
+  stray margin nobody can find.
+
+  The A4-tiled PDF beside this one is the copy that gets filed and sent; it
+  is not what you feed a label printer.
+#}
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Stickers</title>
+    <style>
+        @page {
+            size: {{ width_mm }}mm {{ height_mm }}mm;
+            margin: 0;
+        }
+        body {
+            margin: 0;
+            background: #f1f3f5;
+            font-family: Arial, sans-serif;
+        }
+        .sticker {
+            width: {{ width_mm }}mm;
+            height: {{ height_mm }}mm;
+            /* One label per page — never split, never two to a sheet. */
+            page-break-inside: avoid;
+            break-inside: avoid;
+            page-break-after: always;
+            break-after: page;
+            overflow: hidden;
+        }
+        /* Without this the job ends on a blank label. */
+        .sticker:last-child {
+            page-break-after: auto;
+            break-after: auto;
+        }
+        .sticker img {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .toolbar {
+            padding: 10px;
+        }
+        /* On screen only: the labels are a stack you can scroll through. */
+        .sheet { padding: 0 10px 10px; }
+        .sticker { background: #fff; margin-bottom: 10px; box-shadow: 0 0 0 1px #ced4da; }
+
+        @media print {
+            body { background: #fff; }
+            .toolbar { display: none; }
+            .sheet { padding: 0; }
+            .sticker { margin: 0; box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button type="button" onclick="window.print()">Print</button>
+        <span>{{ images|length }} sticker(s) — {{ width_mm }}×{{ height_mm }}mm, one per page</span>
+    </div>
+    <div class="sheet">
+        {% for src in images %}
+        <div class="sticker"><img src="{{ src }}" alt="sticker"></div>
+        {% endfor %}
+    </div>
+    <script>
+        // The images are data URIs, so they are decoded by the time load
+        // fires; printing before that gives blank labels.
+        window.addEventListener('load', function () {
+            setTimeout(function () { window.print(); }, 300);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  lab-chemical:
+    build: .
+    container_name: lab-chemical-prod
+    restart: unless-stopped
+    ports:
+      - "9999:8000"
+    volumes:
+      - ./lab_chemical.db:/app/lab_chemical.db
+      - ./.env:/app/.env
+      - ./app/data:/app/app/data
+    environment:
+      - FLASK_ENV=production
+      # Do NOT hardcode API keys here. ai_service reads os.environ first and
+      # only falls back to app/data/app_settings.json, so a stale key set here
+      # silently overrides whatever the operator configured in Admin Settings.
+      # Configure keys through /admin/settings, or via the mounted .env file.
+    networks:
+      - lab-network
+
+networks:
+  lab-network:
+    driver: bridge

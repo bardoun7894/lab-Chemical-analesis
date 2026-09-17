@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}{{ 'تسليم' if is_ar else 'Receive' }} — {{ pipe.pipe_code or pipe.no_code or pipe.id }}{% endblock %}
+
+{# Everything above the form is read-only text, not disabled inputs: there is
+   nothing here for the storekeeper to submit but the four fields, so nothing
+   else is rendered as a control in the first place. The server ignores any
+   other key regardless — see warehouse.save. #}
+
+{% block content %}
+<div class="container" style="max-width: 720px;">
+
+    <div class="d-flex align-items-center justify-content-between my-3">
+        <h4 class="mb-0">
+            <i class="bi bi-box-seam"></i>
+            {{ 'تسجيل التسليم' if is_ar else 'Record delivery' }}
+        </h4>
+        <a href="{{ url_for('warehouse.scan') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-upc-scan"></i>
+            {{ 'مسح ماسورة أخرى' if is_ar else 'Scan another' }}
+        </a>
+    </div>
+
+    {# ---- Who this pipe is. Read-only. ---- #}
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-light">
+            <strong>{{ pipe.pipe_code or pipe.no_code or ('#' ~ pipe.id) }}</strong>
+            {% if pipe.warehouse_barcode %}
+            <span class="badge bg-secondary ms-2">
+                <i class="bi bi-upc"></i> {{ pipe.warehouse_barcode }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="row g-3 small">
+                {% for label_ar, label_en, value in [
+                    ('القطر', 'Diameter', ('DN' ~ pipe.diameter) if pipe.diameter else '—'),
+                    ('الكلاس', 'Class', pipe.pipe_class or '—'),
+                    ('المنتج', 'Product', pipe.product.product_code if pipe.product else '—'),
+                    ('الشحنة', 'Ladle', pipe.ladle_id or '—'),
+                    ('أمر الإنتاج', 'Order', pipe.production_order.order_number if pipe.production_order else '—'),
+                    ('تاريخ الإنتاج', 'Produced', pipe.production_date.strftime('%Y-%m-%d') if pipe.production_date else '—')
+                ] %}
+                <div class="col-6 col-md-4">
+                    <div class="text-muted">{{ label_ar if is_ar else label_en }}</div>
+                    <div class="fw-bold">{{ value }}</div>
+                </div>
+                {% endfor %}
+                <div class="col-6 col-md-4">
+                    <div class="text-muted">{{ 'قرار الجودة' if is_ar else 'Quality decision' }}</div>
+                    <div class="fw-bold">
+                        {% if pipe.final_decision_value == 'ACCEPT' %}
+                        <span class="badge bg-success">{{ 'مقبول' if is_ar else 'Accepted' }}</span>
+                        {% elif pipe.final_decision_value %}
+                        <span class="badge bg-danger">{{ pipe.final_decision_value }}</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ 'قيد الانتظار' if is_ar else 'Pending' }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ---- Normal receiving and explicit correction are deliberately separate. ---- #}
+    {% if delivery %}
+    <div class="alert alert-info">
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <strong>{{ 'تم التسليم من قبل' if is_ar else 'Previously delivered' }}</strong>
+        <div class="small mt-2">
+            {{ delivery.date or '—' }} · {{ delivery.receipt or '—' }} ·
+            {{ delivery.sales_order or '—' }} · {{ delivery.customer or '—' }}
+        </div>
+        <div class="small mt-2">
+            {{ 'استخدم نموذج التصحيح أدناه فقط لتعديل السجل الأصلي؛ سيُسجل السبب في سجل المراجعة.'
+               if is_ar else
+               'Use the correction form below only to amend the original record; the reason is recorded in the audit trail.' }}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if blocked and not delivery %}
+    <div class="alert alert-warning">
+        <i class="bi bi-shield-exclamation"></i>
+        <strong>{{ 'لا يمكن التسليم' if is_ar else 'Cannot be delivered' }}</strong><br>
+        {{ blocked }}
+    </div>
+    <p class="text-muted small">
+        {{ 'راجع قسم الجودة. لن تتمكن من تسجيل التسليم حتى تُعتمد الماسورة.'
+           if is_ar
+           else 'Check with quality. Delivery cannot be recorded until the pipe is released.' }}
+    </p>
+    {% else %}
+    <form method="post" action="{{ url_for('warehouse.correct' if delivery else 'warehouse.save', id=pipe.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="deliveryDate">
+                            {{ 'تاريخ التسليم' if is_ar else 'Delivery date' }}
+                        </label>
+                        <input type="date" class="form-control" id="deliveryDate" name="delivery_date"
+                               value="{{ stage.delivery_date.isoformat() if stage and stage.delivery_date else '' }}">
+                    </div>
+                    {% if delivery %}
+                    <div class="col-12">
+                        <label class="form-label fw-semibold" for="auditReason">
+                            {{ 'سبب التصحيح' if is_ar else 'Correction reason' }}
+                        </label>
+                        <textarea class="form-control" id="auditReason" name="audit_reason"
+                                  rows="2" required></textarea>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-6">
+                        <label class="form-label" for="salesOrder">
+                            {{ 'أمر البيع' if is_ar else 'Sales order' }}
+                        </label>
+                        <input type="text" class="form-control" id="salesOrder" name="sales_order"
+                               autocomplete="off"
+                               value="{{ stage.sales_order if stage and stage.sales_order else '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="deliveryCustomer">
+                            {{ 'العميل' if is_ar else 'Customer' }}
+                        </label>
+                        <input type="text" class="form-control" id="deliveryCustomer" name="delivery_customer"
+                               autocomplete="off"
+                               value="{{ stage.delivery_customer if stage and stage.delivery_customer else '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="deliveryReceipt">
+                            {{ 'رقم الإيصال' if is_ar else 'Receipt #' }}
+                        </label>
+                        <input type="text" class="form-control" id="deliveryReceipt" name="delivery_receipt"
+                               autocomplete="off"
+                               value="{{ stage.delivery_receipt if stage and stage.delivery_receipt else '' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-white d-flex justify-content-end gap-2">
+                <a href="{{ url_for('warehouse.scan') }}" class="btn btn-outline-secondary">
+                    {{ 'إلغاء' if is_ar else 'Cancel' }}
+                </a>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i>
+                    {{ ('حفظ التصحيح' if is_ar else 'Save correction') if delivery else ('حفظ' if is_ar else 'Save') }}
+                </button>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

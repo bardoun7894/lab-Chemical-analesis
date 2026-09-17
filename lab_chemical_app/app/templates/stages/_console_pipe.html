@@ -1,0 +1,830 @@
+{# Console right-hand pane for one pipe. Rendered server-side so the per-stage
+   widget matrix stays in one place (see stages.console_pipe docstring).
+   Every stage row is an independent form posting to stages.update_stage. #}
+{% import 'components/_zinc_mass.html' as zinc_mass with context %}
+{% import 'components/_ring_test.html' as ring_test with context %}
+{% import 'components/_multi_select.html' as multi with context %}
+{% import 'components/_standard_dims.html' as std_dims with context %}
+{% import 'components/_standard_row.html' as std_row with context %}
+{% import 'components/_lining_points.html' as lining with context %}
+{% set is_ar = current_locale == 'ar' %}
+{% set blocked = pipe.lab_decision == 'BLOCKED' or pipe.final_decision_value == 'REJECT' %}
+{# The Min / Nominal / Max band the readings are judged against. A stage that
+   has been saved keeps its own; one that has not falls back to the spec on the
+   pipe's order, which the order copied from the product. The register form
+   pushes the same numbers in via JS on order select — the console has no such
+   event, so it renders them server-side. #}
+{% set order_layers = (pipe.production_order.effective_application().get('layers', {})
+                       if pipe.production_order else {}) %}
+
+<div class="console-pipe" data-pipe-id="{{ pipe.id }}">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <h5 class="mb-1">
+                {{ pipe.pipe_code or pipe.no_code }}
+                {% if blocked %}
+                <span class="badge bg-danger">{{ 'محظور' if is_ar else 'Blocked' }}</span>
+                {% endif %}
+            </h5>
+            <div class="text-muted small">
+                {% if pipe.ladle_id %}<span class="me-2">{{ 'شحنة' if is_ar else 'Ladle' }}: <strong>{{ pipe.ladle_id }}</strong></span>{% endif %}
+                {% if pipe.diameter %}<span class="me-2">DN{{ pipe.diameter }}</span>{% endif %}
+                {% if pipe.pipe_class %}<span class="me-2">{{ pipe.pipe_class }}</span>{% endif %}
+                {% if pipe.production_date %}<span class="me-2">{{ pipe.production_date }}</span>{% endif %}
+                {% if pipe.lab_decision %}<span class="me-2">{{ 'قرار المعمل' if is_ar else 'Lab' }}: <strong>{{ pipe.lab_decision }}</strong></span>{% endif %}
+            </div>
+            {# The Application standards ticked on the pipe's order (ISO 8179 /
+               EN 598 / ISO 2531 / EN 545 / AWWA). Read-only here — the ticks
+               are set on the order, this just tells the operator which
+               standard the run is built to without leaving the console. #}
+            {% set std_labels = pipe.production_order.standard_labels() if pipe.production_order else [] %}
+            {% if std_labels %}
+            <div class="mt-1">
+                <span class="text-muted small me-1">{{ 'المواصفة' if is_ar else 'Standard' }}:</span>
+                {% for label in std_labels %}
+                <span class="badge bg-primary me-1">{{ label }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        <a href="{{ url_for('stages.view', id=pipe.id) }}" target="_blank"
+           class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-box-arrow-up-right"></i> {{ 'الصفحة الكاملة' if is_ar else 'Full page' }}
+        </a>
+    </div>
+
+    {% if blocked %}
+    <div class="alert alert-danger py-2 small mb-3">
+        <i class="bi bi-exclamation-octagon"></i>
+        {{ 'لا يمكن تسجيل مراحل على أنبوب محظور أو مرفوض.' if is_ar else 'Stage entry is refused for a blocked or rejected pipe — the server rejects these writes.' }}
+    </div>
+    {% endif %}
+
+    {% for stage_name in stage_names %}
+    {% if not focus_stage or focus_stage == stage_name %}
+    {% set stage = stage_map.get(stage_name) %}
+    {% set decisions = stage_decisions.get(stage_name, []) %}
+    {% set defects = stage_defects.get(stage_name, []) %}
+    {% set machines = stage_machines.get(stage_name, []) %}
+    {% set reasons = defect_reasons.get(stage_name, []) %}
+
+    <form class="console-stage card border-0 shadow-sm mb-2"
+          data-stage="{{ stage_name }}"
+          data-url="{{ url_for('stages.update_stage', id=pipe.id, stage_name=stage_name) }}">
+        <div class="card-body py-2 px-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <strong class="flex-grow-1">{{ stage_name }}</strong>
+                {% if stage and stage.decision %}
+                <span class="badge bg-secondary">{{ stage.decision }}</span>
+                {% endif %}
+                <span class="console-status small text-muted"></span>
+            </div>
+
+            {# update_stage writes these unconditionally from the payload, so any
+               field this form does not send is nulled on every save. Carry the
+               current value for the ones with no visible control here — without
+               them, editing a measurement would silently erase the machine or
+               defect type recorded at the stage. #}
+            <input type="hidden" name="defect_type_id"
+                   value="{{ stage.defect_type_id if stage and stage.defect_type_id else '' }}">
+            {% if not machines %}
+            <input type="hidden" name="machine_id"
+                   value="{{ stage.machine_id if stage and stage.machine_id else '' }}">
+            {% endif %}
+            {% if not defects %}
+            <input type="hidden" name="defect_type"
+                   value="{{ stage.defect_type if stage and stage.defect_type else '' }}">
+            {% endif %}
+
+            <div class="row g-2">
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'التاريخ' if is_ar else 'Date' }}</label>
+                    <input type="date" name="stage_date" class="form-control form-control-sm"
+                           value="{{ stage.stage_date if stage and stage.stage_date else '' }}"
+                           {% if stage_name == annealing_stage %}title="{{ 'افتراضياً اليوم عند الحفظ — يمكن تعديله' if is_ar else 'Defaults to today on save — editable' }}"{% endif %}>
+                </div>
+
+                {% if stage_name == annealing_stage %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'الوقت' if is_ar else 'Time' }}</label>
+                    <input type="time" name="stage_time" class="form-control form-control-sm"
+                           value="{{ stage.stage_time.strftime('%H:%M') if stage and stage.stage_time else '' }}"
+                           title="{{ 'افتراضياً الوقت الحالي عند الحفظ — يمكن تعديله' if is_ar else 'Defaults to now on save — editable' }}">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'رقم التشغيلة' if is_ar else 'Batch #' }}</label>
+                    <input type="text" name="bundle_number" class="form-control form-control-sm"
+                           value="{{ stage.bundle_number if stage and stage.bundle_number else '' }}"
+                           placeholder="{{ 'تلقائي' if is_ar else 'Auto' }}"
+                           readonly title="{{ 'يُنشأ تلقائياً عند الحفظ' if is_ar else 'Generated automatically on save' }}">
+                </div>
+                {% endif %}
+
+                {% if machines %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'المكينة' if is_ar else 'Machine' }}</label>
+                    <select name="machine_id" class="form-select form-select-sm">
+                        <option value="">—</option>
+                        {% for m in machines %}
+                        <option value="{{ m.id }}" {{ 'selected' if stage and stage.machine_id == m.id }}>{{ m.code }}</option>
+                        {% endfor %}
+                        {# The machine on record may have since been reassigned to
+                           another stage and dropped out of this list. Keep it as an
+                           option or saving anything else would silently erase it. #}
+                        {% if stage and stage.machine_id and stage.machine_id not in machines|map(attribute='id')|list %}
+                        <option value="{{ stage.machine_id }}" selected>#{{ stage.machine_id }}</option>
+                        {% endif %}
+                    </select>
+                </div>
+                {% endif %}
+
+                {% if stage_name == ccm_stage %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'حرارة الصب' if is_ar else 'Temp °C' }}</label>
+                    <input type="number" step="any" name="temperature" class="form-control form-control-sm"
+                           value="{{ stage.temperature if stage and stage.temperature is not none else '' }}">
+                </div>
+                {% endif %}
+
+                {# Same unit map the Register grid uses (PipeStage.MEASUREMENT_UNITS),
+                   so a reading means the same thing on both screens. #}
+                {% set unit_spec = measurement_units.get(stage_name) %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">
+                        {{ measurement_labels.get(stage_name) or ('القياس' if is_ar else 'Measurement') }}
+                        {% if unit_spec %}<span class="text-muted">({{ unit_spec[0] }})</span>{% endif %}
+                    </label>
+                    {% if unit_spec %}
+                    <div class="input-group input-group-sm">
+                        <input type="number" step="any" name="measurement_value" class="form-control form-control-sm"
+                               placeholder="{{ unit_spec[2] if is_ar else unit_spec[1] }}"
+                               value="{{ stage.measurement_value if stage and stage.measurement_value is not none else '' }}">
+                        <span class="input-group-text">{{ unit_spec[0] }}</span>
+                    </div>
+                    {% else %}
+                    <input type="number" step="any" name="measurement_value" class="form-control form-control-sm"
+                           value="{{ stage.measurement_value if stage and stage.measurement_value is not none else '' }}">
+                    {% endif %}
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'القرار' if is_ar else 'Decision' }}</label>
+                    <select name="decision" class="form-select form-select-sm">
+                        <option value="">—</option>
+                        {% for en, ar in decisions %}
+                        <option value="{{ en }}" {{ 'selected' if stage and stage.decision == en }}>{{ ar if is_ar else en }}</option>
+                        {% endfor %}
+                        {# A decision recorded before the list was reconfigured must
+                           survive an unrelated edit — and this one drives the
+                           cascade, so losing it is worse than losing a label. #}
+                        {% if stage and stage.decision and stage.decision not in decisions|map(attribute=0)|list %}
+                        <option value="{{ stage.decision }}" selected>{{ stage.decision }}</option>
+                        {% endif %}
+                    </select>
+                </div>
+
+                {% if stage_name == finish_stage or stage_name == delivery_stage %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'رقم الحزمة' if is_ar else 'Bundle #' }}</label>
+                    <input type="text" name="bundle_number" class="form-control form-control-sm"
+                           value="{{ stage.bundle_number if stage and stage.bundle_number else '' }}">
+                </div>
+                {% endif %}
+
+                {% if stage_name == finish_stage %}
+                {# Warehouse barcode. Pipe-level, so update_stage only touches it
+                   when this key is posted — unlike the stage fields around it,
+                   which it blanks when a form omits them. #}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'باركود المخزن' if is_ar else 'Warehouse barcode' }}</label>
+                    <input type="text" name="finish_barcode" class="form-control form-control-sm finish-barcode-in"
+                           inputmode="numeric" autocomplete="off"
+                           value="{{ pipe.warehouse_barcode if pipe.warehouse_barcode else '' }}">
+                </div>
+                {% endif %}
+
+<script>
+// Retyping a Min / Nominal / Max cell has to reach the readings it judges, or
+// the colouring would keep using the band the pane was rendered with.
+// Delegated, because the console replaces this pane wholesale on every pipe.
+(function () {
+    if (window.__consoleBandBound) { return; }
+    window.__consoleBandBound = true;
+
+    var NAME = /_(?:dim_)?thick_(?:(cement|coating)_)?std(?:_(min|max))?$/;
+
+    document.addEventListener('input', function (ev) {
+        var el = ev.target;
+        if (!el || !el.name) { return; }
+        var m = NAME.exec(el.name);
+        if (!m) { return; }
+        var table = el.closest('table');
+        if (!table) { return; }
+        var layer = m[1] || 'S1';
+        var attr = m[2] === 'min' ? 'lsl' : (m[2] === 'max' ? 'usl' : 'nominal');
+        table.querySelectorAll('.std-cmp-input[data-cmp="' + layer + '"]').forEach(function (inp) {
+            inp.dataset[attr] = el.value;
+        });
+        if (window.refreshStandardComparisons) { window.refreshStandardComparisons(table); }
+    });
+})();
+</script>
+
+<script>
+// A wedge scanner types the digits and sends Enter. Left alone, that Enter
+// submits the pipe form mid-entry — so swallow it on the barcode box only.
+// Delegated, because the console replaces this pane wholesale on every pipe.
+(function () {
+    if (window.__finishBarcodeBound) { return; }
+    window.__finishBarcodeBound = true;
+    document.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter') { return; }
+        var el = ev.target;
+        if (!el || !el.classList || !el.classList.contains('finish-barcode-in')) { return; }
+        ev.preventDefault();
+        el.blur();
+    });
+})();
+</script>
+
+                {% if stage_name == delivery_stage %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'أمر البيع' if is_ar else 'Sales Order' }}</label>
+                    <input type="text" name="sales_order" class="form-control form-control-sm"
+                           value="{{ stage.sales_order if stage and stage.sales_order else '' }}">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'العميل' if is_ar else 'Customer' }}</label>
+                    <input type="text" name="delivery_customer" class="form-control form-control-sm"
+                           value="{{ stage.delivery_customer if stage and stage.delivery_customer else '' }}">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'الإيصال' if is_ar else 'Receipt' }}</label>
+                    <input type="text" name="delivery_receipt" class="form-control form-control-sm"
+                           value="{{ stage.delivery_receipt if stage and stage.delivery_receipt else '' }}">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'تاريخ التسليم' if is_ar else 'Delivery Date' }}</label>
+                    <input type="date" name="delivery_date" class="form-control form-control-sm"
+                           value="{{ stage.delivery_date if stage and stage.delivery_date else '' }}">
+                </div>
+                {% endif %}
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'عيب؟' if is_ar else 'Defect?' }}</label>
+                    <select name="has_defect" class="form-select form-select-sm">
+                        <option value="false" {{ 'selected' if not (stage and stage.has_defect) }}>{{ 'لا' if is_ar else 'No' }}</option>
+                        <option value="true" {{ 'selected' if stage and stage.has_defect }}>{{ 'نعم' if is_ar else 'Yes' }}</option>
+                    </select>
+                </div>
+
+                {% if defects %}
+                <div class="col-6 col-md-3">
+                    <label class="form-label small mb-0">{{ 'نوع العيب' if is_ar else 'Defect Type' }}</label>
+                    {{ multi.multi_select('defect_type', defects,
+                                          stage.defect_type if stage else '',
+                                          '—', label_ar=is_ar) }}
+                </div>
+                {% endif %}
+
+                <div class="col-6 col-md-3">
+                    <label class="form-label small mb-0">{{ 'سبب العيب' if is_ar else 'Defect Reason' }}</label>
+                    {{ multi.multi_select('defect_reason', reasons,
+                                          stage.defect_reason if stage else '',
+                                          '—', label_ar=is_ar) }}
+                </div>
+
+                {# Visible, not hidden: `reason` is the decision reason and is what
+                   the Non-Conformance Register shows as root cause — 116 prod rows
+                   carry one. It must round-trip through this form. #}
+                <div class="col-12 col-md-4">
+                    <label class="form-label small mb-0">{{ 'سبب القرار' if is_ar else 'Decision Reason' }}</label>
+                    <input type="text" name="reason" class="form-control form-control-sm"
+                           value="{{ stage.reason if stage and stage.reason else '' }}">
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label small mb-0">{{ 'ملاحظات' if is_ar else 'Notes' }}</label>
+                    <input type="text" name="notes" class="form-control form-control-sm"
+                           value="{{ stage.notes if stage and stage.notes else '' }}">
+                </div>
+
+                {% if stage_name == coating_stage %}
+                {# Coloured only once something has been measured; the band alone
+                   colours nothing. #}
+                {% set tp_state = stage.lining_popup_state() if stage else 'empty' %}
+                {% set has_tp = tp_state == 'data' %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'السماكة' if is_ar else 'Thickness' }}</label>
+                    <button type="button" class="btn btn-{{ 'success' if has_tp else 'outline-secondary' }} btn-sm w-100"
+                            title="{{ ('الاستاندرد متسجل، القرايات لسه' if is_ar else 'Standard set, no readings yet') if tp_state == 'standard' }}"
+                            data-bs-toggle="modal" data-bs-target="#consoleCoatingThicknessModal">
+                        <i class="bi bi-rulers"></i>
+                        {{ 'السماكة' if is_ar else 'Thickness' }}
+                        {% if has_tp %}<i class="bi bi-check2"></i>{% endif %}
+                    </button>
+                </div>
+                {% endif %}
+                {% if stage_name == cutting_stage %}
+                {% set has_rp = stage and stage.ring_profile %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'اختبار الحلقة' if is_ar else 'Ring' }}</label>
+                    <button type="button" class="btn btn-{{ 'success' if has_rp else 'outline-secondary' }} btn-sm w-100"
+                            data-bs-toggle="modal" data-bs-target="#consoleRingTestModal">
+                        <i class="bi bi-circle"></i>
+                        {{ 'اختبار الحلقة' if is_ar else 'Ring' }}
+                        {% if has_rp %}<i class="bi bi-check2"></i>{% endif %}
+                    </button>
+                </div>
+                {% endif %}
+                {% if stage_name == ccm_stage %}
+                {% set dp_state = stage.dimension_popup_state() if stage else 'empty' %}
+                {% set has_dp = dp_state == 'data' %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'الأبعاد' if is_ar else 'Dimensions' }}</label>
+                    <button type="button" class="btn btn-{{ 'success' if has_dp else 'outline-secondary' }} btn-sm w-100"
+                            title="{{ ('الاستاندرد متسجل، القرايات لسه' if is_ar else 'Standard set, no readings yet') if dp_state == 'standard' }}"
+                            data-bs-toggle="modal" data-bs-target="#consoleCcmDimensionModal">
+                        <i class="bi bi-rulers"></i>
+                        {{ 'الأبعاد' if is_ar else 'Dimensions' }}
+                        {% if has_dp %}<i class="bi bi-check2"></i>{% endif %}
+                    </button>
+                </div>
+                {% endif %}
+                {% if stage_name == annealing_stage %}
+                {% set has_ovp = stage and stage.ovality_profile %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'الأوفاليتي' if is_ar else 'Ovality' }}</label>
+                    <button type="button" class="btn btn-{{ 'success' if has_ovp else 'outline-secondary' }} btn-sm w-100"
+                            data-bs-toggle="modal" data-bs-target="#consoleOvalityModal">
+                        <i class="bi bi-rulers"></i>
+                        {{ 'الأوفاليتي' if is_ar else 'Ovality' }}
+                        {% if has_ovp %}<i class="bi bi-check2"></i>{% endif %}
+                    </button>
+                </div>
+                {% endif %}
+                {% if stage_name == zinc_stage %}
+                {% set has_zp = stage and stage.zinc_profile %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'وزن الزنك' if is_ar else 'Zinc mass' }}</label>
+                    {# Popup + a direct printer icon — the sheet without opening the popup. #}
+                    <div class="btn-group w-100">
+                        <button type="button" class="btn btn-{{ 'success' if has_zp else 'outline-secondary' }} btn-sm"
+                                data-bs-toggle="modal" data-bs-target="#consoleZincMassModal">
+                            <i class="bi bi-droplet-half"></i>
+                            {{ 'وزن الزنك' if is_ar else 'Zinc mass' }}
+                            {% if has_zp %}<i class="bi bi-check2"></i>{% endif %}
+                        </button>
+                        <a href="{{ url_for('stages.zinc_sheet', id=pipe.id) }}" target="_blank"
+                           class="btn btn-danger btn-sm flex-grow-0"
+                           title="{{ 'طباعة شهادة وزن الزنك' if is_ar else 'Print zinc mass sheet' }}">
+                            <i class="bi bi-printer-fill"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+                {% if stage_name == finish_stage %}
+                {% set has_vp = stage and stage.visual_profile %}
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-0">{{ 'الفحص البصري' if is_ar else 'Visual' }}</label>
+                    <button type="button" class="btn btn-{{ 'success' if has_vp else 'outline-secondary' }} btn-sm w-100"
+                            data-bs-toggle="modal" data-bs-target="#consoleFinishVisualModal">
+                        <i class="bi bi-eye"></i>
+                        {{ 'الفحص البصري' if is_ar else 'Visual' }}
+                        {% if has_vp %}<i class="bi bi-check2"></i>{% endif %}
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+
+
+            {% if stage_name == zinc_stage %}
+            {# Zinc coating-mass sheet — same grid as the Register form. Lives
+               INSIDE the stage form so the console autosave serializes the
+               cells with the rest of the row. #}
+            {% set zp = stage.zinc_profile if stage and stage.zinc_profile else none %}
+            <div class="modal fade" id="consoleZincMassModal" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-droplet-half"></i>
+                                {{ 'وزن الزنك — M = C (M2 − M1) ÷ A' if is_ar else 'Zinc mass — M = C (M2 − M1) / A' }}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            {{ zinc_mass.zinc_mass_grid(stage_name, zp, is_ar) }}
+                            {{ zinc_mass.zinc_mass_script() }}
+                        </div>
+                        <div class="modal-footer">
+                            <a href="{{ url_for('stages.zinc_sheet', id=pipe.id) }}" target="_blank"
+                               class="btn btn-danger me-auto">
+                                <i class="bi bi-printer-fill"></i> {{ 'طباعة الشهادة' if is_ar else 'Print sheet' }}
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-check2"></i> {{ 'تم' if is_ar else 'Done' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if stage_name == cutting_stage %}
+            {# Ring deflection test — same sheet as the Register form. Lives
+               INSIDE the stage form so the console autosave serializes the
+               cells with the rest of the row. #}
+            {% set rp = stage.ring_profile if stage and stage.ring_profile else none %}
+            <div class="modal fade" id="consoleRingTestModal" tabindex="-1">
+                <div class="modal-dialog modal-md modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-circle"></i>
+                                {{ 'اختبار الحلقة' if is_ar else 'Ring' }}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            {{ ring_test.ring_grid(stage_name, rp, is_ar) }}
+                            {{ ring_test.ring_script() }}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                                <i class="bi bi-check2"></i> {{ 'تم' if is_ar else 'Done' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if stage_name == coating_stage %}
+            {# Coating thickness popup — same grid as the Register form (cement
+               + coating at meters 1-6). Lives INSIDE the stage form so the
+               console autosave serializes the cells with the rest of the row. #}
+            {% set tp = stage.thickness_profile if stage and stage.thickness_profile else none %}
+            <div class="modal fade" id="consoleCoatingThicknessModal" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-rulers"></i>
+                                {{ 'سماكة الأسمنت والكوتنج' if is_ar else 'Cement & Coating thickness' }}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            {# Cement is measured X/Y at the socket and the spigot; coating
+                               is measured once at each metre of the 6 m pipe. Two different
+                               measurements, two different grids. #}
+                            {% set cem_spec = order_layers.get('cement', {}) %}
+                            {% set cem_std = (tp.get('cement_std') if tp else none) if (tp and tp.get('cement_std') is not none) else cem_spec.get('nominal') %}
+                            {% set cem_min = (tp.get('cement_std_min') if tp else none) if (tp and tp.get('cement_std_min') is not none) else cem_spec.get('min') %}
+                            {% set cem_max = (tp.get('cement_std_max') if tp else none) if (tp and tp.get('cement_std_max') is not none) else cem_spec.get('max') %}
+                            <h6 class="mb-2">{{ 'سماكة الأسمنت' if is_ar else 'Cement Thickness' }}</h6>
+                            {{ lining.lining_grid(coating_stage, 'cement',
+                                                  'سماكة الأسمنت' if is_ar else 'Cement Thickness',
+                                                  cem_min, cem_std, cem_max,
+                                                  tp.get('cement_points') if tp else {},
+                                                  tp.get('cement_avg') if tp else none, is_ar) }}
+                            {{ lining.lining_grid_script() }}
+                            <hr>
+                            <h6 class="mb-2">{{ 'سماكة الكوتنج عند كل متر (ماسورة 6 متر)' if is_ar else 'Coating thickness at each meter (6m pipe)' }}</h6>
+                            <table class="table table-sm table-bordered mb-0 text-center align-middle bg-white" id="coatingThickTable">
+                                <thead>
+                                    <tr class="table-secondary">
+                                        <th style="width: 90px;"></th>
+                                        <th style="width: 70px;">Min</th>
+                                        <th style="width: 70px;">Nominal</th>
+                                        <th style="width: 70px;">Max</th>
+                                        {% for m in range(1, 7) %}<th>{{ m }}</th>{% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for layer, layer_ar in [('coating', 'الكوتنج')] %}
+                                    {% set vals = tp.get(layer) if tp else none %}
+                                    {% set spec = order_layers.get(layer, {}) %}
+                                    {% set saved_std = (tp.get(layer ~ '_std') if tp else none) if (tp and tp.get(layer ~ '_std') is not none) else spec.get('nominal') %}
+                                    {% set saved_std_min = (tp.get(layer ~ '_std_min') if tp else none) if (tp and tp.get(layer ~ '_std_min') is not none) else spec.get('min') %}
+                                    {% set saved_std_max = (tp.get(layer ~ '_std_max') if tp else none) if (tp and tp.get(layer ~ '_std_max') is not none) else spec.get('max') %}
+                                    <tr>
+                                        <td class="fw-bold text-start">{{ layer_ar if is_ar else layer|capitalize }}</td>
+                                        {% set unit = 'μ' if layer == 'coating' else 'mm' %}
+                                        <td class="table-light">
+                                            <input type="number" name="stage_{{ coating_stage }}_thick_{{ layer }}_std_min"
+                                                   class="form-control form-control-sm text-center" step="0.01" min="0"
+                                                   placeholder="{{ unit }}"
+                                                   value="{{ saved_std_min if saved_std_min is not none else '' }}">
+                                        </td>
+                                        <td class="table-light">
+                                            <input type="number" name="stage_{{ coating_stage }}_thick_{{ layer }}_std"
+                                                   class="form-control form-control-sm text-center fw-bold coat-std-input" step="0.01" min="0"
+                                                   data-layer="{{ layer }}" placeholder="{{ unit }}"
+                                                   value="{{ saved_std if saved_std is not none else '' }}">
+                                        </td>
+                                        <td class="table-light">
+                                            <input type="number" name="stage_{{ coating_stage }}_thick_{{ layer }}_std_max"
+                                                   class="form-control form-control-sm text-center" step="0.01" min="0"
+                                                   placeholder="{{ unit }}"
+                                                   value="{{ saved_std_max if saved_std_max is not none else '' }}">
+                                        </td>
+                                        {% for m in range(1, 7) %}
+                                        <td>
+                                            <input type="number" name="stage_{{ coating_stage }}_thick_{{ layer }}_{{ m }}"
+                                                   class="form-control form-control-sm text-center std-cmp-input" step="0.01" min="0"
+                                                   data-cmp="{{ layer }}" data-col="{{ m - 1 }}"
+                                                   data-nominal="{{ saved_std if saved_std is not none else '' }}"
+                                                   data-lsl="{{ saved_std_min if saved_std_min is not none else '' }}"
+                                                   data-usl="{{ saved_std_max if saved_std_max is not none else '' }}"
+                                                   value="{{ vals[m - 1] if vals and vals|length >= m and vals[m - 1] is not none else '' }}">
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold text-start">{{ 'الفرق' if is_ar else 'Deviation' }}</td>
+                                        <td class="table-light"></td>
+                                        <td class="table-light"></td>
+                                        <td class="table-light"></td>
+                                        {% for m in range(1, 7) %}
+                                        <td class="fw-bold std-cmp-diff" data-cmp="{{ layer }}" data-col="{{ m - 1 }}"></td>
+                                        {% endfor %}
+                                    </tr>
+                                    {{ std_row.spec_note(10, 'stage_' ~ coating_stage ~ '_thick_' ~ layer, layer_ar if is_ar else layer|capitalize,
+                                                         saved_std, saved_std_min, saved_std_max,
+                                                         is_ar) }}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                                <i class="bi bi-check2"></i> {{ 'تم' if is_ar else 'Done' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if stage_name == ccm_stage %}
+            {# CCM dimensions popup — same grid as the Register form (thickness
+               21 points + diameter D1-D15, samples S1..Sn). Lives INSIDE the
+               stage form so the console autosave serializes the cells with the
+               rest of the row. #}
+            {% set dp = stage.dimension_profile if stage and stage.dimension_profile else none %}
+            {% set dp_dia_samples = dp.get('diameter', {}).get('samples', {}) if dp else {} %}
+            {# Normalised {position: [r1, r2, r3]}; folds a legacy flat 21-cell row. #}
+            {% set dp_thick_matrix = thickness_matrix(dp) if dp else {} %}
+            {% set ccm_std_S1 = dimension_standard_for_dn(pipe.diameter).get('S1') if pipe and pipe.diameter else none %}
+            <div class="modal fade" id="consoleCcmDimensionModal" tabindex="-1">
+                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-rulers"></i>
+                                {{ 'أبعاد الماسورة — السماكة (7 مواضع × 3 قرايات) والقطر (D1-D15)' if is_ar else 'Pipe dimensions — thickness (7 positions x 3 readings) & diameter (D1-D15)' }}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm table-bordered mb-0 text-center align-middle bg-white" data-ccm-thick-table>
+                                    <thead>
+                                        <tr class="table-secondary">
+                                            <th style="min-width: 90px;">{{ 'السماكة (مم)' if is_ar else 'Thickness (mm)' }}</th>
+                                            {% for pos in thickness_positions %}<th>{{ pos }}</th>{% endfor %}
+                                            <th class="table-info" style="min-width: 70px;">{{ 'المتوسط' if is_ar else 'Avg' }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="consoleCcmThickBody">
+                                        {% set dp_thick = dp.get('thickness', {}) if dp else {} %}
+                                        {% set wall_spec = order_layers.get('thickness', {}) %}
+                                        {% set dp_thick_std = dp_thick.get('standard') if dp_thick.get('standard') is not none else wall_spec.get('nominal') %}
+                                        {% set dp_thick_min = dp_thick.get('standard_min') if dp_thick.get('standard_min') is not none else wall_spec.get('min') %}
+                                        {% set dp_thick_max = dp_thick.get('standard_max') if dp_thick.get('standard_max') is not none else wall_spec.get('max') %}
+                                        <tr class="table-light">
+                                            <td class="fw-bold text-start">{{ 'الاستاندرد' if is_ar else 'Standard' }}</td>
+                                            <td colspan="{{ thickness_positions | length }}">
+                                                <div class="d-flex gap-2 justify-content-center align-items-center">
+                                                    <div class="text-center">
+                                                        <small class="d-block text-muted">Min</small>
+                                                        <input type="number" name="stage_{{ ccm_stage }}_dim_thick_std_min"
+                                                               class="form-control form-control-sm text-center" step="0.01" min="0"
+                                                               style="max-width: 90px;" placeholder="mm"
+                                                               value="{{ dp_thick_min if dp_thick_min is not none else '' }}">
+                                                    </div>
+                                                    <div class="text-center">
+                                                        <small class="d-block text-muted fw-bold">Nominal</small>
+                                                        <input type="number" name="stage_{{ ccm_stage }}_dim_thick_std"
+                                                               class="form-control form-control-sm text-center fw-bold" step="0.01" min="0"
+                                                               style="max-width: 90px;" placeholder="mm"
+                                                               value="{{ dp_thick_std if dp_thick_std is not none else '' }}">
+                                                    </div>
+                                                    <div class="text-center">
+                                                        <small class="d-block text-muted">Max</small>
+                                                        <input type="number" name="stage_{{ ccm_stage }}_dim_thick_std_max"
+                                                               class="form-control form-control-sm text-center" step="0.01" min="0"
+                                                               style="max-width: 90px;" placeholder="mm"
+                                                               value="{{ dp_thick_max if dp_thick_max is not none else '' }}">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="table-info"></td>
+                                        </tr>
+                                        {{ std_row.spec_note(thickness_positions | length + 2, 'stage_' ~ ccm_stage ~ '_dim_thick',
+                                                             'سماكة الجدار' if is_ar else 'Wall thickness',
+                                                             dp_thick_std, dp_thick_min, dp_thick_max, is_ar) }}
+                                        {% for r in range(1, thickness_readings + 1) %}
+                                        <tr>
+                                            <td class="fw-bold text-start">{{ ('قراية ' ~ r) if is_ar else ('Reading ' ~ r) }}</td>
+                                            {% for pos in thickness_positions %}
+                                            {% set vals = dp_thick_matrix.get(pos) %}
+                                            <td>
+                                                <input type="number" name="stage_{{ ccm_stage }}_dim_thick_p{{ loop.index }}_{{ r }}"
+                                                       class="form-control form-control-sm text-center px-1 ccm-thick std-cmp-input" step="0.01" min="0" style="min-width: 58px;"
+                                                       data-pos="{{ loop.index }}"
+                                                       data-cmp="S1" data-col="{{ loop.index0 }}"
+                                                       data-nominal="{{ dp_thick_std if dp_thick_std is not none else '' }}"
+                                                       data-lsl="{{ dp_thick_min if dp_thick_min is not none else '' }}"
+                                                       data-usl="{{ dp_thick_max if dp_thick_max is not none else '' }}"
+                                                       value="{{ vals[r - 1] if vals and vals|length >= r and vals[r - 1] is not none else '' }}">
+                                            </td>
+                                            {% endfor %}
+                                            <td class="table-info fw-bold ccm-thick-row-avg"></td>
+                                        </tr>
+                                        {% endfor %}
+                                        <tr>
+                                            <td class="fw-bold text-start">{{ 'الفرق' if is_ar else 'Deviation' }}</td>
+                                            {% for pos in thickness_positions %}
+                                            <td class="fw-bold std-cmp-diff" data-cmp="S1" data-col="{{ loop.index0 }}"></td>
+                                            {% endfor %}
+                                            <td></td>
+                                        </tr>
+                                        <tr class="table-info">
+                                            <td class="fw-bold text-start">{{ 'المتوسط' if is_ar else 'Avg' }}</td>
+                                            {% for pos in thickness_positions %}
+                                            <td class="fw-bold ccm-thick-col-avg" data-pos="{{ loop.index }}"></td>
+                                            {% endfor %}
+                                            <td class="fw-bold ccm-thick-grand"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold text-start">{{ 'الانحراف المعياري' if is_ar else 'Std dev' }}</td>
+                                            {% for pos in thickness_positions %}
+                                            <td class="ccm-thick-col-sd" data-pos="{{ loop.index }}"></td>
+                                            {% endfor %}
+                                            <td class="fw-bold ccm-thick-grand-sd"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                {% if ccm_std_S1 and ccm_std_S1.nominal is not none %}
+                                <div class="small text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i>
+                                    {{ 'الاستاندرد' if is_ar else 'Standard' }}
+                                    S1 (e) DN{{ pipe.diameter }}: <strong>{{ ccm_std_S1.nominal }}</strong> mm
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0 text-center align-middle bg-white">
+                                    <thead>
+                                        <tr class="table-warning">
+                                            <th style="min-width: 80px;">{{ 'القطر' if is_ar else 'Diameter' }}</th>
+                                            {% for n in range(1, 16) %}<th>D{{ n }}</th>{% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody id="consoleCcmDiaBody">
+                                        {% for sname, vals in (dp_dia_samples.items() if dp_dia_samples else [('S1', none)]) %}
+                                        <tr data-sample="{{ sname }}">
+                                            <td class="fw-bold text-start">{{ sname }}</td>
+                                            {% for n in range(1, 16) %}
+                                            <td>
+                                                <input type="number" name="stage_{{ ccm_stage }}_dim_dia_{{ sname }}_{{ n }}"
+                                                       class="form-control form-control-sm text-center px-1" step="0.01" min="0" style="min-width: 58px;"
+                                                       value="{{ vals[n - 1] if vals and vals|length >= n and vals[n - 1] is not none else '' }}">
+                                            </td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="consoleCcmAddSample">
+                                <i class="bi bi-plus-lg"></i> {{ 'إضافة عينة' if is_ar else 'Add sample' }}
+                            </button>
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                                <i class="bi bi-check2"></i> {{ 'تم' if is_ar else 'Done' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if stage_name == annealing_stage %}
+            {# Ovality popup — same ID/D1-D15 grid as the Register form. Lives
+               INSIDE the Annealing stage form so the console autosave
+               serializes the X/Y cells with the rest of the row; update_stage
+               parses the stage_<Annealing>_ov_* keys from the JSON payload. #}
+            {% set ovp = stage.ovality_profile if stage and stage.ovality_profile else none %}
+            {% set ovp_points = ovality_readings(ovp, stage.dimension_profile if stage else none) %}
+            <div class="modal fade" id="consoleOvalityModal" tabindex="-1">
+                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-rulers"></i>
+                                {{ 'الأبعاد والأوفاليتي — TA 1012' if is_ar else 'Dimensions & ovality — TA 1012' }}{% if pipe and pipe.diameter %} <span class="badge bg-secondary">DN{{ pipe.diameter }}</span>{% endif %}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            {% set ov_points = ovality_columns_for(pipe.diameter if pipe else none, {'points': ovp_points}) %}
+                            {{ std_dims.ovality_standard_grid(
+                                annealing_stage,
+                                pipe.diameter if pipe else none,
+                                dimension_standard_for_dn(pipe.diameter) if pipe and pipe.diameter else {},
+                                ov_points,
+                                ovp_points,
+                                is_ar) }}
+                            {{ std_dims.ovality_standard_grid_script() }}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                                <i class="bi bi-check2"></i> {{ 'تم' if is_ar else 'Done' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if stage_name == finish_stage %}
+            {# Visual inspection checklist — 5 items, same as the Register form.
+               The paired _hidden input makes an unchecked box post an explicit
+               "0" so update_stage can tell "unchecked" from "modal never
+               opened" and leave an existing profile alone. #}
+            {% set vp = stage.visual_profile if stage and stage.visual_profile else none %}
+            {% set visual_items = [
+                ('marking', 'الترقيم', 'Marking'),
+                ('ovality', 'البيضاوية', 'Ovality'),
+                ('straightness', 'الاستقامة', 'Straightness'),
+                ('internal_finish', 'التشطيب الداخلي', 'Internal finish'),
+                ('external_finish', 'التشطيب الخارجي', 'External finish'),
+            ] %}
+            <div class="modal fade" id="consoleFinishVisualModal" tabindex="-1">
+                <div class="modal-dialog modal-md modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-eye"></i>
+                                {{ 'الفحص البصري — قائمة التحقق' if is_ar else 'Visual inspection checklist' }}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-2">
+                            <div class="table-responsive">
+                                <table class="table table-bordered mb-0 text-center align-middle bg-white">
+                                    <tbody>
+                                        <tr>
+                                            {% for key, label_ar, label_en in visual_items %}
+                                            {% set checked = vp.get(key, false) if vp else false %}
+                                            <td style="min-width: 120px; height: 86px;">
+                                                <input type="hidden" name="stage_{{ finish_stage }}_visual_{{ key }}_hidden" value="0">
+                                                <input class="form-check-input" type="checkbox"
+                                                       name="stage_{{ finish_stage }}_visual_{{ key }}" value="1"
+                                                       id="console_vis_{{ pipe.id }}_{{ key }}"
+                                                       {{ 'checked' if checked }}>
+                                                <label class="d-block fw-bold mt-2" for="console_vis_{{ pipe.id }}_{{ key }}">
+                                                    {{ label_ar if is_ar else label_en }}
+                                                </label>
+                                            </td>
+                                            {% endfor %}
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                                <i class="bi bi-check2"></i> {{ 'تم' if is_ar else 'Done' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </form>
+    {% endif %}
+    {% endfor %}
+
+</div>
+
+{# Checkbox-dropdown behaviour for the Defect Type / Defect Reason cells.
+   Guarded internally, so re-emitting it on every pane swap is harmless. #}
+{{ multi.multi_select_script("—") }}

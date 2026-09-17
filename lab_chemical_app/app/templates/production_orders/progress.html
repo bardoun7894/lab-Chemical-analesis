@@ -54,7 +54,7 @@
                                     <small class="text-muted">{{ 'مكتمل' if current_locale == 'ar' else 'Done' }}</small>
                                 </div>
                                 <div class="col-4">
-                                    <div class="text-warning display-6">{{ order.produced_quantity - order.completed_quantity - order.rejected_quantity }}</div>
+                                    <div class="text-warning display-6">{{ [0, order.produced_quantity - order.completed_quantity - order.rejected_quantity]|max }}</div>
                                     <small class="text-muted">{{ 'جاري' if current_locale == 'ar' else 'In Progress' }}</small>
                                 </div>
                                 <div class="col-4">
@@ -117,12 +117,12 @@
         </div>
     </div>
 
-    <!-- Chemical Analyses -->
+    <!-- Chemical -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
                 <i class="bi bi-flask"></i>
-                {{ 'التحاليل الكيميائية' if current_locale == 'ar' else 'Chemical Analyses' }}
+                {{ 'الكيميائي' if current_locale == 'ar' else 'Chemical' }}
             </h5>
             <a href="{{ url_for('chemical.add') }}?order_id={{ order.id }}" class="btn btn-light btn-sm">
                 <i class="bi bi-plus"></i>
@@ -174,7 +174,7 @@
             {% else %}
             <div class="text-center text-muted py-3">
                 <i class="bi bi-flask display-6"></i>
-                <p>{{ 'لا توجد تحاليل كيميائية مرتبطة بهذا الأمر' if current_locale == 'ar' else 'No chemical analyses linked to this order' }}</p>
+                <p>{{ 'لا يوجد تحليل كيميائي مرتبط بهذا الأمر' if current_locale == 'ar' else 'No chemical data linked to this order' }}</p>
             </div>
             {% endif %}
         </div>
@@ -200,7 +200,11 @@
                         <tr>
                             <th>{{ 'الكود' if current_locale == 'ar' else 'Code' }}</th>
                             <th>{{ 'المغرفة' if current_locale == 'ar' else 'Ladle' }}</th>
-                            <th>{{ 'التحليل' if current_locale == 'ar' else 'Analysis' }}</th>
+                            <th>{{ 'قرار المغرفة' if current_locale == 'ar' else 'Ladle Decision' }}</th>
+                            <th>{{ 'الترتيب' if current_locale == 'ar' else 'Order' }}</th>
+                            <th>{{ 'القطر' if current_locale == 'ar' else 'DN' }}</th>
+                            <th>{{ 'قرار المختبر' if current_locale == 'ar' else 'Lab' }}</th>
+                            <th>{{ 'النهائي' if current_locale == 'ar' else 'Final' }}</th>
                             {% for stage in stages %}
                             <th class="text-center" style="font-size: 0.75rem;">{{ stage[:3] }}</th>
                             {% endfor %}
@@ -211,32 +215,80 @@
                         {% for pipe in pipes %}
                         <tr>
                             <td><strong>{{ pipe.no_code }}</strong></td>
-                            <td>{{ pipe.ladle_id }}</td>
+                            <td><small class="text-muted">{{ pipe.ladle_id or '-' }}</small></td>
+                            <!-- Ladle Decision -->
                             <td>
                                 {% if pipe.ladle_id and pipe.ladle_id in chemical_by_ladle %}
                                 {% set chem = chemical_by_ladle[pipe.ladle_id] %}
-                                {% if chem.decision == 'فحص أخيرة فقط' %}
-                                <span class="badge bg-success" title="{{ chem.decision }}">OK</span>
-                                {% elif chem.decision == 'تالف' %}
-                                <span class="badge bg-danger" title="{{ chem.decision }}">X</span>
+                                {% if 'أخيرة' in chem.decision or 'Last' in chem.decision %}
+                                <span class="badge bg-info" title="{{ chem.decision }}">⭐ Last</span>
+                                {% elif 'أولى وأخيرة' in chem.decision or '1st and Last' in chem.decision %}
+                                <span class="badge bg-primary" title="{{ chem.decision }}">⭐⭐ F&amp;L</span>
+                                {% elif '100%' in chem.decision %}
+                                <span class="badge bg-success" title="{{ chem.decision }}">✅ 100%</span>
+                                {% elif 'تالف' in chem.decision or 'Reject' in chem.decision %}
+                                <span class="badge bg-dark" title="{{ chem.decision }}">🚫 Reject</span>
                                 {% else %}
-                                <span class="badge bg-warning text-dark" title="{{ chem.decision }}">!</span>
+                                <span class="badge bg-secondary">{{ chem.decision }}</span>
                                 {% endif %}
                                 {% else %}
-                                <span class="badge bg-secondary">-</span>
+                                <span class="badge bg-light text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <!-- Pipe Order / Role -->
+                            <td>
+                                <span class="font-monospace">#{{ pipe.arrange_pipe or '?' }}</span>
+                                {% if pipe.mechanical_test_role == 'FIRST' %}
+                                <span class="badge bg-warning text-dark" title="First Pipe">⭐ First</span>
+                                {% elif pipe.mechanical_test_role == 'LAST' %}
+                                <span class="badge bg-info" title="Last Pipe">⭐ Last</span>
+                                {% elif pipe.mechanical_test_role == 'ALL' %}
+                                <span class="badge bg-success" title="100% Test">✅ All</span>
+                                {% elif pipe.mechanical_test_role == 'ANY' %}
+                                <span class="badge bg-secondary" title="Waiting">⏳</span>
+                                {% endif %}
+                            </td>
+                            <td>DN{{ pipe.diameter or '?' }}</td>
+                            <!-- Lab Decision -->
+                            <td>
+                                {% if pipe.lab_decision == 'ACCEPT' %}
+                                <span class="badge bg-success">✓</span>
+                                {% elif pipe.lab_decision == 'REJECT' %}
+                                <span class="badge bg-danger">✗</span>
+                                {% elif pipe.lab_decision == 'HOLD' %}
+                                <span class="badge bg-warning text-dark">⏸</span>
+                                {% elif pipe.lab_decision == 'WAITING' %}
+                                <span class="badge bg-info">⌛</span>
+                                {% elif pipe.lab_decision == 'BLOCKED' %}
+                                <span class="badge bg-dark">🚫</span>
+                                {% elif pipe.lab_decision == 'FROZEN' %}
+                                <span class="badge bg-primary" title="Frozen — recoverable mechanical freeze">❄️</span>
+                                {% else %}
+                                <span class="badge bg-light text-muted">-</span>
+                                {% endif %}
+                                {% if pipe.cascade_from %}
+                                <br><small class="text-muted" style="font-size: 0.7rem;">{{ pipe.cascade_from }}</small>
+                                {% endif %}
+                            </td>
+                            <!-- Final Decision -->
+                            <td>
+                                {% if pipe.final_decision_value == 'ACCEPT' %}
+                                <span class="badge bg-success" title="Accept">✓</span>
+                                {% elif pipe.final_decision_value == 'REJECT' %}
+                                <span class="badge bg-danger" title="Reject">✗</span>
+                                {% elif pipe.final_decision_value == 'HOLD' %}
+                                <span class="badge bg-warning text-dark" title="Hold">⏸</span>
+                                {% else %}
+                                <span class="badge bg-light text-muted">-</span>
                                 {% endif %}
                             </td>
                             {% for stage_name in stages %}
-                            {% set stage = pipe.get_stage(stage_name) %}
+                            {% set bucket = pipe_stage_status.get(pipe.id, {}).get(stage_name, 'pending') %}
                             <td class="text-center">
-                                {% if stage and stage.decision %}
-                                    {% if stage.decision == 'ACCEPT' %}
-                                    <span class="badge bg-success rounded-pill">✓</span>
-                                    {% elif stage.decision == 'REJECT' %}
-                                    <span class="badge bg-danger rounded-pill">✗</span>
-                                    {% else %}
-                                    <span class="badge bg-warning rounded-pill">?</span>
-                                    {% endif %}
+                                {% if bucket == 'accept' %}
+                                <span class="badge bg-success rounded-pill">✓</span>
+                                {% elif bucket == 'reject' %}
+                                <span class="badge bg-danger rounded-pill">✗</span>
                                 {% else %}
                                 <span class="badge bg-light text-muted rounded-pill">-</span>
                                 {% endif %}

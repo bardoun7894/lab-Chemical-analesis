@@ -1,24 +1,20 @@
 """
 QR Code Service
 
-Generates QR codes and sticker images for pipes.
+QR codes, and page layout for batch sticker printing.
+
+This module used to carry a second sticker renderer of its own — different
+sizes, different fonts, no barcode — and every batch PDF went through it, so
+printing a sheet gave you a different label from printing one pipe. The label
+now has exactly one renderer, stickers.create_sticker_image; what is left here
+is the QR helper and the tiling that arranges finished images on a page.
 """
 
 from io import BytesIO
-from typing import Optional, Dict
+from typing import Dict
+
 import qrcode
-from PIL import Image, ImageDraw, ImageFont
-
-
-# Sticker sizes in mm
-STICKER_SIZES = {
-    'small': (50, 30),
-    'medium': (70, 50),
-    'large': (100, 70),
-}
-
-# Convert mm to pixels (300 DPI)
-MM_TO_PX = 300 / 25.4
+from PIL import Image
 
 
 def generate_qr_code(data: str, size: int = 200, border: int = 2) -> Image.Image:
@@ -74,200 +70,54 @@ def create_pipe_qr_data(pipe_info: Dict) -> str:
     return '|'.join(fields)
 
 
-def create_sticker_image(
-    pipe_info: Dict,
-    size_name: str = 'medium',
-    custom_width: Optional[int] = None,
-    custom_height: Optional[int] = None
-) -> BytesIO:
-    """
-    Create sticker image with pipe info, production order, stages, and QR code.
+def create_batch_stickers(sticker_pngs, width_mm, height_mm, gap_mm=5):
+    """Tile already-rendered sticker PNGs onto A4 pages.
+
+    Takes finished images rather than pipe data on purpose: the label is
+    rendered once, by stickers.create_sticker_image, so a batch print and a
+    single print are the same picture. This function decides only where each
+    one goes on the page.
 
     Args:
-        pipe_info: Dict with pipe information
-        size_name: Preset size name ('small', 'medium', 'large')
-        custom_width: Custom width in mm (overrides size_name)
-        custom_height: Custom height in mm (overrides size_name)
+        sticker_pngs: BytesIO PNG buffers, one per sticker, in print order.
+        width_mm, height_mm: the size each was rendered at.
+        gap_mm: whitespace between stickers, for the cutting line.
 
-    Returns:
-        BytesIO buffer containing PNG image
-    """
-    # Determine dimensions
-    if custom_width and custom_height:
-        width_mm, height_mm = custom_width, custom_height
-    else:
-        width_mm, height_mm = STICKER_SIZES.get(size_name, STICKER_SIZES['medium'])
-
-    # Convert to pixels
-    width_px = int(width_mm * MM_TO_PX)
-    height_px = int(height_mm * MM_TO_PX)
-
-    # Create white background
-    img = Image.new('RGB', (width_px, height_px), 'white')
-    draw = ImageDraw.Draw(img)
-
-    # Try to load fonts
-    try:
-        font_large = ImageFont.truetype("arial.ttf", int(height_px * 0.09))
-        font_medium = ImageFont.truetype("arial.ttf", int(height_px * 0.07))
-        font_small = ImageFont.truetype("arial.ttf", int(height_px * 0.05))
-        font_tiny = ImageFont.truetype("arial.ttf", int(height_px * 0.04))
-    except:
-        font_large = ImageFont.load_default()
-        font_medium = font_large
-        font_small = font_large
-        font_tiny = font_large
-
-    # Generate QR code with enhanced data
-    qr_data = create_pipe_qr_data(pipe_info)
-    qr_size = int(min(width_px, height_px) * 0.42)
-    qr_image = generate_qr_code(qr_data, qr_size)
-
-    # Place QR code on right side
-    qr_x = width_px - qr_size - int(width_px * 0.03)
-    qr_y = int(height_px * 0.15)
-    img.paste(qr_image, (qr_x, qr_y))
-
-    # Draw border
-    draw.rectangle([(2, 2), (width_px-3, height_px-3)], outline='black', width=2)
-
-    # Draw text on left side
-    x_offset = int(width_px * 0.03)
-    y_offset = int(height_px * 0.03)
-    line_height = int(height_px * 0.10)
-
-    # Title with order number if available
-    order_number = pipe_info.get('order_number', '')
-    if order_number:
-        draw.text((x_offset, y_offset), f"Order: {order_number}", font=font_medium, fill='black')
-    else:
-        draw.text((x_offset, y_offset), "PIPE LABEL", font=font_medium, fill='black')
-    y_offset += int(line_height * 0.8)
-
-    # Separator line
-    draw.line([(x_offset, y_offset), (qr_x - 10, y_offset)], fill='black', width=1)
-    y_offset += int(line_height * 0.2)
-
-    # Pipe info lines
-    info_lines = [
-        f"Code: {pipe_info.get('no_code', 'N/A')}",
-        f"Ladle: {pipe_info.get('ladle_id', 'N/A')}",
-        f"DN{pipe_info.get('diameter', 'N/A')} {pipe_info.get('pipe_class', '')}",
-        f"Date: {pipe_info.get('production_date', 'N/A')}",
-        f"Weight: {pipe_info.get('weight', 'N/A')} kg",
-    ]
-
-    for line in info_lines:
-        draw.text((x_offset, y_offset), line, font=font_small, fill='black')
-        y_offset += int(line_height * 0.55)
-
-    # Decision with color
-    decision = pipe_info.get('decision', 'N/A')
-    if decision == 'ACCEPT':
-        decision_color = 'green'
-    elif decision == 'REJECT':
-        decision_color = 'red'
-    else:
-        decision_color = 'orange'
-
-    draw.text((x_offset, y_offset), f"Decision: {decision}", font=font_medium, fill=decision_color)
-    y_offset += int(line_height * 0.7)
-
-    # Stages summary at bottom (for larger stickers)
-    stages = pipe_info.get('stages', '')
-    if stages and height_px > 400:
-        draw.text((x_offset, y_offset), f"Stages: {stages}", font=font_tiny, fill='gray')
-
-    # Customer name at very bottom if available
-    customer = pipe_info.get('customer', '')
-    if customer and height_px > 500:
-        y_offset += int(line_height * 0.5)
-        draw.text((x_offset, y_offset), f"Customer: {customer[:20]}", font=font_tiny, fill='gray')
-
-    # Save to buffer
-    buffer = BytesIO()
-    img.save(buffer, format='PNG', dpi=(300, 300))
-    buffer.seek(0)
-
-    return buffer
-
-
-def create_batch_stickers(
-    pipes: list,
-    size_name: str = 'medium',
-    per_page: int = 4
-) -> BytesIO:
-    """
-    Create PDF with multiple stickers for batch printing.
-
-    Args:
-        pipes: List of pipe info dicts
-        size_name: Sticker size
-        per_page: Number of stickers per page
-
-    Returns:
-        BytesIO buffer containing PDF
+    Returns a BytesIO holding the PDF.
     """
     from reportlab.lib.pagesizes import A4
-    from reportlab.pdfgen import canvas
     from reportlab.lib.units import mm
+    from reportlab.lib.utils import ImageReader
+    from reportlab.pdfgen import canvas
 
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
-
     page_width, page_height = A4
 
-    # Get sticker size
-    width_mm, height_mm = STICKER_SIZES.get(size_name, STICKER_SIZES['medium'])
-
-    # Calculate grid
     margin = 10 * mm
-    cols = int((page_width - 2 * margin) / (width_mm * mm + 5 * mm))
-    rows = int((page_height - 2 * margin) / (height_mm * mm + 5 * mm))
+    cell_w = width_mm * mm + gap_mm * mm
+    cell_h = height_mm * mm + gap_mm * mm
+    cols = max(int((page_width - 2 * margin) / cell_w), 1)
+    rows = max(int((page_height - 2 * margin) / cell_h), 1)
+    per_page = cols * rows
 
-    if cols < 1:
-        cols = 1
-    if rows < 1:
-        rows = 1
+    for i, png in enumerate(sticker_pngs):
+        slot = i % per_page
+        col, row = slot % cols, slot // cols
+        x = margin + col * cell_w
+        y = page_height - margin - (row + 1) * cell_h
 
-    stickers_per_page = cols * rows
-
-    current_page = 0
-    sticker_idx = 0
-
-    for i, pipe_info in enumerate(pipes):
-        # Calculate position
-        page_idx = i % stickers_per_page
-        col = page_idx % cols
-        row = page_idx // cols
-
-        x = margin + col * (width_mm * mm + 5 * mm)
-        y = page_height - margin - (row + 1) * (height_mm * mm + 5 * mm)
-
-        # Generate sticker image
-        sticker_buffer = create_sticker_image(pipe_info, size_name)
-        sticker_img = Image.open(sticker_buffer)
-
-        # Save temp image for ReportLab
-        temp_buffer = BytesIO()
-        sticker_img.save(temp_buffer, format='PNG')
-        temp_buffer.seek(0)
-
-        # Draw on canvas
+        png.seek(0)
         c.drawImage(
-            temp_buffer,
-            x, y,
-            width=width_mm * mm,
-            height=height_mm * mm
+            ImageReader(png), x, y,
+            width=width_mm * mm, height=height_mm * mm,
         )
 
-        # New page if needed
-        if page_idx == stickers_per_page - 1 and i < len(pipes) - 1:
+        if slot == per_page - 1 and i < len(sticker_pngs) - 1:
             c.showPage()
 
     c.save()
     buffer.seek(0)
-
     return buffer
 
 

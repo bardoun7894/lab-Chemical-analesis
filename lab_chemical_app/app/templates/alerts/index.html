@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% set is_ar = current_locale == 'ar' %}
+{% block title %}{{ 'تنبيهات المؤشرات' if is_ar else 'KPI Alerts' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">
+      <i class="bi bi-bell"></i>
+      {{ 'تنبيهات المؤشرات' if is_ar else 'KPI Alerts' }}
+      {% if open_count %}
+      <span class="badge bg-danger">{{ open_count }}</span>
+      {% endif %}
+    </h2>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('admin.kpi_target_settings') }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-bullseye"></i>
+        {{ 'أهداف المؤشرات' if is_ar else 'KPI targets' }}
+      </a>
+      {% if open_count %}
+      <form method="post" action="{{ url_for('alerts.mark_read') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-check2-all"></i>
+          {{ 'تعليم الكل كمقروء' if is_ar else 'Mark all read' }}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not has_targets %}
+  {# An empty settings page is not a clean bill of health, and the screen has
+     to say so rather than show an encouraging blank. #}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i>
+    {{ 'لا توجد أهداف مضبوطة، فالنظام لا ينبّه على أي شيء. الأهداف قرار إدارة — اضبطها من صفحة أهداف المؤشرات.'
+       if is_ar else
+       'No targets are set, so nothing can be alerted on. Targets are a management decision — set them on the KPI targets page.' }}
+  </div>
+  {% endif %}
+
+  {# Today's whole scoreboard. A KPI sitting just inside its target raises
+     nothing, and that is exactly the one worth watching. #}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-light">
+      <strong>{{ 'قراءات اليوم' if is_ar else "Today's readings" }}</strong>
+      <span class="text-muted small">
+        — {{ counts.get('pipes', 0) }} {{ 'ماسورة' if is_ar else 'pipes' }},
+        {{ counts.get('decided', 0) }} {{ 'تم البت فيها' if is_ar else 'decided' }}
+      </span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>{{ 'المؤشر' if is_ar else 'KPI' }}</th>
+              <th>{{ 'القراءة' if is_ar else 'Reading' }}</th>
+              <th>{{ 'الهدف' if is_ar else 'Target' }}</th>
+              <th>{{ 'الحكم' if is_ar else 'Verdict' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in scoreboard %}
+            <tr>
+              <td>{{ row.label_ar if is_ar else row.label_en }}</td>
+              <td class="fw-bold">
+                {% if row.value is none %}
+                <span class="text-muted">—</span>
+                {% else %}
+                {{ row.value }}{{ row.unit }}
+                {% endif %}
+              </td>
+              <td class="text-muted">
+                {% if row.target is none %}
+                <span class="small">{{ 'بدون هدف' if is_ar else 'no target' }}</span>
+                {% else %}
+                {{ row.target }}{{ row.unit }}
+                {% endif %}
+              </td>
+              <td>
+                {% if row.verdict %}
+                  {% if row.verdict.met %}
+                  <span class="badge bg-success">{{ 'داخل الهدف' if is_ar else 'on target' }}</span>
+                  {% else %}
+                  <span class="badge bg-danger">{{ 'خارج الهدف' if is_ar else 'off target' }}</span>
+                  {% endif %}
+                {% else %}
+                <span class="text-muted small">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# Where the rejects are. The plant number says the day crossed the line;
+     only these say which machine, which shift, which mould. #}
+  {% set scope_labels = {
+      'machine': ('المكن (CCM)', 'Machines (CCM)'),
+      'shift': ('الورديات', 'Shifts'),
+      'stage': ('المراحل', 'Stages'),
+      'mold': ('الاسطمبات', 'Moulds'),
+      'dn': ('الأقطار DN', 'Diameters (DN)')} %}
+  <div class="row g-3 mb-3">
+    {% for scope in ['machine', 'shift', 'stage', 'mold', 'dn'] %}
+    {% set rows = breakdown.get(scope) or [] %}
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light py-2">
+          <strong>{{ scope_labels[scope][0] if is_ar else scope_labels[scope][1] }}</strong>
+          <span class="text-muted small">
+            — {{ 'معدل الرفض اليوم' if is_ar else "today's reject rate" }}
+          </span>
+        </div>
+        <div class="card-body p-0">
+          {% if rows %}
+          <table class="table table-sm mb-0 align-middle">
+            <tbody>
+              {% for r in rows %}
+              <tr>
+                <td class="fw-bold">{{ r.key }}</td>
+                <td class="text-nowrap">
+                  {% if r.pct is none %}
+                  <span class="text-muted">—</span>
+                  {% else %}
+                  <span class="badge bg-{{ 'danger' if r.over else ('success' if r.over is not none else 'secondary') }}">
+                    {{ r.pct }}%
+                  </span>
+                  {% endif %}
+                  <small class="text-muted">
+                    {{ r.rejects }}/{{ r.decided }}
+                  </small>
+                </td>
+                <td class="small text-muted text-nowrap">
+                  {% if r.target is none %}
+                  {{ 'بدون حد' if is_ar else 'no threshold' }}
+                  {% elif not r.judged %}
+                  {{ 'عينة صغيرة' if is_ar else 'sample too small' }}
+                  {% else %}
+                  {{ 'الحد' if is_ar else 'limit' }} {{ r.target }}%
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p class="text-muted small m-3 mb-0">
+            {{ 'لا توجد بيانات اليوم' if is_ar else 'nothing recorded today' }}
+          </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# The rate over time. A day under the line every day can still add up to a
+     month over it, and the month is the number that gets reported upward. #}
+  <div class="row g-3 mb-3">
+    {% for band, rows, title_ar, title_en in [
+        ('day', trend.by_day, 'معدل الرفض اليومي', 'Reject rate per day'),
+        ('month', trend.by_month, 'معدل الرفض الشهري', 'Reject rate per month')] %}
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light py-2">
+          <strong>{{ title_ar if is_ar else title_en }}</strong>
+          <span class="text-muted small">
+            — {{ ('آخر %d يوم' % trend_days) if is_ar else ('last %d days' % trend_days) }}
+          </span>
+        </div>
+        <div class="card-body p-0">
+          {% if rows %}
+          <table class="table table-sm mb-0 align-middle">
+            <tbody>
+              {% for r in rows|reverse %}
+              {% set limit = trend_targets.get(band) %}
+              <tr>
+                <td class="fw-bold text-nowrap">{{ r.key }}</td>
+                <td class="text-nowrap">
+                  {% if r.pct is none %}
+                  <span class="text-muted">—</span>
+                  {% else %}
+                  <span class="badge bg-{{ 'danger' if (limit is not none and r.judged and r.pct > limit) else ('success' if (limit is not none and r.judged) else 'secondary') }}">
+                    {{ r.pct }}%
+                  </span>
+                  {% endif %}
+                  <small class="text-muted">{{ r.rejects }}/{{ r.decided }}</small>
+                </td>
+                <td class="small text-muted text-nowrap">
+                  {% if limit is none %}
+                  {{ 'بدون حد' if is_ar else 'no threshold' }}
+                  {% elif not r.judged %}
+                  {{ 'عينة صغيرة' if is_ar else 'sample too small' }}
+                  {% else %}
+                  {{ 'الحد' if is_ar else 'limit' }} {{ limit }}%
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p class="text-muted small m-3 mb-0">
+            {{ 'لا توجد بيانات' if is_ar else 'no data' }}
+          </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="text-muted small">
+    <i class="bi bi-info-circle"></i>
+    {{ 'أي مجموعة أقل من %d ماسورة متقرر فيها مش بتتحاسب — ماسورة واحدة مرفوضة تساوي 100%% ومعناها صفر.' % min_sample
+       if is_ar else
+       'Any group with fewer than %d decided pipes is not judged — one rejected pipe is 100%% and means nothing.' % min_sample }}
+  </p>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      {% if alerts %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>{{ 'اليوم' if is_ar else 'Day' }}</th>
+              <th>{{ 'الحالة' if is_ar else 'State' }}</th>
+              <th>{{ 'التنبيه' if is_ar else 'Alert' }}</th>
+              <th>{{ 'القراءة' if is_ar else 'Reading' }}</th>
+              <th>{{ 'الهدف' if is_ar else 'Target' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in alerts %}
+            <tr class="{{ '' if a.is_open else 'text-muted' }}">
+              <td class="text-nowrap">{{ a.day }}</td>
+              <td>
+                {% if not a.is_open %}
+                <span class="badge bg-secondary">{{ 'رجع للهدف' if is_ar else 'recovered' }}</span>
+                {% elif a.severity == 'critical' %}
+                <span class="badge bg-danger">{{ 'حرج' if is_ar else 'critical' }}</span>
+                {% else %}
+                <span class="badge bg-warning text-dark">{{ 'تحذير' if is_ar else 'warning' }}</span>
+                {% endif %}
+                {% if a.is_open and not a.read_at %}
+                <span class="badge bg-primary">{{ 'جديد' if is_ar else 'new' }}</span>
+                {% endif %}
+              </td>
+              <td>{{ a.message }}</td>
+              <td class="text-nowrap">{{ a.value }}{{ a.unit }}</td>
+              <td class="text-nowrap">{{ a.target }}{{ a.unit }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted m-3 mb-0">
+        {{ 'لا توجد تنبيهات في آخر %d يوم' % history_days if is_ar
+           else 'No alerts in the last %d days' % history_days }}
+      </p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

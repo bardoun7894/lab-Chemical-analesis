@@ -31,3 +31,37 @@ Master.xlsb
 *.jpeg
 *.png
 !lab_chemical_app/app/static/**/*.png  # Keep static images if any
+lab_chemical_app/ai-knowledge-base/
+
+# --- server sync: never commit data, backups, secrets ---
+*.sql
+*.sql.gz
+*.dump
+*.db
+*.sqlite
+*.sqlite3
+*.tgz
+*.tar
+*.tar.gz
+*.zip
+*.bak
+*.bak.*
+*.bak-*
+*.bak_*
+*.bak[0-9]*
+*.pg-bak
+*.orig
+*.clobbered*
+*.pem
+*.key
+*.p12
+.env
+.env.*
+!.env.example
+whatsapp-auth*/
+whatsapp-media/
+backups/
+predeploy/
+pg-bak-*
+app-data-bak-*
+.bak-app-*/

@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'تعديل سبب العيب' if defect_reason else 'إضافة سبب عيب' if current_locale == 'ar' else 'Edit Defect Reason' if defect_reason else 'Add Defect Reason' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-exclamation-diamond"></i>
+            {% if defect_reason %}
+                {{ 'تعديل سبب العيب' if current_locale == 'ar' else 'Edit Defect Reason' }}
+            {% else %}
+                {{ 'إضافة سبب عيب جديد' if current_locale == 'ar' else 'Add New Defect Reason' }}
+            {% endif %}
+        </h2>
+        <a href="{{ url_for('admin.defect_reasons') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'المرحلة' if current_locale == 'ar' else 'Stage' }} *</label>
+                            <select name="stage_name" class="form-select" required>
+                                <option value="">{{ 'اختر المرحلة' if current_locale == 'ar' else 'Select Stage' }}</option>
+                                {% for stage in stages %}
+                                <option value="{{ stage }}" {{ 'selected' if defect_reason and defect_reason.stage_name == stage }}>
+                                    {{ stage }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'سبب العيب (إنجليزي)' if current_locale == 'ar' else 'Defect Reason (English)' }} *</label>
+                            <input type="text" name="name_en" class="form-control" required
+                                   value="{{ defect_reason.name_en if defect_reason else '' }}"
+                                   placeholder="e.g., Surface crack">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'سبب العيب (عربي)' if current_locale == 'ar' else 'Defect Reason (Arabic)' }} *</label>
+                            <input type="text" name="name_ar" class="form-control" required
+                                   value="{{ defect_reason.name_ar if defect_reason else '' }}"
+                                   placeholder="مثلاً: شقوق سطحية">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الترتيب' if current_locale == 'ar' else 'Sort Order' }}</label>
+                            <input type="number" name="sort_order" class="form-control" min="0"
+                                   value="{{ defect_reason.sort_order if defect_reason else '0' }}">
+                            <small class="text-muted">{{ 'يستخدم لترتيب الأسباب في القائمة المنسدلة' if current_locale == 'ar' else 'Used to order reasons in dropdown lists' }}</small>
+                        </div>
+
+                        <div class="form-check mb-4">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+                                   {{ 'checked' if not defect_reason or defect_reason.is_active }}>
+                            <label class="form-check-label" for="is_active">
+                                {{ 'نشط' if current_locale == 'ar' else 'Active' }}
+                            </label>
+                        </div>
+
+                        {% include 'components/_audit_reason.html' %}
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-lg"></i>
+                                {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
+                            </button>
+                            <a href="{{ url_for('admin.defect_reasons') }}" class="btn btn-outline-secondary">
+                                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        {{ 'معلومات' if current_locale == 'ar' else 'Information' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="small">
+                        {{ 'تظهر أسباب العيوب النشطة كقائمة منسدلة في حقل "سبب العيب" لكل مرحلة في نموذج المراحل.' if current_locale == 'ar' else 'Active defect reasons appear as the dropdown choices for each stage\'s "Defect Reason" field in the stages form.' }}
+                    </p>
+                    <ul class="small">
+                        <li>{{ 'كل مرحلة لها قائمة أسباب عيوب خاصة بها' if current_locale == 'ar' else 'Each stage has its own defect reason list' }}</li>
+                        <li>{{ 'القيم المحفوظة سابقاً تبقى ظاهرة حتى لو حُذف السبب' if current_locale == 'ar' else 'Previously saved values stay visible even if the reason is deleted' }}</li>
+                        <li>{{ 'يتم عرض الأسباب النشطة فقط' if current_locale == 'ar' else 'Only active reasons are shown' }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

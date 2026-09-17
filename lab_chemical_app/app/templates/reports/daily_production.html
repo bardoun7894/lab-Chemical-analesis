@@ -128,17 +128,23 @@
                                 </span>
                             </td>
                             <td>
-                                <a href="{{ url_for('pipes.detail', id=pipe.id) }}">{{ pipe.no_code }}</a>
+                                <a href="{{ url_for('stages.view', id=pipe.id) }}">{{ pipe.no_code }}</a>
                             </td>
                             <td>DN {{ pipe.diameter }}</td>
-                            <td>{{ pipe.length }} m</td>
+                            <td>{{ pipe.thickness or '-' }} mm</td>
                             <td>
-                                {% if pipe.status == 'OK' %}
-                                <span class="badge bg-success">OK</span>
-                                {% elif pipe.status == 'DEFECT' %}
-                                <span class="badge bg-danger">Defect</span>
+                                {% if pipe.final_decision_value == 'ACCEPT' %}
+                                <span class="badge bg-success">{{ 'مقبول' if current_locale == 'ar' else 'Accept' }}</span>
+                                {% elif pipe.final_decision_value == 'REJECT' %}
+                                <span class="badge bg-danger">{{ 'مرفوض' if current_locale == 'ar' else 'Reject' }}</span>
+                                {% elif pipe.final_decision_value == 'HOLD' %}
+                                <span class="badge bg-warning">{{ 'هولد' if current_locale == 'ar' else 'Hold' }}</span>
+                                {% elif pipe.lab_decision == 'FROZEN' %}
+                                <span class="badge bg-primary">❄️ {{ 'مجمّد' if current_locale == 'ar' else 'Frozen' }}</span>
+                                {% elif pipe.lab_decision %}
+                                <span class="badge bg-secondary">{{ pipe.lab_decision }}</span>
                                 {% else %}
-                                <span class="badge bg-secondary">{{ pipe.status or '-' }}</span>
+                                <span class="badge bg-light text-dark">{{ 'قيد الانتظار' if current_locale == 'ar' else 'Pending' }}</span>
                                 {% endif %}
                             </td>
                         </tr>

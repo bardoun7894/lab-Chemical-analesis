@@ -17,7 +17,7 @@ except ImportError:
 
 from app import db
 from app.models.chemical import ChemicalAnalysis, Furnace
-from app.models.pipe import Pipe, PipeStage
+from app.models.pipe import Pipe, PipeStage, normalize_no_code
 from app.models.mechanical import MechanicalTest
 from app.services.ladle_utils import generate_ladle_id
 
@@ -276,13 +276,33 @@ class ExcelImporter:
         stage_count = 0
 
         stage_names = ['CCM', 'Annealing', 'Zinc', 'Cutting', 'Hydrotest', 'Cement', 'Coating', 'Finish']
+        # Excel import runs against the canonical default names; if the admin
+        # renamed any of these in Settings > Stage Management, map them to the
+        # current display names so the import writes the right stage_name.
+        try:
+            from app.models.stage import ProductionStage
+            _stage_name_overrides = {
+                'CCM': ProductionStage.name_for_code('ccm'),
+                'Annealing': ProductionStage.name_for_code('annealing'),
+                'Zinc': ProductionStage.name_for_code('zinc'),
+                'Cutting': ProductionStage.name_for_code('cutting'),
+                'Hydrotest': ProductionStage.name_for_code('hydrotest'),
+                'Cement': ProductionStage.name_for_code('cement'),
+                'Coating': ProductionStage.name_for_code('coating'),
+                'Finish': ProductionStage.name_for_code('finish'),
+            }
+        except Exception:
+            _stage_name_overrides = {}
 
         for row_num, row in enumerate(sheet.iter_rows(min_row=start_row, values_only=True), start=start_row):
             try:
                 if not row or not row[mapping['no_code']]:
                     continue
 
-                no_code = str(row[mapping['no_code']]).strip()
+                no_code, no_code_error = normalize_no_code(str(row[mapping['no_code']]))
+                if no_code_error:
+                    self.warnings.append(f"Row {row_num}: {no_code_error} Skipping")
+                    continue
 
                 # Check for duplicate pipe
                 existing = Pipe.query.filter_by(no_code=no_code).first()
@@ -323,7 +343,7 @@ class ExcelImporter:
                         if decision:
                             stage = PipeStage(
                                 pipe_id=pipe.id,
-                                stage_name=stage_name,
+                                stage_name=_stage_name_overrides.get(stage_name, stage_name),
                                 decision=str(decision).strip().upper() if decision else None
                             )
                             db.session.add(stage)

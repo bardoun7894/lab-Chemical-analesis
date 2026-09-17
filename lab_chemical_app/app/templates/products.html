@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'إدارة المنتجات' if current_locale == 'ar' else 'Products' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-box-seam"></i>
+            {{ 'إدارة المنتجات' if current_locale == 'ar' else 'Product Management' }}
+        </h2>
+        <div>
+            <a href="{{ url_for('admin.add_product') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i>
+                {{ 'إضافة منتج' if current_locale == 'ar' else 'Add Product' }}
+            </a>
+            <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Products Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ 'رمز المنتج' if current_locale == 'ar' else 'Product Code' }}</th>
+                            <th>{{ 'الوصف' if current_locale == 'ar' else 'Description' }}</th>
+                            <th>{{ 'الوزن (كجم)' if current_locale == 'ar' else 'Weight (kg)' }}</th>
+                            <th>{{ 'الطول (م)' if current_locale == 'ar' else 'Length (m)' }}</th>
+                            <th>{{ 'الحالة' if current_locale == 'ar' else 'Active' }}</th>
+                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td><code>{{ product.product_code }}</code></td>
+                            <td>{{ (product.description_ar if current_locale == 'ar' else product.description_en) or '-' }}</td>
+                            <td>{{ product.weight_kg if product.weight_kg is not none else '-' }}</td>
+                            <td>{{ product.length_m if product.length_m is not none else '-' }}</td>
+                            <td>
+                                {% if product.is_active %}
+                                <span class="badge bg-success">{{ 'نشط' if current_locale == 'ar' else 'Active' }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ 'غير نشط' if current_locale == 'ar' else 'Inactive' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if can('admin', 'products_edit') %}<a href="{{ url_for('admin.edit_product', id=product.id) }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>{% endif %}
+                                    {% if can('admin', 'products_delete') %}<form method="POST" action="{{ url_for('admin.delete_product', id=product.id) }}"
+                                          onsubmit="return confirm('{{ 'هل أنت متأكد من الحذف؟' if current_locale == 'ar' else 'Are you sure you want to delete?' }}');" style="display: inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        {% if can('admin', 'products_delete') %}<button type="submit" class="btn btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>{% endif %}
+                                    </form>{% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if not products %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-3">{{ 'لا توجد منتجات' if current_locale == 'ar' else 'No products found' }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

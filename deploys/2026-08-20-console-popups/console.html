@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+{% set is_ar = current_locale == 'ar' %}
+
+{% block title %}{{ 'وحدة تسجيل المراحل' if is_ar else 'Stage Entry Console' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .console-list { max-height: calc(100vh - 320px); overflow-y: auto; }
+    .console-list .list-group-item { cursor: pointer; }
+    .console-list .list-group-item.active { background: var(--bs-primary); border-color: var(--bs-primary); }
+    .console-pane { max-height: calc(100vh - 230px); overflow-y: auto; }
+    .console-status.ok { color: #198754; }
+    .console-status.err { color: #dc3545; }
+    .console-status.busy { color: #6c757d; }
+    .console-stage.dirty { outline: 2px solid #ffc107; outline-offset: -2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-lightning-charge text-primary"></i>
+                {{ 'وحدة تسجيل المراحل' if is_ar else 'Stage Entry Console' }}
+            </h1>
+            <p class="text-muted mb-0 small">
+                {{ 'اختر الأنبوب من القائمة، سجّل قراءات المرحلة — الحفظ تلقائي — ثم انتقل للأنبوب التالي دون مغادرة الشاشة'
+                   if is_ar else
+                   'Pick a pipe from the list, record its stage readings — saved automatically — then move to the next pipe without leaving the screen' }}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('stages.add') }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-plus-lg"></i> {{ 'تسجيل أنبوب جديد' if is_ar else 'Register new pipe' }}
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- ============ Picker ============ -->
+        <div class="col-lg-4 col-xl-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="form-label small mb-1">{{ 'المرحلة' if is_ar else 'Stage' }}</label>
+                        <select id="f-stage" class="form-select form-select-sm">
+                            <option value="">{{ 'كل المراحل' if is_ar else 'All stages' }}</option>
+                            {% for name in stage_names %}
+                            <option value="{{ name }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="f-pending">
+                        <label class="form-check-label small" for="f-pending">
+                            {{ 'المتبقي في هذه المرحلة فقط' if is_ar else 'Only pipes still pending at this stage' }}
+                        </label>
+                    </div>
+
+                    <input type="text" id="f-q" class="form-control form-control-sm mb-2"
+                           placeholder="{{ 'كود الأنبوب / الشحنة…' if is_ar else 'Pipe code / ladle…' }}" autofocus>
+
+                    <div class="row g-1 mb-2">
+                        <div class="col-6">
+                            <input type="text" id="f-dn" class="form-control form-control-sm" placeholder="DN">
+                        </div>
+                        <div class="col-6">
+                            <input type="date" id="f-date" class="form-control form-control-sm">
+                        </div>
+                    </div>
+
+                    <select id="f-order" class="form-select form-select-sm mb-2">
+                        <option value="">{{ 'كل أوامر الإنتاج' if is_ar else 'All production orders' }}</option>
+                        {% for o in production_orders %}
+                        <option value="{{ o.id }}">{{ o.order_number }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-muted" id="pipe-count">—</span>
+                        <button type="button" id="btn-reload" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+
+                    <div class="list-group list-group-flush console-list" id="pipe-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ Entry pane ============ -->
+        <div class="col-lg-8 col-xl-9">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body console-pane" id="pipe-pane">
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-arrow-{{ 'right' if is_ar else 'left' }}-circle" style="font-size:2.5rem"></i>
+                        <p class="mt-3 mb-0">{{ 'اختر أنبوباً من القائمة للبدء' if is_ar else 'Pick a pipe from the list to start' }}</p>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="small text-muted" id="pane-status"></span>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-prev" disabled>
+                            <i class="bi bi-chevron-up"></i> {{ 'السابق' if is_ar else 'Previous' }}
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-save-next" disabled>
+                            <i class="bi bi-check2-all"></i> {{ 'حفظ والتالي' if is_ar else 'Save & Next' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    "use strict";
+
+    const IS_AR = {{ 'true' if is_ar else 'false' }};
+    const CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const T = {
+        saving:  IS_AR ? 'جارٍ الحفظ…'      : 'saving…',
+        saved:   IS_AR ? 'تم الحفظ'         : 'saved',
+        failed:  IS_AR ? 'فشل الحفظ'        : 'save failed',
+        loading: IS_AR ? 'جارٍ التحميل…'    : 'loading…',
+        none:    IS_AR ? 'لا توجد أنابيب'   : 'No pipes match',
+        last:    IS_AR ? 'هذا آخر أنبوب في القائمة' : 'That was the last pipe in the list',
+        allsaved: IS_AR ? 'تم حفظ كل التغييرات' : 'All changes saved',
+    };
+
+    const listEl   = document.getElementById('pipe-list');
+    const paneEl   = document.getElementById('pipe-pane');
+    const countEl  = document.getElementById('pipe-count');
+    const statusEl = document.getElementById('pane-status');
+    const btnNext  = document.getElementById('btn-save-next');
+    const btnPrev  = document.getElementById('btn-prev');
+
+    let pipes = [];
+    let currentIndex = -1;
+
+    // ---------------------------------------------------------------- picker
+    function filters() {
+        return new URLSearchParams({
+            q:       document.getElementById('f-q').value.trim(),
+            dn:      document.getElementById('f-dn').value.trim(),
+            date:    document.getElementById('f-date').value,
+            order:   document.getElementById('f-order').value,
+            stage:   document.getElementById('f-stage').value,
+            pending: document.getElementById('f-pending').checked ? '1' : '',
+        });
+    }
+
+    function loadPipes(keepSelection) {
+        const selectedId = currentIndex >= 0 ? pipes[currentIndex].id : null;
+        countEl.textContent = T.loading;
+        fetch('{{ url_for("stages.api_console_search") }}?' + filters().toString())
+            .then(r => r.json())
+            .then(data => {
+                pipes = data.pipes || [];
+                renderList(data);
+                if (keepSelection && selectedId) {
+                    const i = pipes.findIndex(p => p.id === selectedId);
+                    if (i >= 0) { currentIndex = i; highlight(); return; }
+                }
+                currentIndex = -1;
+                updateButtons();
+            })
+            .catch(() => { countEl.textContent = T.failed; });
+    }
+
+    function renderList(data) {
+        listEl.innerHTML = '';
+        if (!pipes.length) {
+            countEl.textContent = T.none;
+            return;
+        }
+        countEl.textContent = data.count + (data.truncated ? '+' : '');
+        pipes.forEach((p, i) => {
+            const a = document.createElement('button');
+            a.type = 'button';
+            a.className = 'list-group-item list-group-item-action py-2';
+            a.dataset.index = i;
+            const badge = p.stage_decision
+                ? '<span class="badge bg-success-subtle text-success-emphasis">' + p.stage_decision + '</span>'
+                : '';
+            const blocked = p.blocked ? '<span class="badge bg-danger">!</span>' : '';
+            a.innerHTML =
+                '<div class="d-flex justify-content-between align-items-center gap-2">' +
+                  '<span class="text-truncate"><strong>' + (p.code || p.no_code) + '</strong></span>' +
+                  blocked + badge +
+                '</div>' +
+                '<div class="small text-muted text-truncate">' +
+                  (p.ladle ? p.ladle + ' · ' : '') + (p.dn ? 'DN' + p.dn + ' · ' : '') + (p.date || '') +
+                '</div>';
+            a.addEventListener('click', () => select(i));
+            listEl.appendChild(a);
+        });
+    }
+
+    function highlight() {
+        [...listEl.children].forEach((el, i) => el.classList.toggle('active', i === currentIndex));
+        const active = listEl.children[currentIndex];
+        if (active) active.scrollIntoView({ block: 'nearest' });
+        updateButtons();
+    }
+
+    function updateButtons() {
+        btnNext.disabled = currentIndex < 0;
+        btnPrev.disabled = currentIndex <= 0;
+    }
+
+    // ------------------------------------------------------------ entry pane
+    function select(i) {
+        if (i < 0 || i >= pipes.length) return;
+        currentIndex = i;
+        highlight();
+        statusEl.textContent = T.loading;
+        fetch('/stages/console/pipe/' + pipes[i].id + '?stage=' +
+              encodeURIComponent(document.getElementById('f-stage').value))
+            .then(r => r.text())
+            .then(html => {
+                paneEl.innerHTML = html;
+                statusEl.textContent = '';
+                wireForms();
+                const first = paneEl.querySelector('input:not([type=hidden]), select');
+                if (first) first.focus();
+            })
+            .catch(() => { statusEl.textContent = T.failed; });
+    }
+
+    // A stage row is only written when the user actually touched it — otherwise
+    // opening a pipe would stamp today's date and an approver onto all ten
+    // stages and fabricate history rows for stages that never happened.
+    // The change listener is DELEGATED on the pane: the CCM dimension grid's
+    // "+ Add sample" clones new inputs after wiring, and per-input listeners
+    // would never reach them.
+    function wireForms() {
+        paneEl.querySelectorAll('form.console-stage').forEach(form => {
+            form.addEventListener('submit', e => e.preventDefault());
+        });
+    }
+
+    paneEl.addEventListener('change', e => {
+        const form = e.target.closest('form.console-stage');
+        if (!form) return;
+        form.classList.add('dirty');
+        saveForm(form);
+    });
+
+    // CCM "+ Add sample" — clone the last sample row in both dimension grids
+    // as S(n+1). Delegated because the pane HTML is injected per pipe.
+    paneEl.addEventListener('click', e => {
+        const btn = e.target.closest('#consoleCcmAddSample');
+        if (!btn) return;
+        ['consoleCcmThickBody', 'consoleCcmDiaBody'].forEach(tbodyId => {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            const rows = tbody.querySelectorAll('tr[data-sample]');
+            if (!rows.length) return;
+            const next = 'S' + (rows.length + 1);
+            const clone = rows[rows.length - 1].cloneNode(true);
+            clone.setAttribute('data-sample', next);
+            clone.querySelector('td').textContent = next;
+            clone.querySelectorAll('input').forEach(inp => {
+                inp.name = inp.name.replace(/_S\d+_/, '_' + next + '_');
+                inp.value = '';
+            });
+            tbody.appendChild(clone);
+        });
+    });
+
+    // Ovality popup — recompute X-Y and Ovality % as the operator types.
+    // Delegated for the same reason as the button above: the pane HTML is
+    // injected per pipe, so nothing can be bound at load time. Saving needs no
+    // wiring here — the cells sit inside the stage form, so the pane's
+    // 'change' handler autosaves them with the rest of the row.
+    paneEl.addEventListener('input', e => {
+        const cell = e.target.closest('.console-ovality-x, .console-ovality-y');
+        if (!cell) return;
+        const table = cell.closest('.console-ovality-table');
+        if (!table) return;
+        const point = cell.getAttribute('data-point');
+        const q = sel => table.querySelector(sel + '[data-point="' + point + '"]');
+        const xEl = q('.console-ovality-x'), yEl = q('.console-ovality-y');
+        const diffEl = q('.console-ovality-diff'), pctEl = q('.console-ovality-pct');
+        if (!xEl || !yEl || !diffEl || !pctEl) return;
+
+        const x = parseFloat(xEl.value), y = parseFloat(yEl.value);
+        if (isNaN(x) || isNaN(y)) {
+            diffEl.textContent = '';
+            pctEl.textContent = '';
+            return;
+        }
+        diffEl.textContent = (x - y).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+        pctEl.textContent = (x + y === 0)
+            ? ''
+            : (((x - y) / (x + y)) * 100).toFixed(2) + '%';
+    });
+
+    function saveForm(form) {
+        const status = form.querySelector('.console-status');
+        const payload = {};
+        new FormData(form).forEach((v, k) => { payload[k] = v; });
+
+        status.className = 'console-status small busy';
+        status.textContent = T.saving;
+
+        return fetch(form.dataset.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify(payload),
+        })
+        .then(r => r.json().then(j => ({ ok: r.ok, body: j })))
+        .then(({ ok, body }) => {
+            if (ok && body.success) {
+                status.className = 'console-status small ok';
+                status.textContent = '✓ ' + T.saved + ' ' + new Date().toLocaleTimeString();
+                form.classList.remove('dirty');
+                return true;
+            }
+            // Surface the server's real reason (Zinc lab gate, Delivery gate,
+            // locked decision) instead of a generic failure.
+            status.className = 'console-status small err';
+            status.textContent = '✗ ' + (body.error || T.failed);
+            return false;
+        })
+        .catch(() => {
+            status.className = 'console-status small err';
+            status.textContent = '✗ ' + T.failed;
+            return false;
+        });
+    }
+
+    function saveAllDirty() {
+        const dirty = [...paneEl.querySelectorAll('form.console-stage.dirty')];
+        if (!dirty.length) return Promise.resolve(true);
+        return Promise.all(dirty.map(saveForm)).then(rs => rs.every(Boolean));
+    }
+
+    // ------------------------------------------------------------- controls
+    btnNext.addEventListener('click', () => {
+        saveAllDirty().then(allOk => {
+            if (!allOk) return;   // leave the user on the row the server refused
+            statusEl.textContent = T.allsaved;
+            if (currentIndex + 1 < pipes.length) {
+                select(currentIndex + 1);
+                // Reflect the decision we just recorded in the list badge.
+                loadPipesBadgesLater();
+            } else {
+                statusEl.textContent = T.last;
+            }
+        });
+    });
+
+    btnPrev.addEventListener('click', () => {
+        saveAllDirty().then(allOk => { if (allOk && currentIndex > 0) select(currentIndex - 1); });
+    });
+
+    let badgeTimer = null;
+    function loadPipesBadgesLater() {
+        clearTimeout(badgeTimer);
+        badgeTimer = setTimeout(() => loadPipes(true), 1200);
+    }
+
+    // Warn before losing an unsaved (mid-typing) row.
+    window.addEventListener('beforeunload', e => {
+        if (paneEl.querySelector('form.console-stage.dirty')) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    let searchTimer = null;
+    ['f-q', 'f-dn'].forEach(id =>
+        document.getElementById(id).addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => loadPipes(false), 300);
+        })
+    );
+    ['f-date', 'f-order', 'f-stage', 'f-pending'].forEach(id =>
+        document.getElementById(id).addEventListener('change', () => loadPipes(false))
+    );
+    document.getElementById('btn-reload').addEventListener('click', () => loadPipes(true));
+
+    loadPipes(false);
+})();
+</script>
+{% endblock %}

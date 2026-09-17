@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% from 'components/table_tools.html' import table_tools %}
+
+{% block title %}{{ 'التسليمات' if current_locale == 'ar' else 'Deliveries' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-truck"></i>
+            {{ 'سجلات التسليم' if current_locale == 'ar' else 'Delivery Records' }}
+        </h2>
+        <div class="d-flex gap-2">
+            {{ table_tools('deliveries', export_url=url_for('stages.delivery_export'), columns=picker_columns) }}
+            <a href="{{ url_for('stages.list') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                {{ 'الأنابيب' if current_locale == 'ar' else 'Pipes' }}
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-funnel"></i> {{ 'فلاتر' if current_locale == 'ar' else 'Filters' }}</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'أمر البيع' if current_locale == 'ar' else 'Sales Order' }}</label>
+                    <input type="text" name="sales_order" class="form-control" value="{{ filters.sales_order or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</label>
+                    <input type="text" name="customer" class="form-control" value="{{ filters.customer or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'رقم الإذن' if current_locale == 'ar' else 'Delivery Receipt' }}</label>
+                    <input type="text" name="delivery_receipt" class="form-control" value="{{ filters.delivery_receipt or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'رقم الباقة' if current_locale == 'ar' else 'Bundle #' }}</label>
+                    <input type="text" name="bundle" class="form-control" value="{{ filters.bundle or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'رقم الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}</label>
+                    <input type="text" name="no_code" class="form-control" value="{{ filters.no_code or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">DN</label>
+                    <select name="dn" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        {% for size in dn_sizes %}
+                        <option value="{{ size }}" {{ 'selected' if filters.dn == size|string else '' }}>DN{{ size }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'الفئة' if current_locale == 'ar' else 'Class' }}</label>
+                    <select name="class" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        {% for c in pipe_classes %}
+                        <option value="{{ c }}" {{ 'selected' if filters.class == c else '' }}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'المنتج' if current_locale == 'ar' else 'Product' }}</label>
+                    <select name="product_id" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        {% for prod in products %}
+                        <option value="{{ prod.id }}" {{ 'selected' if filters.product_id == prod.id|string else '' }}>{{ prod.product_code }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</label>
+                    <select name="shift" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        {% for s in [1, 2, 3] %}
+                        <option value="{{ s }}" {{ 'selected' if filters.shift == s|string else '' }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'من تاريخ' if current_locale == 'ar' else 'From Date' }}</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ filters.date_from or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'إلى تاريخ' if current_locale == 'ar' else 'To Date' }}</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ filters.date_to or '' }}">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary w-100"><i class="bi bi-search"></i> {{ 'تطبيق' if current_locale == 'ar' else 'Apply' }}</button>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <a href="{{ url_for('stages.delivery_list') }}" class="btn btn-outline-secondary w-100">{{ 'مسح' if current_locale == 'ar' else 'Reset' }}</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Comparison summary (same idea as the Shift Engineer Comparison report) -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="bi bi-bar-chart-line"></i>
+                {{ 'مقارنة التسليمات' if current_locale == 'ar' else 'Delivery Comparison' }}
+            </h6>
+            <a href="{{ url_for('reports.delivery_comparison') }}?{{ request.query_string.decode() }}"
+               class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-box-arrow-up-right"></i>
+                {{ 'التقرير الكامل' if current_locale == 'ar' else 'Full report' }}
+            </a>
+        </div>
+        <div class="card-body">
+            {% with data = delivery_summary, ar = (current_locale == 'ar') %}
+            {% include 'reports/_delivery_comparison_tables.html' %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">
+                {{ 'النتائج' if current_locale == 'ar' else 'Results' }}:
+                <span class="badge bg-secondary">{{ deliveries|length }}</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if deliveries %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" data-table-tools="deliveries" data-row-select>
+                    <thead class="table-light">
+                        <tr>
+                            <th data-col="pipe_code">{{ 'رقم الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}</th>
+                            <th data-col="dn">DN</th>
+                            <th data-col="sales_order">{{ 'أمر البيع' if current_locale == 'ar' else 'Sales Order' }}</th>
+                            <th data-col="customer">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</th>
+                            <th data-col="receipt">{{ 'رقم الإذن' if current_locale == 'ar' else 'Receipt #' }}</th>
+                            <th data-col="bundle">{{ 'رقم الباقة' if current_locale == 'ar' else 'Bundle #' }}</th>
+                            <th data-col="delivery_date">{{ 'تاريخ التسليم' if current_locale == 'ar' else 'Delivery Date' }}</th>
+                            <th data-col="final">{{ 'القرار النهائي' if current_locale == 'ar' else 'Final Decision' }}</th>
+                            <th data-col="actions" data-col-label="{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in deliveries %}
+                        {% set p = d.pipe %}
+                        <tr data-row-id="{{ d.id }}">
+                            <td data-col="pipe_code"><code>{{ p.pipe_code or p.no_code }}</code></td>
+                            <td data-col="dn">DN{{ p.diameter }}</td>
+                            <td data-col="sales_order">{{ d.sales_order or '-' }}</td>
+                            <td data-col="customer">{{ d.delivery_customer or '-' }}</td>
+                            <td data-col="receipt">{{ d.delivery_receipt or '-' }}</td>
+                            <td data-col="bundle">{{ d.bundle_number or '-' }}</td>
+                            <td data-col="delivery_date">{{ d.delivery_date or '-' }}</td>
+                            <td data-col="final">
+                                {% set fd = p.final_decision_value or 'PENDING' %}
+                                {% set color = 'success' if fd == 'ACCEPT' else ('danger' if fd == 'REJECT' else 'warning') %}
+                                <span class="badge bg-{{ color }}">{{ fd }}</span>
+                            </td>
+                            <td data-col="actions">
+                                <a href="{{ url_for('stages.view', id=p.id) }}" class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-4 mb-0">{{ 'لا توجد سجلات تسليم مطابقة' if current_locale == 'ar' else 'No delivery records match the filters.' }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

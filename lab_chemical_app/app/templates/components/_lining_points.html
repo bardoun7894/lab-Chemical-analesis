@@ -1,0 +1,215 @@
+{# Lining thickness — X/Y at the socket and the spigot.
+
+   Replaces the six per-metre cells. The lining is measured at the two ends of
+   the pipe, twice at each, and every measurement is a perpendicular pair, so
+   the grid reads like the ovality one: X, Y, the spread between them, the
+   average of the pair, and one overall average across the four positions.
+
+   The Min / Nominal / Max band keeps the same input names it had, so the
+   product's Application spec still reaches it unchanged.
+
+   Callers pass:
+     stage_name  - the stage the inputs post under (Coating)
+     layer       - cement or coating
+     title       - the row label used in the empty-band note
+     nominal/lo/hi - the band, or none
+     points      - thickness_profile.<layer>_points, or {}
+     overall     - thickness_profile.<layer>_avg, or none
+     is_ar       - locale flag
+#}
+{% import 'components/_standard_row.html' as std_note with context %}
+
+{% macro lining_grid(stage_name, layer, title, lo, nominal, hi, points, overall, is_ar) %}
+{% set points = points or {} %}
+{# Cement is measured in millimetres, coating in microns. #}
+{% set unit = 'μ' if layer == 'coating' else 'mm' %}
+<div class="table-responsive mb-3">
+    <table class="table table-sm table-bordered mb-0 text-center align-middle bg-white cem-table"
+           data-cem-stage="{{ stage_name }}" data-cem-layer="{{ layer }}">
+        <thead>
+            <tr class="table-secondary">
+                <th style="min-width: 66px;">{{ 'الأدنى' if is_ar else 'min' }}</th>
+                <th style="min-width: 66px;">{{ 'الاسمي' if is_ar else 'nominal' }}</th>
+                <th style="min-width: 66px;">{{ 'الأقصى' if is_ar else 'max' }}</th>
+                <th style="min-width: 74px;" class="small text-muted">{{ unit }}</th>
+                <th colspan="2">{{ 'السوكيت' if is_ar else 'Socket' }}</th>
+                <th colspan="2">{{ 'الاسبيجوت' if is_ar else 'Spigot' }}</th>
+                <th class="table-info" style="min-width: 78px;">{{ 'المتوسط' if is_ar else 'Average' }}</th>
+            </tr>
+            <tr>
+                <td class="table-light">
+                    <input type="number" name="stage_{{ stage_name }}_thick_{{ layer }}_std_min"
+                           class="form-control form-control-sm text-center cem-band" step="0.01" min="0"
+                           data-bound="lsl" placeholder="{{ unit }}"
+                           value="{{ lo if lo is not none else '' }}">
+                </td>
+                <td class="table-light">
+                    <input type="number" name="stage_{{ stage_name }}_thick_{{ layer }}_std"
+                           class="form-control form-control-sm text-center fw-bold cem-band" step="0.01" min="0"
+                           data-bound="nominal" placeholder="{{ unit }}"
+                           value="{{ nominal if nominal is not none else '' }}">
+                </td>
+                <td class="table-light">
+                    <input type="number" name="stage_{{ stage_name }}_thick_{{ layer }}_std_max"
+                           class="form-control form-control-sm text-center cem-band" step="0.01" min="0"
+                           data-bound="usl" placeholder="{{ unit }}"
+                           value="{{ hi if hi is not none else '' }}">
+                </td>
+                <td></td>
+                {% for key, end, ordinal in lining_points_cols %}
+                <th>{{ ordinal }}</th>
+                {% endfor %}
+                <td class="table-info"></td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for axis in ['x', 'y'] %}
+            <tr>
+                <td colspan="3" class="table-light"></td>
+                <td class="fw-bold text-start">{{ axis | upper }}</td>
+                {% for key, end, ordinal in lining_points_cols %}
+                {% set pv = points.get(key) %}
+                {% set val = pv.get(axis) if pv else none %}
+                {% set out = val is not none and (
+                    (lo is not none and val < lo) or (hi is not none and val > hi)) %}
+                <td>
+                    <input type="number" name="stage_{{ stage_name }}_thick_{{ layer }}_pt_{{ key }}_{{ axis }}"
+                           class="form-control form-control-sm text-center px-1 cem-{{ axis }}{{ ' border-danger text-danger' if out }}"
+                           step="0.01" min="0" style="min-width: 62px;"
+                           data-point="{{ key }}"
+                           data-lsl="{{ lo if lo is not none else '' }}"
+                           data-usl="{{ hi if hi is not none else '' }}"
+                           value="{{ val if val is not none else '' }}">
+                </td>
+                {% endfor %}
+                <td class="table-info"></td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td colspan="3" class="table-light"></td>
+                <td class="fw-bold text-start">{{ 'الفرق' if is_ar else 'diff' }}</td>
+                {% for key, end, ordinal in lining_points_cols %}
+                {% set pv = points.get(key) %}
+                <td class="fw-bold cem-diff" data-point="{{ key }}">
+                    {% if pv and pv.get('diff') is not none %}{{ pv.get('diff') }}{% endif %}
+                </td>
+                {% endfor %}
+                <td class="table-info"></td>
+            </tr>
+            <tr class="table-info">
+                <td colspan="3" class="table-light"></td>
+                <td class="fw-bold text-start">{{ 'المتوسط' if is_ar else 'Average' }}</td>
+                {% for key, end, ordinal in lining_points_cols %}
+                {% set pv = points.get(key) %}
+                <td class="fw-bold cem-avg" data-point="{{ key }}">
+                    {% if pv and pv.get('avg') is not none %}{{ pv.get('avg') }}{% endif %}
+                </td>
+                {% endfor %}
+                <td class="fw-bold cem-grand">{% if overall is not none %}{{ overall }}{% endif %}</td>
+            </tr>
+            {# Same guarantee the per-metre grid had: an empty band has to say
+               so, or the readings look judged when nothing judged them. #}
+            {{ std_note.spec_note(4 + (lining_points_cols | length) + 1,
+                                  'stage_' ~ stage_name ~ '_thick_' ~ layer,
+                                  title,
+                                  nominal, lo, hi, is_ar) }}
+        </tbody>
+    </table>
+</div>
+<div class="small text-muted mb-2">
+    <i class="bi bi-info-circle"></i>
+    {{ 'قرايتين على السوكيت وقرايتين على الاسبيجوت، كل قراية X و Y. الفرق = X − Y. المتوسط = (X+Y)/2، والمتوسط النهائي هو متوسط المواضع اللي اتقاست.' if is_ar
+       else 'Two readings at the socket and two at the spigot, each a perpendicular X/Y pair. diff = X − Y. Average = (X+Y)/2, and the final Average is the mean of the positions actually measured.' }}
+</div>
+{% endmacro %}
+
+
+{# Live diff / average as the operator types, and the out-of-band flag.
+
+   Delegated on document and emitted once, so it covers a grid swapped in
+   later — the Stage Console replaces its whole pane on every pipe change.
+#}
+{% macro lining_grid_script() %}
+<script>
+(function () {
+    if (window.__cemBound) { return; }
+    window.__cemBound = true;
+
+    function num(el) {
+        if (!el || el.value === '') { return null; }
+        var v = parseFloat(el.value);
+        return isNaN(v) ? null : v;
+    }
+
+    function band(table) {
+        var lo = table.querySelector('.cem-band[data-bound="lsl"]');
+        var hi = table.querySelector('.cem-band[data-bound="usl"]');
+        return [num(lo), num(hi)];
+    }
+
+    function flag(el, lo, hi) {
+        if (!el) { return; }
+        var v = num(el);
+        var bad = v !== null && ((lo !== null && v < lo) || (hi !== null && v > hi));
+        el.classList.toggle('border-danger', bad);
+        el.classList.toggle('text-danger', bad);
+    }
+
+    function recalc(table) {
+        var limits = band(table), lo = limits[0], hi = limits[1];
+        var avgs = [];
+        table.querySelectorAll('.cem-x').forEach(function (xEl) {
+            var pt = xEl.dataset.point;
+            var yEl = table.querySelector('.cem-y[data-point="' + pt + '"]');
+            var x = num(xEl), y = num(yEl);
+
+            flag(xEl, lo, hi);
+            flag(yEl, lo, hi);
+
+            var diffEl = table.querySelector('.cem-diff[data-point="' + pt + '"]');
+            if (diffEl) {
+                diffEl.textContent = (x !== null && y !== null)
+                    ? (Math.round((x - y) * 100) / 100) : '';
+            }
+
+            var taken = [x, y].filter(function (v) { return v !== null; });
+            var avgEl = table.querySelector('.cem-avg[data-point="' + pt + '"]');
+            var avg = taken.length
+                ? Math.round((taken.reduce(function (a, b) { return a + b; }, 0)
+                              / taken.length) * 100) / 100
+                : null;
+            if (avgEl) { avgEl.textContent = avg === null ? '' : avg; }
+            if (avg !== null) { avgs.push(avg); }
+        });
+
+        var grand = table.querySelector('.cem-grand');
+        if (grand) {
+            grand.textContent = avgs.length
+                ? Math.round((avgs.reduce(function (a, b) { return a + b; }, 0)
+                              / avgs.length) * 100) / 100
+                : '';
+        }
+    }
+
+    document.addEventListener('input', function (ev) {
+        var el = ev.target;
+        if (!el.classList) { return; }
+        if (!(el.classList.contains('cem-x') || el.classList.contains('cem-y')
+              || el.classList.contains('cem-band'))) { return; }
+        var table = el.closest('.cem-table');
+        if (table) { recalc(table); }
+    });
+
+    function initAll(root) {
+        (root || document).querySelectorAll('.cem-table').forEach(recalc);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { initAll(); });
+    } else {
+        initAll();
+    }
+    document.addEventListener('shown.bs.modal', function (e) { initAll(e.target); });
+    window.refreshLiningGrids = initAll;
+})();
+</script>
+{% endmacro %}

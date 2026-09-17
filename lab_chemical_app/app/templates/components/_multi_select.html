@@ -1,0 +1,143 @@
+{# Checkbox dropdown for the stage grid's Defect Type / Defect Reason cells.
+
+   A native <select multiple> is unusable in a table cell — it grows to N rows
+   and ctrl-click is not something the shop floor should have to know. So the
+   control is a dropdown button holding checkboxes, backed by ONE hidden input
+   carrying the picked values comma-joined:
+
+       Sand hole, Crack
+
+   That keeps the wire format a plain string, so every existing reader —
+   stages.add / edit / update_stage, PipeStageHistory, the exports, the detail
+   page badges — keeps working untouched. Aggregation splits on the comma
+   (crosstab_service, bi_service) so two defects on one row count as two.
+
+   Callers pass:
+     field   - the input name the route already reads (stage_<X>_defect_type)
+     items   - the admin list as [(name_en, name_ar), ...]
+     current - the saved string, comma-separated or a single legacy value
+     none_label - what the button shows when nothing is picked
+     value_ar / label_ar - which half of each tuple to store and to show.
+       Both screens already differ here (the Register grid stores the localised
+       reason label, the Console stores name_en), so the flags keep each
+       caller's existing stored value byte-for-byte.
+
+   A saved value that has since been removed from the admin list is rendered as
+   an extra checked box, so editing a row never silently drops it.
+#}
+{% macro multi_select(field, items, current, none_label, value_ar=False, label_ar=False) %}
+{% set current = (current or '')|trim %}
+{% set picked = current.split(',')|map('trim')|reject('equalto', '')|list %}
+{% set known = items|map(attribute=(1 if value_ar else 0))|list %}
+{% set extras = picked|reject('in', known)|list %}
+<div class="dropdown ms-multi">
+    <input type="hidden" name="{{ field }}" class="ms-value" value="{{ current }}">
+    {# Styled as form-select, not as a button: it sits in a row of native
+       <select>s and has to read as one of them. form-select carries the
+       border, height and chevron, so no dropdown-toggle class here — that
+       would draw a second caret next to Bootstrap's own. #}
+    <button class="form-select form-select-sm text-start text-truncate ms-label"
+            type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+        {% if picked|length == 0 %}{{ none_label }}
+        {% elif picked|length == 1 %}{{ picked[0] }}
+        {% else %}{{ picked|length }}{% endif %}
+    </button>
+    <ul class="dropdown-menu p-2 ms-menu" style="max-height: 260px; overflow-y: auto; min-width: 220px;">
+        {% for name_en, name_ar in items %}
+        {% set value = name_ar if value_ar else name_en %}
+        {% set label = name_ar if label_ar else name_en %}
+        <li>
+            <label class="dropdown-item d-flex align-items-center gap-2 px-2 py-1 mb-0">
+                <input type="checkbox" class="form-check-input m-0 ms-box"
+                       value="{{ value }}" {{ 'checked' if value in picked }}>
+                <span>{{ label }}</span>
+            </label>
+        </li>
+        {% endfor %}
+        {% for value in extras %}
+        <li>
+            <label class="dropdown-item d-flex align-items-center gap-2 px-2 py-1 mb-0">
+                <input type="checkbox" class="form-check-input m-0 ms-box" value="{{ value }}" checked>
+                <span>{{ value }} <em class="text-muted small">({{ 'محذوف' if current_locale == 'ar' else 'retired' }})</em></span>
+            </label>
+        </li>
+        {% endfor %}
+        {% if not items and not extras %}
+        <li><span class="dropdown-item-text text-muted small">{{ none_label }}</span></li>
+        {% endif %}
+    </ul>
+</div>
+{% endmacro %}
+
+
+{# Emitted once per page. Delegated, so it also covers a grid swapped in later
+   (the Stage Console replaces its whole pane on every pipe change). #}
+{% macro multi_select_script(none_label) %}
+<script>
+(function () {
+    if (window.__msMultiBound) { return; }
+    window.__msMultiBound = true;
+
+    var NONE = {{ none_label|tojson }};
+
+    function sync(root) {
+        var hidden = root.querySelector('.ms-value');
+        var label = root.querySelector('.ms-label');
+        if (!hidden || !label) { return; }
+
+        var picked = Array.prototype.slice
+            .call(root.querySelectorAll('.ms-box'))
+            .filter(function (b) { return b.checked; })
+            .map(function (b) { return b.value; });
+
+        hidden.value = picked.join(', ');
+        label.textContent = picked.length === 0 ? NONE
+            : (picked.length === 1 ? picked[0] : String(picked.length));
+
+        // The console autosaves on change of its own inputs; the hidden field
+        // is not one of them, so tell it explicitly.
+        hidden.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    document.addEventListener('change', function (ev) {
+        var box = ev.target;
+        if (!box.classList || !box.classList.contains('ms-box')) { return; }
+        var root = box.closest('.ms-multi');
+        if (root) { sync(root); }
+    });
+
+    // Clicking the label must not close the menu before the box toggles.
+    document.addEventListener('click', function (ev) {
+        if (ev.target.closest && ev.target.closest('.ms-menu')) {
+            ev.stopPropagation();
+        }
+    });
+
+    // The Register grid lives inside .table-responsive. That sets overflow-x,
+    // and CSS resolves the other axis to auto as soon as one is not visible —
+    // so the open menu would be clipped to the cell height. Let it out while
+    // the menu is open, then put the scroller back exactly as it was.
+    function scroller(el) {
+        return el && el.closest ? el.closest('.table-responsive') : null;
+    }
+
+    document.addEventListener('show.bs.dropdown', function (ev) {
+        if (!ev.target.closest || !ev.target.closest('.ms-multi')) { return; }
+        var box = scroller(ev.target);
+        if (box) {
+            box.dataset.msPrevOverflow = box.style.overflow || '';
+            box.style.overflow = 'visible';
+        }
+    });
+
+    document.addEventListener('hide.bs.dropdown', function (ev) {
+        if (!ev.target.closest || !ev.target.closest('.ms-multi')) { return; }
+        var box = scroller(ev.target);
+        if (box && 'msPrevOverflow' in box.dataset) {
+            box.style.overflow = box.dataset.msPrevOverflow;
+            delete box.dataset.msPrevOverflow;
+        }
+    });
+})();
+</script>
+{% endmacro %}

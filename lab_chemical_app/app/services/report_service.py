@@ -345,6 +345,178 @@ def generate_daily_production_pdf(pipes, report_date, by_shift, by_diameter):
     return buffer
 
 
+def generate_daily_report_pdf(report):
+    """
+    PDF of the v52-style daily report (BI dashboard section).
+
+    Args:
+        report: dict returned by bi_service.daily_report()
+
+    Returns:
+        BytesIO buffer containing PDF
+    """
+    R = reshape_arabic
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        rightMargin=1.2*cm, leftMargin=1.2*cm,
+        topMargin=1.2*cm, bottomMargin=1.2*cm,
+    )
+
+    elements = []
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'DailyTitle', parent=styles['Heading1'],
+        fontSize=16, spaceAfter=4, alignment=1)
+    sub_style = ParagraphStyle(
+        'DailySub', parent=styles['Normal'],
+        fontSize=10, alignment=1, textColor=colors.grey)
+
+    t = report["today"]
+    y = report["yest"]
+
+    elements.append(Paragraph(R("التقرير اليومي للإنتاج والجودة"), title_style))
+    elements.append(Paragraph(R("مصنع CCM — أنابيب الحديد الزهر المطيل"), sub_style))
+    elements.append(Paragraph(
+        f"{R(report['arabic_date'])} — {report['date']}", sub_style))
+    elements.append(Spacer(1, 4*mm))
+    elements.append(Paragraph(
+        R(f"الحالة العامة: {report['status']['text']} — "
+          f"معدل الرفض: {t['rej_pct']:.2f}%"), styles['Heading2']))
+    elements.append(Spacer(1, 4*mm))
+
+    def _arrow(cur, prev, lower_better=True):
+        if prev is None:
+            return "—"
+        diff = cur - prev
+        if abs(diff) < 0.01:
+            return "→"
+        return ("▲" if diff > 0 else "▼")
+
+    # KPI table
+    kpi_data = [[R("المؤشر"), R("اليوم"), R("التغيير عن أمس")],
+                [R("إجمالي الإنتاج"), str(t["produced"]),
+                 _arrow(t["produced"], y["produced"] if y else None, False)],
+                [R("تم البت فيها"), str(t["n"]),
+                 _arrow(t["n"], y["n"] if y else None, False)],
+                [R("المرفوض"), str(t["rejects"]),
+                 _arrow(t["rejects"], y["rejects"] if y else None)],
+                [R("معدل الرفض"), f"{t['rej_pct']:.2f}%",
+                 _arrow(t["rej_pct"], y["rej_pct"] if y else None)],
+                # Coverage travels with the number: saving only covers pipes
+                # carrying both a standard and an actual weight, and a printed
+                # page has no tooltip to explain that later.
+                [R("Saving %"),
+                 f"{t['sav_pct']:.2f}%" if t.get("sav_n") else "—",
+                 (f"{t['sav_kg'] / 1000:.2f} MT "
+                  f"({t.get('sav_n', 0)}/{t.get('sav_of', 0)})")
+                 if t.get("sav_n") else R("لا يوجد وزن معياري وفعلي")]]
+    wa = report["week_avg"]
+    if wa:
+        kpi_data.append([R("متوسط آخر أسبوع"),
+                         f"{wa['rej_pct']:.2f}%", f"{wa['n_per_day']} ماسورة/يوم"])
+    elements.append(_pdf_table(kpi_data, [55*mm, 45*mm, 45*mm]))
+    elements.append(Spacer(1, 6*mm))
+
+    def _perf_table(title, rows):
+        data = [[R(h) for h in (title, "الإجمالي", "مرفوض", "%", "التغيير")]]
+        for r in rows:
+            data.append([R(str(r["key"])), str(r["total"]), str(r["rejects"]),
+                         f"{r['pct']:.1f}%", _arrow(r["pct"], r.get("y_pct"))])
+        return _pdf_table(data, [45*mm, 25*mm, 25*mm, 25*mm, 25*mm])
+
+    elements.append(_perf_table("الماكينة", report["machine_rows"]))
+    elements.append(Spacer(1, 4*mm))
+    elements.append(_perf_table("المشرف", report["sup_rows"]))
+    elements.append(Spacer(1, 6*mm))
+
+    # Rejection reasons
+    if report["top_reasons"]:
+        data = [[R(h) for h in ("#", "السبب", "العدد", "%")]]
+        for i, r in enumerate(report["top_reasons"], 1):
+            data.append([str(i), R(r["reason"]), str(r["count"]),
+                         f"{r['pct']:.1f}%"])
+        elements.append(_pdf_table(data, [12*mm, 70*mm, 30*mm, 28*mm]))
+        elements.append(Spacer(1, 6*mm))
+
+    # Molds
+    if report["top_molds"]:
+        data = [[R(h) for h in ("#", "القالب", "مرفوض")]]
+        for i, m in enumerate(report["top_molds"], 1):
+            data.append([str(i), R(m["mold"]), str(m["count"])])
+        elements.append(_pdf_table(data, [12*mm, 70*mm, 30*mm]))
+        elements.append(Spacer(1, 6*mm))
+
+    # Shifts + week footer
+    data = [[R(h) for h in ("الوردية", "الإجمالي", "مرفوض", "%")]]
+    for r in report["shift_rows"]:
+        data.append([R(f"الوردية {r['key']}"), str(r["total"]),
+                     str(r["rejects"]), f"{r['pct']:.1f}%"])
+    elements.append(_pdf_table(data, [45*mm, 35*mm, 35*mm, 25*mm]))
+    if wa:
+        elements.append(Spacer(1, 2*mm))
+        elements.append(Paragraph(R(
+            f"متوسط آخر أسبوع: {wa['rej_pct']:.2f}% رفض | "
+            f"{wa['n_per_day']} ماسورة/يوم"), sub_style))
+    elements.append(Spacer(1, 6*mm))
+
+    # Shift detail
+    if report["shift_detail_rows"]:
+        data = [[R(h) for h in ("الوردية", "القطر DN", "النوع",
+                                "متخذ القرار", "الإجمالي", "مرفوض", "%")]]
+        for r in report["shift_detail_rows"]:
+            data.append([str(r["shift"]), f"DN{r['dn']}", R(str(r["cls"])),
+                         R(r["approver"]), str(r["total"]),
+                         str(r["rejects"]), f"{r['pct']:.1f}%"])
+        elements.append(_pdf_table(
+            data, [16*mm, 22*mm, 22*mm, 34*mm, 18*mm, 18*mm, 18*mm]))
+        elements.append(Spacer(1, 6*mm))
+
+    # Summary
+    elements.append(Paragraph(R("الملخص التنفيذي (تلقائي)"), styles['Heading2']))
+    elements.append(Paragraph(R(report["summary"]), styles['Normal']))
+    elements.append(Spacer(1, 6*mm))
+
+    # Alerts
+    if report["alerts"]:
+        elements.append(Paragraph(R("تنبيهات اليوم"), styles['Heading2']))
+        for a in report["alerts"]:
+            elements.append(Paragraph(R(a), styles['Normal']))
+        elements.append(Spacer(1, 6*mm))
+
+    # Signatures
+    sig = Table(
+        [[R(s) for s in report["signatures"]]],
+        colWidths=[55*mm, 55*mm, 55*mm])
+    sig.setStyle(TableStyle([
+        ('LINEABOVE', (0, 0), (-1, 0), 0.8, colors.grey),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(Spacer(1, 10*mm))
+    elements.append(sig)
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+
+def _pdf_table(data, col_widths):
+    """Styled table used by the daily report PDF."""
+    table = Table(data, colWidths=col_widths)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#334155')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.4, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1),
+         [colors.white, colors.HexColor('#f1f5f9')]),
+    ]))
+    return table
+
+
 def generate_defect_report_pdf(chem_defects, stage_defects, defects_by_stage, date_from, date_to):
     """
     Generate PDF report for defects.

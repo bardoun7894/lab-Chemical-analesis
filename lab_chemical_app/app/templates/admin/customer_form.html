@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'تعديل العميل' if customer else 'إضافة عميل' if current_locale == 'ar' else 'Edit Customer' if customer else 'Add Customer' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-people"></i>
+            {% if customer %}
+                {{ 'تعديل العميل' if current_locale == 'ar' else 'Edit Customer' }}
+            {% else %}
+                {{ 'إضافة عميل جديد' if current_locale == 'ar' else 'Add New Customer' }}
+            {% endif %}
+        </h2>
+        <a href="{{ url_for('admin.customers') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.edit_customer', id=customer.id) if customer else url_for('admin.add_customer') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الرمز' if current_locale == 'ar' else 'Code' }} *</label>
+                            <input type="text" name="code" class="form-control" required
+                                   value="{{ customer.code if customer else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الاسم (إنجليزي)' if current_locale == 'ar' else 'Name EN' }} *</label>
+                            <input type="text" name="name_en" class="form-control" required
+                                   value="{{ customer.name_en if customer else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الاسم (عربي)' if current_locale == 'ar' else 'Name AR' }}</label>
+                            <input type="text" name="name_ar" class="form-control"
+                                   value="{{ customer.name_ar if customer else '' }}">
+                        </div>
+
+                        <div class="form-check mb-4">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+                                   {{ 'checked' if not customer or customer.is_active }}>
+                            <label class="form-check-label" for="is_active">
+                                {{ 'نشط' if current_locale == 'ar' else 'Active' }}
+                            </label>
+                        </div>
+
+                        {% include 'components/_audit_reason.html' %}
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-lg"></i>
+                                {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
+                            </button>
+                            <a href="{{ url_for('admin.customers') }}" class="btn btn-outline-secondary">
+                                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

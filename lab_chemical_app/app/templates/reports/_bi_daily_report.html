@@ -1,0 +1,567 @@
+{# Daily production & quality report — one printable page for a single date.
+   Included by reports/bi_dashboard.html. Macros are declared here rather than
+   inherited so the partial stays renderable on its own. #}
+
+{% set dr = data.daily_report %}
+
+{# Day-over-day change. Yesterday is the denominator, so a zero baseline has
+   no percentage to report — showing the direction alone beats dividing by zero,
+   which used to take the whole page down with a 500. #}
+{% macro dr_arrow(cur, prev, lower_better=false) -%}
+  {%- if prev is none -%}
+    <span class="text-muted">—</span>
+  {%- elif (cur - prev)|abs < 0.01 -%}
+    <span class="text-muted">مستقر</span>
+  {%- else -%}
+    {%- set better = (cur - prev) < 0 if lower_better else (cur - prev) > 0 -%}
+    <span class="fw-bold {{ 'text-success' if better else 'text-danger' }}">
+      <i class="bi bi-arrow-{{ 'up' if cur > prev else 'down' }}-short"></i>
+      {%- if prev -%}
+        {{ ((cur - prev) / prev * 100)|round(1)|abs }}%
+      {%- else -%}
+        من صفر
+      {%- endif -%}
+    </span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro dr_pill(p) -%}
+  <span class="ccm-pill {{ 'bad' if p > 7 else 'warn' if p > 4 else 'ok' }}">{{ '%.1f'|format(p) }}%</span>
+{%- endmacro %}
+
+{% if not dr %}
+  <div class="ccm-card"><div class="ccm-empty">لا توجد بيانات إنتاج بعد</div></div>
+{% else %}
+
+<div class="ccm-card mb-3 no-print">
+  <div class="ccm-card-body">
+    <form method="get" action="{{ url_for('reports.bi_dashboard') }}" class="row g-2 align-items-end">
+      {# rpt_date and _panel are re-emitted below, so skipping them here keeps
+         the filters without duplicating either key. Without the _panel marker
+         the reader is dropped back on Overview the moment they pick a date. #}
+      {% for k, v in request.args.items() %}
+        {% if k not in ('rpt_date', 'rpt_to', 'shift', '_panel') %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endif %}
+      {% endfor %}
+      <input type="hidden" name="_panel" value="daily">
+      <div class="col-auto">
+        <label class="form-label small">من تاريخ</label>
+        <input type="date" name="rpt_date" value="{{ dr.date_from or dr.date }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-auto">
+        {# Leave blank for a single day. A later date switches the report to a
+           span, where yesterday/week comparisons no longer apply. #}
+        <label class="form-label small">إلى تاريخ <span class="text-muted">(اختياري)</span></label>
+        <input type="date" name="rpt_to" value="{{ dr.date_to if dr.is_range else '' }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-auto">
+        <label class="form-label small">الوردية</label>
+        <select name="shift" class="form-select form-select-sm">
+          <option value="">الكل</option>
+          {% for n in [1, 2, 3] %}
+          <option value="{{ n }}" {{ 'selected' if dr.filters.get('shift') == n }}>وردية {{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-arrow-repeat"></i> توليد</button>
+      </div>
+      <div class="col d-flex justify-content-end gap-2">
+        <button type="button" onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-printer"></i> طباعة
+        </button>
+        <a href="{{ url_for('reports.export_daily_report_pdf', rpt_date=dr.date_from or dr.date, rpt_to=(dr.date_to if dr.is_range else none), shift=dr.filters.get('shift')) }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-file-earmark-pdf"></i> PDF
+        </a>
+        <button type="button" onclick="copyDailySummary()" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-clipboard"></i> نسخ الملخص
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="dailyReport">
+
+  <div class="ccm-card mb-3">
+    <div class="ccm-card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <div class="fw-bold">التقرير اليومي للإنتاج والجودة</div>
+        <div class="ccm-kpi-note">مصنع CCM — أنابيب الحديد الزهر المطيل</div>
+      </div>
+      <div class="text-end">
+        {% if dr.is_range %}
+        <div class="fw-bold">من {{ dr.date_from }} إلى {{ dr.date_to }}</div>
+        <div class="ccm-kpi-note">{{ dr.per_day|length }} يوم إنتاج</div>
+        {% else %}
+        <div class="fw-bold">{{ dr.arabic_date }}</div>
+        <div class="ccm-kpi-note">{{ dr.date }}</div>
+        {% endif %}
+        {% if dr.filters.get('shift') %}
+        <div class="ccm-kpi-note">وردية {{ dr.filters.get('shift') }} فقط</div>
+        {% endif %}
+        {% if dr.fell_back %}
+        <div class="ccm-kpi-note text-danger">
+          لا يوجد إنتاج في {{ dr.requested_date }} — معروض آخر يوم إنتاج
+        </div>
+        {% endif %}
+      </div>
+      <div>
+        <span class="ccm-pill {{ 'bad' if dr.today.rej_pct > 7 else 'warn' if dr.today.rej_pct > 4 else 'ok' }}">
+          {{ dr.status.text }} · {{ '%.2f'|format(dr.today.rej_pct) }}%
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ccm-kpis">
+    <div class="ccm-kpi is-navy">
+      <div class="ccm-kpi-label">إجمالي الإنتاج</div>
+      <div class="ccm-kpi-value">{{ dr.today.produced }}</div>
+      <div class="ccm-kpi-note">
+        {% if dr.yest %}{{ dr_arrow(dr.today.produced, dr.yest.produced) }} عن أمس{% else %}—{% endif %}
+        {% if dr.today.produced != dr.today.n %}
+          · {{ dr.today.produced - dr.today.n }} بانتظار القرار
+        {% endif %}
+      </div>
+    </div>
+    <div class="ccm-kpi is-danger">
+      <div class="ccm-kpi-label">المرفوض</div>
+      <div class="ccm-kpi-value">{{ dr.today.rejects }}</div>
+      <div class="ccm-kpi-note">{% if dr.yest %}{{ dr_arrow(dr.today.rejects, dr.yest.rejects, true) }} عن أمس{% else %}—{% endif %}</div>
+    </div>
+    <div class="ccm-kpi is-warning">
+      <div class="ccm-kpi-label">معدل الرفض</div>
+      <div class="ccm-kpi-value">{{ '%.2f'|format(dr.today.rej_pct) }}%</div>
+      <div class="ccm-kpi-note">
+        من {{ dr.today.n }} تم البت فيها
+        {% if dr.week_avg %} · متوسط الأسبوع {{ '%.1f'|format(dr.week_avg.rej_pct) }}%{% endif %}
+      </div>
+    </div>
+    {# Saving covers only pipes carrying both a standard and an actual weight;
+       the note says how many, so the figure is never read plant-wide. #}
+    <div class="ccm-kpi {{ 'is-muted' if not dr.today.sav_n else ('is-success' if dr.today.sav_pct > 2 else 'is-warning') }}">
+      <div class="ccm-kpi-label">Saving</div>
+      <div class="ccm-kpi-value">
+        {% if dr.today.sav_n %}{{ '%.2f'|format(dr.today.sav_pct) }}%{% else %}—{% endif %}
+      </div>
+      <div class="ccm-kpi-note">
+        {% if dr.today.sav_n %}
+        {{ '%.2f'|format(dr.today.sav_kg / 1000) }} طن ·
+        محسوب من {{ dr.today.sav_n }} من {{ dr.today.sav_of }} ماسورة
+        {% else %}
+        لا توجد ماسورة لها وزن معياري وفعلي معاً
+        {% endif %}
+        {% if dr.today.sav_excluded %}
+        · <span class="text-danger">{{ dr.today.sav_excluded | length }} مستبعدة</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if dr.is_range and dr.per_day %}
+  <div class="ccm-card mb-3">
+    <div class="ccm-card-head"><span>الأداء اليومي خلال الفترة</span></div>
+    <div class="ccm-card-body is-flush">
+      <div class="ccm-scroll">
+        <table class="ccm-table">
+          <thead><tr>
+            <th>التاريخ</th><th class="num">الإنتاج</th><th class="num">تم البت</th>
+            <th class="num">مرفوض</th><th class="num">النسبة</th><th class="num">Saving</th>
+          </tr></thead>
+          <tbody>
+            {% for d in dr.per_day %}
+            <tr>
+              <td>{{ d.date }}</td>
+              <td class="num">{{ d.produced }}</td>
+              <td class="num">{{ d.n }}</td>
+              <td class="num">{{ d.rejects }}</td>
+              <td class="num">{{ dr_pill(d.rej_pct) }}</td>
+              <td class="num">{% if d.sav_n %}{{ '%.2f'|format(d.sav_pct) }}%{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if dr.lab %}
+  <div class="ccm-grid">
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>نتائج المعمل — التحليل الكيميائي</span></div>
+      <div class="ccm-card-body is-flush">
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead><tr><th>القرار</th><th class="num">العدد</th></tr></thead>
+            <tbody>
+              {% for decision, n in dr.lab.chem_decisions.items() %}
+              <tr><td>{{ decision }}</td><td class="num">{{ n }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="ccm-card-body ccm-kpi-note">
+        {{ dr.lab.chem_count }} تحليل · {{ dr.lab.ladles }} بوتقة
+      </div>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>نتائج المعمل — الاختبارات الميكانيكية</span></div>
+      <div class="ccm-card-body is-flush">
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead><tr><th>النتيجة</th><th class="num">العدد</th></tr></thead>
+            <tbody>
+              {% for result, n in dr.lab.mech_results.items() %}
+              <tr><td>{{ result }}</td><td class="num">{{ n }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="ccm-card-body ccm-kpi-note">{{ dr.lab.mech_count }} اختبار فعّال</div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Per-stage: where in the line the rejects actually happen. Stage names come
+     folded through stage_name_aliases(), so a renamed built-in stage is one row
+     rather than a live row plus a ghost. #}
+  <div class="ccm-card mb-3">
+    <div class="ccm-card-head"><span>تحليل بالمرحلة</span></div>
+    <div class="ccm-card-body is-flush">
+      <div class="ccm-scroll">
+        <table class="ccm-table">
+          <thead><tr>
+            <th>المرحلة</th><th class="num">الإجمالي</th><th class="num">مقبول</th>
+            <th class="num">مرفوض</th><th class="num">بانتظار القرار</th><th class="num">نسبة الرفض</th>
+          </tr></thead>
+          <tbody>
+            {% for r in dr.stage_rows %}
+            <tr>
+              <td>{{ r.stage }}</td>
+              <td class="num">{{ r.total }}</td>
+              <td class="num">{{ r.acc }}</td>
+              <td class="num">{{ r.rej }}</td>
+              <td class="num">{{ r.pending }}</td>
+              <td class="num">{{ dr_pill(r.rej_pct) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-muted">لا توجد مراحل مسجلة</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if dr.defects and dr.defects.total %}
+  <div class="ccm-grid">
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>العيوب الأكثر تكراراً</span></div>
+      <div class="ccm-card-body is-flush">
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead><tr><th>العيب</th><th class="num">العدد</th><th class="num">%</th></tr></thead>
+            <tbody>
+              {% for r in dr.defects.rows %}
+              <tr><td>{{ r.label }}</td><td class="num">{{ r.count }}</td><td class="num">{{ r.pct }}%</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>العيوب حسب القطر</span></div>
+      <div class="ccm-card-body is-flush">
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead><tr><th>القطر</th><th class="num">عيوب</th><th>الأكثر تكراراً</th></tr></thead>
+            <tbody>
+              {% for r in dr.defects.by_dn %}
+              <tr>
+                <td>DN{{ r.dn }}</td>
+                <td class="num">{{ r.defects }}</td>
+                <td>{{ r.worst }} <span class="text-muted">({{ r.worst_count }})</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="ccm-grid">
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>الأداء بالماكينة</span></div>
+      <div class="ccm-card-body is-flush">
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead><tr><th>الماكينة</th><th class="num">الإجمالي</th><th class="num">مرفوض</th><th class="num">النسبة</th><th class="num">التغيير</th></tr></thead>
+            <tbody>
+              {% for r in dr.machine_rows %}
+              <tr>
+                <td>{{ r.key }}</td>
+                <td class="num">{{ r.total }}</td>
+                <td class="num">{{ r.rejects }}</td>
+                <td class="num">{{ dr_pill(r.pct) }}</td>
+                <td class="num">{{ dr_arrow(r.pct, r.y_pct, true) }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center text-muted">لا توجد بيانات</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>الأداء بالمشرف</span></div>
+      <div class="ccm-card-body is-flush">
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead><tr><th>المشرف</th><th class="num">الإجمالي</th><th class="num">مرفوض</th><th class="num">النسبة</th><th class="num">التغيير</th></tr></thead>
+            <tbody>
+              {% for r in dr.sup_rows %}
+              <tr>
+                <td>{{ r.key }}</td>
+                <td class="num">{{ r.total }}</td>
+                <td class="num">{{ r.rejects }}</td>
+                <td class="num">{{ dr_pill(r.pct) }}</td>
+                <td class="num">{{ dr_arrow(r.pct, r.y_pct, true) }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center text-muted">لا توجد بيانات</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>أسباب الرفض الأكثر تكراراً</span></div>
+      <div class="ccm-card-body is-flush">
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead><tr><th>#</th><th>السبب</th><th class="num">العدد</th><th class="num">النسبة</th></tr></thead>
+            <tbody>
+              {% for r in dr.top_reasons %}
+              <tr><td>{{ loop.index }}</td><td>{{ r.reason }}</td><td class="num">{{ r.count }}</td><td class="num">{{ '%.1f'|format(r.pct) }}%</td></tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted">لا توجد أسباب مسجلة</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>الأداء بالوردية</span></div>
+      <div class="ccm-card-body is-flush">
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead><tr><th>الوردية</th><th class="num">الإجمالي</th><th class="num">مرفوض</th><th class="num">النسبة</th></tr></thead>
+            <tbody>
+              {% for r in dr.shift_rows %}
+              <tr><td>الوردية {{ r.key }}</td><td class="num">{{ r.total }}</td><td class="num">{{ r.rejects }}</td><td class="num">{{ dr_pill(r.pct) }}</td></tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted">لا توجد بيانات</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% if dr.week_avg %}
+      <div class="ccm-card-foot">متوسط آخر أسبوع: {{ '%.2f'|format(dr.week_avg.rej_pct) }}% رفض · {{ dr.week_avg.n_per_day }} ماسورة/يوم</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if dr.top_molds %}
+  <div class="ccm-card mb-3">
+    <div class="ccm-card-head"><span>أكثر القوالب رفضاً</span></div>
+    <div class="ccm-card-body is-flush">
+      <table class="ccm-table">
+        <thead><tr><th>#</th><th>القالب</th><th class="num">مرفوض</th></tr></thead>
+        <tbody>
+          {% for m in dr.top_molds %}
+          <tr><td>{{ loop.index }}</td><td>{{ m.mold }}</td><td class="num">{{ m.count }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="ccm-card mb-3">
+    <div class="ccm-card-head"><span>تفاصيل الإنتاج بالوردية — القطر والنوع ومتخذ القرار</span></div>
+    <div class="ccm-card-body is-flush">
+      <div class="ccm-scroll">
+        <table class="ccm-table">
+          <thead><tr><th>القطر DN</th><th>النوع</th><th>متخذ القرار</th><th class="num">الإجمالي</th><th class="num">مرفوض</th><th class="num">النسبة</th></tr></thead>
+          <tbody>
+            {% set ns = namespace(last_shift=None) %}
+            {% for r in dr.shift_detail_rows %}
+              {% if r.shift != ns.last_shift %}
+                {% set ns.last_shift = r.shift %}
+                <tr><td colspan="6" class="fw-bold">الوردية {{ r.shift }}</td></tr>
+              {% endif %}
+              <tr>
+                <td>DN{{ r.dn }}</td>
+                <td>{{ r.cls }}</td>
+                <td>{{ r.approver }}</td>
+                <td class="num">{{ r.total }}</td>
+                <td class="num">{{ r.rejects }}</td>
+                <td class="num">{{ dr_pill(r.pct) }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="6" class="text-center text-muted">لا توجد بيانات</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% if not dr.today.has_approver %}
+    <div class="ccm-card-foot">لا توجد اعتمادات مراحل (approved_by) لبيانات اليوم — تسجيلها يُظهر اسم متخذ القرار هنا.</div>
+    {% endif %}
+  </div>
+
+  <div class="ccm-card mb-3">
+    <div class="ccm-card-head"><span>الملخص التنفيذي</span></div>
+    <div class="ccm-card-body"><div id="dailySummaryText" class="small lh-lg">{{ dr.summary }}</div></div>
+  </div>
+
+  {% if dr.alerts %}
+  <div class="ccm-card mb-3">
+    <div class="ccm-card-head"><span>تنبيهات اليوم</span></div>
+    <div class="ccm-card-body is-flush">
+      <table class="ccm-table">
+        <tbody>{% for a in dr.alerts %}<tr><td>{{ a }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if dr.today.sav_excluded %}
+  {# Set aside from the saving figure, not hidden: a wrong product link makes a
+     pipe report saving in the hundreds of percent, and averaging it in would
+     move the plant number without anyone seeing why. #}
+  <div class="ccm-card mt-3">
+    <div class="ccm-card-head">
+      <span>ماسورات مستبعدة من حساب التوفير</span>
+    </div>
+    <div class="ccm-card-body is-flush">
+      <div class="ccm-scroll">
+        <table class="ccm-table">
+          <thead><tr>
+            <th>الماسورة</th><th class="num">القطر</th>
+            <th class="num">الوزن المعياري</th><th class="num">الوزن الفعلي</th>
+            <th>السبب</th>
+          </tr></thead>
+          <tbody>
+            {% for e in dr.today.sav_excluded %}
+            <tr>
+              <td>{{ e.pipe }}</td>
+              <td class="num">DN{{ e.dn }}</td>
+              <td class="num">{{ '%.1f'|format(e.planned) }}</td>
+              <td class="num">{{ '%.1f'|format(e.actual) }}</td>
+              <td class="small text-danger">{{ e.reason }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="ccm-card-body ccm-kpi-note">
+      الأرقام دي غالباً منتج مربوط بالغلط أو وزن مُدخل خطأ — راجعها في صفحة الماسورة.
+    </div>
+  </div>
+  {% endif %}
+
+  {# AI reads the aggregates this page already computed — the same numbers the
+     reader sees — not the raw pipe rows. #}
+  <div class="ccm-card mt-3 no-print" id="dailyAiCard">
+    <div class="ccm-card-head d-flex justify-content-between align-items-center">
+      <span>تحليل AI وتوصيات</span>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="dailyAiBtn"
+              data-url="{{ url_for('reports.api_ai_summary', report_type='daily',
+                                   rpt_date=dr.date_from or dr.date,
+                                   rpt_to=(dr.date_to if dr.is_range else none),
+                                   shift=dr.filters.get('shift')) }}">
+        توليد التحليل
+      </button>
+    </div>
+    <div class="ccm-card-body">
+      <div id="dailyAiResult" class="ccm-kpi-note">
+        اضغط «توليد التحليل» لقراءة الأسباب الجذرية وتوصيات مرتبة بالأولوية.
+      </div>
+    </div>
+  </div>
+
+  {# Sign-off. The quality row is pre-filled with the day's resolvable approver
+     (PipeStage.approved_by_id); a role with nobody resolvable gets a blank line
+     to sign rather than an invented name. #}
+  <div class="ccm-card mt-3 ccm-signoff">
+    <div class="ccm-card-head"><span>الاعتماد</span></div>
+    <div class="ccm-card-body">
+      <div class="row g-4">
+        {% for row in dr.signoff %}
+        <div class="col-md-4 text-center">
+          <div class="ccm-signoff-name">{{ row.name or '&nbsp;' }}</div>
+          <div class="ccm-signoff-rule"></div>
+          <div class="fw-bold small">{{ row.role }}</div>
+          <div class="ccm-kpi-note">
+            {% if dr.is_range %}{{ dr.date_from }} — {{ dr.date_to }}{% else %}{{ dr.date }}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+      const btn = document.getElementById('dailyAiBtn');
+      if (!btn) { return; }
+      btn.addEventListener('click', function () {
+          const out = document.getElementById('dailyAiResult');
+          btn.disabled = true;
+          out.textContent = 'جارٍ التحليل…';
+          fetch(btn.dataset.url)
+              .then(r => r.json())
+              .then(d => {
+                  if (d.error) { out.textContent = d.error; return; }
+                  // The endpoint may return the model's JSON or a plain string;
+                  // render whichever shape arrived rather than assuming one.
+                  const parts = [];
+                  if (d.summary) { parts.push('<p>' + d.summary + '</p>'); }
+                  ['insights', 'recommendations'].forEach(function (k) {
+                      if (Array.isArray(d[k]) && d[k].length) {
+                          parts.push('<ul>' + d[k].map(
+                              i => '<li>' + i + '</li>').join('') + '</ul>');
+                      }
+                  });
+                  out.innerHTML = parts.length ? parts.join('')
+                      : (typeof d === 'string' ? d : JSON.stringify(d));
+              })
+              .catch(() => { out.textContent = 'تعذّر توليد التحليل.'; })
+              .finally(() => { btn.disabled = false; });
+      });
+  })();
+
+  function copyDailySummary() {
+      const el = document.getElementById('dailySummaryText');
+      if (!el) { return; }
+      navigator.clipboard.writeText(el.textContent.trim())
+          .catch(() => window.prompt('انسخ يدوياً', el.textContent.trim()));
+  }
+</script>
+{% endif %}

@@ -1,0 +1,88 @@
+{# The traceability canvas SVG — server-rendered so screen, fragment swap and
+   print share one code path. The JS only pans, zooms and highlights; it never
+   builds nodes. Swapped wholesale on expand/collapse and on the refresh poll,
+   the way the Stage Console swaps _console_pipe.html.
+
+   Swim lanes: each heat owns a horizontal band and its own children sit
+   inside it, so a ladle's pipes are beside that ladle rather than somewhere
+   down a shared column. #}
+{% set is_ar = current_locale == 'ar' %}
+<svg class="trace-svg" width="100%" height="100%"
+     data-w="{{ graph.width }}" data-h="{{ graph.height }}">
+    <defs>
+        <marker id="traceArrow" markerWidth="9" markerHeight="7"
+                refX="8" refY="3.5" orient="auto">
+            <polygon points="0 0, 9 3.5, 0 7"></polygon>
+        </marker>
+        <marker id="traceArrowLoop" markerWidth="9" markerHeight="7"
+                refX="8" refY="3.5" orient="auto">
+            <polygon points="0 0, 9 3.5, 0 7"></polygon>
+        </marker>
+    </defs>
+    <g class="trace-viewport">
+
+        {# lane bands first, behind everything #}
+        {% for b in graph.bands %}
+        <g class="trace-band">
+            <rect class="trace-band-bg" x="8" y="{{ b.y }}"
+                  width="{{ graph.width - 16 }}" height="{{ b.height }}" rx="10"></rect>
+            {% if b.label %}
+            <text class="trace-band-label" x="24" y="{{ b.y + 26 }}">{{ b.label }}</text>
+            {% endif %}
+        </g>
+        {% endfor %}
+
+        {# edges next so nodes paint on top #}
+        {% for e in graph.edges %}
+        <path class="trace-hit" d="{{ e.path }}"></path>
+        <path class="trace-edge state-{{ e.state }}{{ ' taken' if e.taken }}{{ ' loop' if e.loop }}"
+              data-from="{{ e["from"] }}" data-to="{{ e["to"] }}" d="{{ e.path }}"></path>
+        {% endfor %}
+        {% for e in graph.edges %}
+        {% if e.label %}
+        <text class="trace-elabel{{ ' taken' if e.taken }}"
+              x="{{ e.lx }}" y="{{ e.ly }}"
+              data-from="{{ e["from"] }}" data-to="{{ e["to"] }}"
+              text-anchor="middle">{{ e.label }}</text>
+        {% endif %}
+        {% endfor %}
+
+        {% for n in graph.nodes %}
+        <g class="trace-node kind-{{ n.kind }} state-{{ n.state }}{{ ' dim' if n.dim }}{{ ' expandable' if n.expandable }}"
+           data-id="{{ n.id }}"
+           {% if n.expandable %}data-expand="{{ n.expand_token }}" data-expanded="{{ '1' if n.expanded else '' }}"{% endif %}
+           {% if n.kind == 'stage' and n.stage_id %}data-detail="{{ url_for('reports.traceability_tree_node', kind='stage', id=n.stage_id) }}"
+           {% elif n.kind == 'scenario' and n.ladle_id %}data-detail="{{ url_for('reports.traceability_tree_node', kind='scenario', id=n.ladle_id) }}"
+           {% elif n.detail_url %}data-detail="{{ url_for('reports.traceability_tree_node', kind=n.kind, id=n.detail_url[1]) }}"{% endif %}
+           tabindex="0" transform="translate({{ n.x }},{{ n.y }})">
+            <rect class="trace-body" width="190" height="74" rx="8"></rect>
+            <rect class="trace-spine" width="4" height="74" rx="2"></rect>
+            <text class="trace-title" x="14" y="24">{{ n.title | truncate(23, true) }}</text>
+            {% if n.subtitle %}
+            <text class="trace-sub" x="14" y="42">{{ n.subtitle | truncate(28, true) }}</text>
+            {% endif %}
+            {% if n.who %}
+            <text class="trace-meta" x="14" y="60">{{ n.who | truncate(16, true) }}{% if n.when %} · {{ n.when }}{% endif %}</text>
+            {% elif n.when %}
+            <text class="trace-meta" x="14" y="60">{{ n.when }}</text>
+            {% elif n.kind in ('stage', 'ladle', 'mechanical', 'pipe') and n.state != 'none' %}
+            <text class="trace-meta trace-unattributed" x="14" y="60">{{ 'غير مسجل' if is_ar else 'not recorded' }}</text>
+            {% endif %}
+            {% if n.counts %}
+            <text class="trace-counts" x="176" y="60" text-anchor="end">
+                <tspan class="c-pass">{{ n.counts["pass"] }}●</tspan>
+                <tspan class="c-hold"> {{ n.counts.hold }}▲</tspan>
+                <tspan class="c-fail"> {{ n.counts.fail + n.counts.blocked }}■</tspan>
+            </text>
+            {% endif %}
+            {% if n.badge %}
+            <text class="trace-badge" x="176" y="24" text-anchor="end">{{ n.badge | truncate(11, true) }}</text>
+            {% endif %}
+            {% if n.expandable and not n.expanded %}
+            <text class="trace-plus" x="176" y="46" text-anchor="end">+</text>
+            {% endif %}
+            <title>{{ n.title }}{% if n.subtitle %} — {{ n.subtitle }}{% endif %}</title>
+        </g>
+        {% endfor %}
+    </g>
+</svg>

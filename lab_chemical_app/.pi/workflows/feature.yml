@@ -1,0 +1,153 @@
+description: "Generic feature pipeline: plan → implement → verify → review → docs"
+maxTransitions: 12
+
+phases:
+  - id: plan
+    thinking: high
+    tools:
+      - read
+      - find
+      - ls
+      - grep
+      - module_report
+      - read_symbol
+      - web_search
+      - web_fetch
+    output:
+      type: text
+      description: "Markdown implementation plan with step-by-step changes."
+    prompt: |
+      Task:
+      {{input}}
+
+      You are the planning phase. Read the relevant source files first (use module_report
+      for outlines, read_symbol for bodies). Research prior art via web_search if needed.
+      Produce a detailed step-by-step implementation plan covering:
+      - Files to create/modify
+      - Edge cases to handle
+      - Test cases to add
+      - Risks and rollback notes
+
+  - id: implement
+    thinking: medium
+    tools:
+      - read
+      - edit
+      - write
+      - bash
+      - grep
+      - find
+      - ls
+      - lsp_diagnostics
+      - read_symbol
+    output:
+      type: text
+      description: "Implementation summary: files changed, decisions made."
+    prompt: |
+      Original task:
+      {{input}}
+
+      Plan:
+      {{phase.plan.output}}
+
+      Implement the plan. Follow existing project conventions. After editing, run
+      lsp_diagnostics on changed files to catch type/syntax errors early.
+
+  - id: verify
+    thinking: medium
+    tools:
+      - read
+      - bash
+      - grep
+      - find
+      - ls
+      - lens_diagnostics
+      - lsp_diagnostics
+    output:
+      type: text
+      description: "Verification report with PASS/FAIL per check and evidence."
+    prompt: |
+      Original task:
+      {{input}}
+
+      Plan:
+      {{phase.plan.output}}
+
+      Implementation:
+      {{phase.implement.output}}
+
+      Verify with real commands (evidence > assertion):
+      1. lens_diagnostics mode=all on edited files
+      2. Project test suite (npm test, php artisan test, pytest, etc.)
+      3. Linters (npm run lint, ruff, php-cs-fixer, etc.)
+      4. Build if applicable (npm run build, etc.)
+      Report PASS/FAIL for each check with the command output.
+
+  - id: review
+    thinking: high
+    tools:
+      - read
+      - bash
+      - grep
+      - find
+      - ls
+      - module_report
+      - read_symbol
+    output:
+      type: structured
+      status:
+        enum: [APPROVED, CHANGES_REQUESTED]
+        description: "APPROVED when all checks pass; CHANGES_REQUESTED when issues remain."
+      report: "Code review report."
+      data:
+        fields:
+          hasComments:
+            type: boolean
+            description: "True when actionable review comments exist."
+    next:
+      - if:
+          status: CHANGES_REQUESTED
+        goto: implement
+      - if:
+          status: APPROVED
+        goto: docs
+      - end: true
+    prompt: |
+      Original task:
+      {{input}}
+
+      Plan:
+      {{phase.plan.output}}
+
+      Implementation:
+      {{phase.implement.output}}
+
+      Verification:
+      {{phase.verify.output}}
+
+      Review the full implementation:
+      1. Does it match the plan?
+      2. Edge cases covered?
+      3. Consistent with existing patterns?
+      4. Security/performance concerns?
+      5. Tests adequate?
+
+  - id: docs
+    thinking: low
+    tools:
+      - read
+      - edit
+      - write
+      - bash
+      - grep
+      - find
+      - ls
+    prompt: |
+      Original task:
+      {{input}}
+
+      Review:
+      {{phase.review.output}}
+
+      Update docs as needed: changelog, API docs, .env.example, README.
+      Summarize what was documented.

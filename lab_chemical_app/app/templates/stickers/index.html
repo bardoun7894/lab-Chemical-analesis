@@ -17,10 +17,16 @@
                         {{ 'إنشاء وطباعة ملصقات الأنابيب مع QR Code' if current_locale == 'ar' else 'Generate and print pipe stickers with QR codes' }}
                     </p>
                 </div>
-                <a href="{{ url_for('admin.sticker_settings') }}" class="btn btn-outline-primary">
-                    <i class="bi bi-gear"></i>
-                    {{ 'تخصيص التصميم' if current_locale == 'ar' else 'Customize Design' }}
-                </a>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('stickers.bulk_print') }}" class="btn btn-outline-success">
+                        <i class="bi bi-printer"></i>
+                        {{ 'طباعة جماعية' if current_locale == 'ar' else 'Bulk Print' }}
+                    </a>
+                    <a href="{{ url_for('admin.sticker_settings') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-gear"></i>
+                        {{ 'تخصيص التصميم' if current_locale == 'ar' else 'Customize Design' }}
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -54,6 +60,31 @@
                 </div>
             </div>
 
+            {% include 'stickers/_verdict_legend.html' %}
+
+            <!-- Print Mode Selection -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-toggles"></i>
+                        {{ 'الطباعة' if current_locale == 'ar' else 'Print for' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {# Internal is the default — the floor prints far more
+                       labels than ship; the customer print is the explicit
+                       choice. #}
+                    <select class="form-select" id="modeSelect">
+                        <option value="internal" selected>
+                            {{ 'داخلي — مع المرحلة' if current_locale == 'ar' else 'Internal — with stage' }}
+                        </option>
+                        <option value="external">
+                            {{ 'خارجي — القرار فقط' if current_locale == 'ar' else 'External — decision only' }}
+                        </option>
+                    </select>
+                </div>
+            </div>
+
             <!-- Sticker Size Selection -->
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-success text-white">
@@ -64,6 +95,14 @@
                 </div>
                 <div class="card-body">
                     <div class="btn-group-vertical w-100" role="group">
+                        {# The card is the stock actually on the floor — first and
+                           preselected, so nobody has to know to pick it. #}
+                        <input type="radio" class="btn-check" name="stickerSize" id="sizeCard" value="card" checked>
+                        <label class="btn btn-outline-success" for="sizeCard">
+                            <i class="bi bi-credit-card-2-front"></i>
+                            Card ({{ sizes.card[0] }}x{{ sizes.card[1] }}mm) - {{ 'كارت ١٠×١٠ سم' if current_locale == 'ar' else '10×10cm stock' }}
+                        </label>
+
                         <input type="radio" class="btn-check" name="stickerSize" id="sizeSmall" value="small">
                         <label class="btn btn-outline-success" for="sizeSmall">
                             <i class="bi bi-square"></i>
@@ -82,7 +121,7 @@
                             Large ({{ sizes.large[0] }}x{{ sizes.large[1] }}mm) - {{ 'كبير' if current_locale == 'ar' else 'Detailed' }}
                         </label>
 
-                        <input type="radio" class="btn-check" name="stickerSize" id="sizeGCP" value="gcp" checked>
+                        <input type="radio" class="btn-check" name="stickerSize" id="sizeGCP" value="gcp">
                         <label class="btn btn-outline-success" for="sizeGCP">
                             <i class="bi bi-award"></i>
                             GCP Pro ({{ sizes.gcp[0] }}x{{ sizes.gcp[1] }}mm) - {{ 'احترافي' if current_locale == 'ar' else 'Professional' }}
@@ -169,6 +208,9 @@ document.querySelectorAll('input[name="stickerSize"]').forEach(radio => {
 
 document.getElementById('customWidth').addEventListener('change', updatePreview);
 document.getElementById('customHeight').addEventListener('change', updatePreview);
+document.getElementById('modeSelect').addEventListener('change', function() {
+    if (selectedPipeId) updatePreview();
+});
 
 // Search on Enter
 document.getElementById('searchInput').addEventListener('keypress', function(e) {
@@ -179,7 +221,7 @@ function searchPipes() {
     const query = document.getElementById('searchInput').value.trim();
     if (!query) return;
 
-    fetch(`/stickers/search?q=${encodeURIComponent(query)}`)
+    fetch(`${window.APP_ROOT}/stickers/search?q=${encodeURIComponent(query)}`)
         .then(response => response.json())
         .then(data => {
             const resultsDiv = document.getElementById('searchResults');
@@ -259,7 +301,8 @@ function updatePreview() {
     if (!selectedPipeId) return;
 
     const size = document.querySelector('input[name="stickerSize"]:checked').value;
-    let url = `/stickers/generate/${selectedPipeId}?size=${size}`;
+    const mode = document.getElementById('modeSelect').value;
+    let url = `${window.APP_ROOT}/stickers/generate/${selectedPipeId}?size=${size}&mode=${mode}`;
 
     if (size === 'custom') {
         const width = document.getElementById('customWidth').value;
@@ -277,7 +320,8 @@ function downloadSticker() {
     if (!selectedPipeId) return;
 
     const size = document.querySelector('input[name="stickerSize"]:checked').value;
-    let url = `/stickers/download/${selectedPipeId}?size=${size}`;
+    const mode = document.getElementById('modeSelect').value;
+    let url = `${window.APP_ROOT}/stickers/download/${selectedPipeId}?size=${size}&mode=${mode}`;
 
     if (size === 'custom') {
         const width = document.getElementById('customWidth').value;

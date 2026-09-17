@@ -1,143 +1,125 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard - Lab Chemical Analysis{% endblock %}
+{% block title %}{{ 'لوحة التحكم' if current_locale == 'ar' else 'Dashboard' }} - GCP QC Pipes Traceability{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col">
-            <h2>
-                <i class="bi bi-speedometer2"></i>
+    {# The topbar already names the page, so this line carries the things the
+       topbar cannot: who is looking, and which day the numbers below are. #}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h2 class="page-title mb-0">
                 {% if current_locale == 'ar' %}
-                لوحة التحكم
+                مرحباً {{ current_user.full_name_ar or current_user.full_name or current_user.username }}
                 {% else %}
-                Dashboard
+                Welcome, {{ current_user.full_name or current_user.username }}
                 {% endif %}
             </h2>
-            <p class="text-muted">
-                {% if current_locale == 'ar' %}
-                مرحباً {{ current_user.full_name_ar or current_user.full_name or current_user.username }}!
-                {% else %}
-                Welcome {{ current_user.full_name or current_user.username }}!
-                {% endif %}
+            <p class="page-subtitle mb-0">
+                {{ 'نظرة على إنتاج اليوم وجودته' if current_locale == 'ar'
+                   else "Today's production and quality at a glance" }}
             </p>
         </div>
+        <span class="badge rounded-pill text-bg-light border text-muted fw-semibold px-3 py-2">
+            <i class="bi bi-calendar3 me-1"></i>{{ today.strftime('%d %b %Y') }}
+        </span>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="row g-4 mb-4">
-        <!-- Chemical Analyses Today -->
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-2">
-                                {{ 'تحليلات اليوم' if current_locale == 'ar' else 'Analyses Today' }}
-                            </h6>
-                            <h2 class="mb-0">{{ stats.chem_today }}</h2>
-                        </div>
-                        <div class="bg-primary bg-opacity-10 rounded-circle p-3">
-                            <i class="bi bi-flask text-primary fs-3"></i>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('chemical.list') }}" class="text-decoration-none small">
-                        {{ 'عرض الكل' if current_locale == 'ar' else 'View all' }} →
-                    </a>
-                </div>
-            </div>
+    {# KPI targets missed today. On the dashboard rather than only in the bell:
+       the point of a target is that missing it is the first thing you see. #}
+    {% if can('analytics', 'kpis') %}
+    {% set kpi_alerts = kpi_alerts_today() %}
+    {% if kpi_alerts %}
+    {% set worst = 'danger' if kpi_alerts[0].severity == 'critical' else 'warning' %}
+    <div class="alert alert-{{ worst }} shadow-sm" role="alert">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h6 class="alert-heading mb-2">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            {{ 'مؤشرات تجاوزت الهدف اليوم' if current_locale == 'ar'
+               else 'KPI targets missed today' }}
+            <span class="badge bg-dark">{{ kpi_alerts|length }}</span>
+          </h6>
+          <ul class="mb-0 ps-3">
+            {% for a in kpi_alerts[:4] %}
+            <li>{{ a.message }}</li>
+            {% endfor %}
+          </ul>
         </div>
-
-        <!-- Pipes Today -->
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-2">
-                                {{ 'أنابيب اليوم' if current_locale == 'ar' else 'Pipes Today' }}
-                            </h6>
-                            <h2 class="mb-0">{{ stats.pipes_today }}</h2>
-                        </div>
-                        <div class="bg-success bg-opacity-10 rounded-circle p-3">
-                            <i class="bi bi-diagram-3 text-success fs-3"></i>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('stages.list') }}" class="text-decoration-none small">
-                        {{ 'عرض الكل' if current_locale == 'ar' else 'View all' }} →
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mechanical Tests Today -->
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-2">
-                                {{ 'اختبارات ميكانيكية' if current_locale == 'ar' else 'Mech Tests Today' }}
-                            </h6>
-                            <h2 class="mb-0">{{ stats.mech_today }}</h2>
-                        </div>
-                        <div class="bg-warning bg-opacity-10 rounded-circle p-3">
-                            <i class="bi bi-gear text-warning fs-3"></i>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('mechanical.list') }}" class="text-decoration-none small">
-                        {{ 'عرض الكل' if current_locale == 'ar' else 'View all' }} →
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Defects This Week -->
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-2">
-                                {{ 'عيوب هذا الأسبوع' if current_locale == 'ar' else 'Defects This Week' }}
-                            </h6>
-                            <h2 class="mb-0 text-danger">{{ stats.defects_week }}</h2>
-                        </div>
-                        <div class="bg-danger bg-opacity-10 rounded-circle p-3">
-                            <i class="bi bi-exclamation-triangle text-danger fs-3"></i>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('reports.defect_summary') }}" class="text-decoration-none small">
-                        {{ 'عرض التقرير' if current_locale == 'ar' else 'View report' }} →
-                    </a>
-                </div>
-            </div>
-        </div>
+        <a href="{{ url_for('alerts.index') }}" class="btn btn-sm btn-outline-dark text-nowrap">
+          {{ 'كل التنبيهات' if current_locale == 'ar' else 'All alerts' }}
+        </a>
+      </div>
     </div>
+    {% endif %}
+    {% endif %}
+
+    {# One tile per headline number. The whole card is the link (stretched-link),
+       so the target is the tile rather than a four-word "View all" under it. #}
+    {% set stat_tiles = [
+        ('primary', 'bg-primary-soft', 'bi-flask',
+         'تحليلات اليوم', 'Analyses Today', stats.chem_today,
+         'اليوم', 'today', url_for('chemical.list')),
+        ('success', 'bg-success-soft', 'bi-diagram-3',
+         'أنابيب اليوم', 'Pipes Today', stats.pipes_today,
+         'اليوم', 'today', url_for('stages.list')),
+        ('warning', 'bg-warning-soft', 'bi-gear',
+         'اختبارات ميكانيكية', 'Mech Tests Today', stats.mech_today,
+         'اليوم', 'today', url_for('mechanical.list')),
+        ('danger', 'bg-danger-soft', 'bi-exclamation-triangle',
+         'عيوب هذا الأسبوع', 'Defects This Week', stats.defects_week,
+         'آخر ٧ أيام', 'last 7 days',
+         url_for('reports.defect_summary', date_from=week_ago.isoformat(), date_to=today.isoformat())),
+    ] %}
+    <div class="row g-3 mb-3">
+        {% for tone, soft, icon, label_ar, label_en, value, cap_ar, cap_en, href in stat_tiles %}
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-tile tone-{{ tone }} h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div class="min-w-0">
+                            <p class="stat-label">{{ label_ar if current_locale == 'ar' else label_en }}</p>
+                            <div class="stat-value mt-2">{{ value }}</div>
+                            <p class="stat-tile-caption">
+                                <i class="bi bi-clock-history"></i>
+                                {{ cap_ar if current_locale == 'ar' else cap_en }}
+                            </p>
+                        </div>
+                        <div class="stat-icon-wrapper {{ soft }}">
+                            <i class="bi {{ icon }}"></i>
+                        </div>
+                    </div>
+                    <a href="{{ href }}" class="stretched-link"
+                       aria-label="{{ label_ar if current_locale == 'ar' else label_en }}"></a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
 
     <!-- AI Summary Card -->
-    <div class="row g-4 mb-4">
+    <div class="row g-3 mb-3">
         <div class="col-12">
-            <div class="card border-0 shadow-sm" id="aiSummaryCard">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
+            <div class="card" id="aiSummaryCard">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="panel-title">
                         <i class="bi bi-robot"></i>
                         {{ 'ملخص الذكاء الاصطناعي' if current_locale == 'ar' else 'AI Daily Summary' }}
                     </h5>
-                    <button type="button" class="btn btn-sm btn-light" id="aiSummaryRefresh">
+                    <button type="button" class="btn btn-sm btn-primary" id="aiSummaryRefresh">
                         <i class="bi bi-magic"></i>
                         {{ 'تحليل' if current_locale == 'ar' else 'Analyze' }}
                     </button>
                 </div>
                 <div class="card-body">
-                    <div id="aiSummaryInitial" class="text-center py-3">
-                        <i class="bi bi-robot display-4 text-muted"></i>
-                        <p class="text-muted mt-2 mb-0">{{ 'انقر على زر التحليل للحصول على ملخص الذكاء الاصطناعي' if current_locale == 'ar' else 'Click Analyze button to get AI summary' }}</p>
+                    <div id="aiSummaryInitial" class="empty-state empty-state-row">
+                        <span class="empty-state-icon"><i class="bi bi-robot"></i></span>
+                        <p>{{ 'اضغط «تحليل» ليقرأ المساعد إنتاج اليوم ويلخّص ما يستحق الانتباه.' if current_locale == 'ar' else 'Press Analyze and the assistant reads today’s production, then tells you what is worth your attention.' }}</p>
                     </div>
-                    <div id="aiSummaryLoading" class="text-center py-3" style="display: none;">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <p class="text-muted mt-2 mb-0">{{ 'جاري تحليل البيانات...' if current_locale == 'ar' else 'Analyzing data...' }}</p>
+                    <div id="aiSummaryLoading" class="empty-state empty-state-row" style="display: none;">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <p>{{ 'جاري تحليل البيانات...' if current_locale == 'ar' else 'Analyzing data…' }}</p>
                     </div>
                     <div id="aiSummaryContent" style="display: none;">
                         <div class="row">
@@ -165,41 +147,74 @@
     </div>
 
     <!-- Quick Actions -->
-    <div class="row g-4 mb-4">
+    {% set quick_actions = [
+        ('chemical',   'add',      'chemical.add',   'bg-primary-soft', 'bi-flask',      'تحليل كيميائي جديد', 'New Chemical Analysis'),
+        ('stages',     'add',      'stages.add',     'bg-success-soft', 'bi-diagram-3',  'تسجيل أنبوب جديد',   'Register New Pipe'),
+        ('mechanical', 'add',      'mechanical.add', 'bg-warning-soft', 'bi-gear',       'اختبار ميكانيكي جديد', 'New Mechanical Test'),
+        ('stickers',   'list',     'stickers.index', 'bg-danger-soft',  'bi-qr-code',    'طباعة ملصقات',        'Print Stickers'),
+    ] %}
+    {% if can('chemical', 'add') or can('stages', 'add') or can('mechanical', 'add') or can('stickers', 'list') %}
+    <div class="row g-3 mb-3">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-lightning"></i>
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="panel-title">
+                        <i class="bi bi-lightning-charge"></i>
                         {{ 'إجراءات سريعة' if current_locale == 'ar' else 'Quick Actions' }}
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-3 col-6">
-                            <a href="{{ url_for('chemical.add') }}" class="btn btn-outline-primary w-100 py-3">
-                                <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
-                                {{ 'تحليل كيميائي جديد' if current_locale == 'ar' else 'New Chemical Analysis' }}
+                    <div class="row g-2">
+                        {% for module, screen, endpoint, soft, icon, label_ar, label_en in quick_actions %}
+                        {% if can(module, screen) %}
+                        <div class="col-lg-3 col-md-6">
+                            <a href="{{ url_for(endpoint) }}" class="qa-tile">
+                                <span class="stat-icon-wrapper {{ soft }}"><i class="bi {{ icon }}"></i></span>
+                                <span class="qa-tile-label">{{ label_ar if current_locale == 'ar' else label_en }}</span>
+                                <i class="bi {{ 'bi-arrow-left' if current_locale == 'ar' else 'bi-arrow-right' }}"></i>
                             </a>
                         </div>
-                        <div class="col-md-3 col-6">
-                            <a href="{{ url_for('stages.add') }}" class="btn btn-outline-success w-100 py-3">
-                                <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
-                                {{ 'تسجيل أنبوب جديد' if current_locale == 'ar' else 'Register New Pipe' }}
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-6">
-                            <a href="{{ url_for('mechanical.add') }}" class="btn btn-outline-warning w-100 py-3">
-                                <i class="bi bi-plus-circle fs-4 d-block mb-2"></i>
-                                {{ 'اختبار ميكانيكي جديد' if current_locale == 'ar' else 'New Mechanical Test' }}
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-6">
-                            <a href="{{ url_for('stickers.index') }}" class="btn btn-outline-info w-100 py-3">
-                                <i class="bi bi-qr-code fs-4 d-block mb-2"></i>
-                                {{ 'طباعة ملصقات' if current_locale == 'ar' else 'Print Stickers' }}
-                            </a>
-                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- KPI Charts -->
+    <div class="row g-3 mb-3">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="panel-title">
+                        <i class="bi bi-graph-up"></i>
+                        {{ 'اتجاه الإنتاج' if current_locale == 'ar' else 'Production Trend (7 Days)' }}
+                    </h5>
+                </div>
+                <div class="card-body position-relative">
+                    <canvas id="productionTrendChart" height="200"></canvas>
+                    <div class="empty-state" id="trendEmpty" style="display:none;">
+                        <span class="empty-state-icon"><i class="bi bi-graph-up"></i></span>
+                        <p>{{ 'لا يوجد إنتاج في آخر ٧ أيام' if current_locale == 'ar' else 'No production in the last 7 days' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="panel-title">
+                        <i class="bi bi-pie-chart"></i>
+                        {{ 'توزيع القرارات' if current_locale == 'ar' else 'Decision Distribution' }}
+                    </h5>
+                </div>
+                <div class="card-body position-relative">
+                    <canvas id="decisionPieChart" height="200"></canvas>
+                    <div class="empty-state" id="pieEmpty" style="display:none;">
+                        <span class="empty-state-icon"><i class="bi bi-pie-chart"></i></span>
+                        <p>{{ 'لا توجد قرارات بعد' if current_locale == 'ar' else 'No decisions recorded yet' }}</p>
                     </div>
                 </div>
             </div>
@@ -207,12 +222,12 @@
     </div>
 
     <!-- Recent Activity -->
-    <div class="row g-4">
+    <div class="row g-3">
         <!-- Recent Chemical Analyses -->
         <div class="col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="panel-title">
                         <i class="bi bi-flask"></i>
                         {{ 'آخر التحليلات الكيميائية' if current_locale == 'ar' else 'Recent Chemical Analyses' }}
                     </h5>
@@ -263,13 +278,13 @@
 
         <!-- Recent Pipes -->
         <div class="col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="panel-title">
                         <i class="bi bi-diagram-3"></i>
                         {{ 'آخر الأنابيب المسجلة' if current_locale == 'ar' else 'Recent Pipes' }}
                     </h5>
-                    <a href="{{ url_for('stages.list') }}" class="btn btn-sm btn-outline-success">
+                    <a href="{{ url_for('stages.list') }}" class="btn btn-sm btn-outline-primary">
                         {{ 'عرض الكل' if current_locale == 'ar' else 'View All' }}
                     </a>
                 </div>
@@ -309,9 +324,71 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Load KPI charts
+    fetch('{{ url_for("reports.api_dashboard_kpi") }}')
+        .then(r => r.json())
+        .then(data => {
+            // Production Trend Line Chart
+            const trendCtx = document.getElementById('productionTrendChart');
+            const trendTotal = (data.trend || []).reduce((s, d) => s + (d.count || 0), 0);
+            if (trendCtx) {
+                if (!trendTotal) {
+                    trendCtx.style.display = 'none';
+                    document.getElementById('trendEmpty').style.display = 'flex';
+                } else {
+                new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.trend.map(d => d.date.slice(5)),
+                        datasets: [{
+                            label: '{{ "الإنتاج" if current_locale == "ar" else "Production" }}',
+                            data: data.trend.map(d => d.count),
+                            borderColor: '#0891b2',
+                            backgroundColor: 'rgba(8,145,178,0.08)',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                    }
+                });
+                }
+            }
+
+            // Decision Pie Chart
+            const pieCtx = document.getElementById('decisionPieChart');
+            const pieTotal = (data.pie.accepted || 0) + (data.pie.rejected || 0) + (data.pie.hold || 0) + (data.pie.other || 0);
+            if (pieCtx) {
+                if (!pieTotal) {
+                    pieCtx.style.display = 'none';
+                    document.getElementById('pieEmpty').style.display = 'flex';
+                } else {
+                new Chart(pieCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Accept', 'Reject', 'Hold', 'Other'],
+                        datasets: [{
+                            data: [data.pie.accepted, data.pie.rejected, data.pie.hold, data.pie.other],
+                            backgroundColor: ['#057a55', '#c81e1e', '#b45309', '#6b7280']
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+                }
+            }
+        })
+        .catch(err => console.log('KPI load error:', err));
+
     const aiSummaryLoading = document.getElementById('aiSummaryLoading');
     const aiSummaryContent = document.getElementById('aiSummaryContent');
     const aiSummaryError = document.getElementById('aiSummaryError');
@@ -327,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function loadAiSummary() {
         aiSummaryInitial.style.display = 'none';
-        aiSummaryLoading.style.display = 'block';
+        aiSummaryLoading.style.display = 'flex';
         aiSummaryContent.style.display = 'none';
         aiSummaryError.style.display = 'none';
 

@@ -1,0 +1,160 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block filters %}
+<div class="col-md-2">
+    <label class="form-label small">{{ 'من تاريخ' if current_locale == 'ar' else 'From date' }}</label>
+    <input type="date" name="date_from" class="form-control form-control-sm"
+           value="{{ data.filters.date_from or '' }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">{{ 'إلى تاريخ' if current_locale == 'ar' else 'To date' }}</label>
+    <input type="date" name="date_to" class="form-control form-control-sm"
+           value="{{ data.filters.date_to or '' }}">
+</div>
+<div class="col-md-3">
+    <label class="form-label small">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</label>
+    <input type="text" name="customer" class="form-control form-control-sm"
+           value="{{ data.filters.customer or '' }}">
+</div>
+<div class="col-md-3">
+    <label class="form-label small">{{ 'تجميع حسب' if current_locale == 'ar' else 'Group by' }}</label>
+    <select name="group_by" class="form-select form-select-sm">
+        <option value="heat"  {{ 'selected' if data.group_by == 'heat' }}>{{ 'المعلقة (كل مكة طلعت إيه)' if current_locale == 'ar' else 'Per Heat / Ladle' }}</option>
+        <option value="batch" {{ 'selected' if data.group_by == 'batch' }}>{{ 'الشحنة / الباقة' if current_locale == 'ar' else 'Per Delivery Batch' }}</option>
+        <option value="order" {{ 'selected' if data.group_by == 'order' }}>{{ 'أمر البيع' if current_locale == 'ar' else 'Per Sales Order' }}</option>
+        <option value="flat"  {{ 'selected' if data.group_by == 'flat' }}>{{ 'قائمة الأنابيب' if current_locale == 'ar' else 'Flat pipe list' }}</option>
+    </select>
+</div>
+{% endblock %}
+
+{% block body %}
+<!-- Summary -->
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card text-white bg-secondary"><div class="card-body text-center">
+            <h6 class="text-white-50">{{ 'عدد المجموعات' if current_locale == 'ar' else 'Groups' }}</h6>
+            <h2 class="mb-0">{{ data.summary.groups }}</h2>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-primary"><div class="card-body text-center">
+            <h6 class="text-white-50">{{ 'أنابيب مسلَّمة' if current_locale == 'ar' else 'Delivered Pipes' }}</h6>
+            <h2 class="mb-0">{{ data.summary.delivered_pipes }}</h2>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-info"><div class="card-body text-center">
+            <h6 class="text-white-50">{{ 'إجمالي الوزن (كجم)' if current_locale == 'ar' else 'Total Weight (kg)' }}</h6>
+            <h2 class="mb-0">{{ data.summary.total_weight }}</h2>
+        </div></div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+
+        {% if data.group_by == 'heat' %}
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>{{ 'المعلقة' if current_locale == 'ar' else 'Heat / Ladle' }}</th>
+                    <th>{{ 'منتج' if current_locale == 'ar' else 'Produced' }}</th>
+                    <th>{{ 'مقبول' if current_locale == 'ar' else 'Accepted' }}</th>
+                    <th>{{ 'مرفوض' if current_locale == 'ar' else 'Rejected' }}</th>
+                    <th>{{ 'معلق' if current_locale == 'ar' else 'Pending' }}</th>
+                    <th>{{ 'مسلَّم' if current_locale == 'ar' else 'Delivered' }}</th>
+                    <th>DN</th>
+                    <th>{{ 'الوزن (كجم)' if current_locale == 'ar' else 'Weight (kg)' }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in data.groups %}
+                <tr>
+                    <td><strong>{{ g.key }}</strong></td>
+                    <td>{{ g.produced }}</td>
+                    <td><span class="badge bg-success">{{ g.accepted }}</span></td>
+                    <td><span class="badge bg-danger">{{ g.rejected }}</span></td>
+                    <td><span class="badge bg-warning text-dark">{{ g.pending }}</span></td>
+                    <td><span class="badge bg-primary">{{ g.delivered }}</span></td>
+                    <td class="small">{{ g.dns or '-' }}</td>
+                    <td>{{ g.weight }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-center text-muted py-4">{{ 'لا توجد بيانات' if current_locale == 'ar' else 'No data for the selected filters' }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% elif data.group_by in ('batch', 'order') %}
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>{{ ('الباقة' if data.group_by == 'batch' else 'أمر البيع') if current_locale == 'ar' else ('Bundle' if data.group_by == 'batch' else 'Sales Order') }}</th>
+                    <th>{{ 'أنابيب' if current_locale == 'ar' else 'Pipes' }}</th>
+                    <th>{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</th>
+                    <th>{{ 'أمر البيع' if current_locale == 'ar' else 'Sales Order' }}</th>
+                    <th>DN</th>
+                    <th>{{ 'آخر تسليم' if current_locale == 'ar' else 'Last Delivery' }}</th>
+                    <th>{{ 'الوزن (كجم)' if current_locale == 'ar' else 'Weight (kg)' }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in data.groups %}
+                <tr>
+                    <td><strong>{{ g.key }}</strong></td>
+                    <td><span class="badge bg-primary">{{ g.pipes }}</span></td>
+                    <td>{{ g.customer or '-' }}</td>
+                    <td>{{ g.sales_order or '-' }}</td>
+                    <td class="small">{{ g.dns or '-' }}</td>
+                    <td>{{ g.last_delivery or '-' }}</td>
+                    <td>{{ g.weight }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-4">{{ 'لا توجد بيانات' if current_locale == 'ar' else 'No data for the selected filters' }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% else %}
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>{{ 'تاريخ التسليم' if current_locale == 'ar' else 'Delivery Date' }}</th>
+                    <th>{{ 'رقم الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}</th>
+                    <th>DN</th>
+                    <th>{{ 'أمر البيع' if current_locale == 'ar' else 'Sales Order' }}</th>
+                    <th>{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</th>
+                    <th>{{ 'الإذن' if current_locale == 'ar' else 'Receipt' }}</th>
+                    <th>{{ 'الباقة' if current_locale == 'ar' else 'Bundle' }}</th>
+                    <th>{{ 'الوزن' if current_locale == 'ar' else 'Weight' }}</th>
+                    <th>{{ 'القرار' if current_locale == 'ar' else 'Final' }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.rows %}
+                <tr>
+                    <td>{{ r.delivery_date or '-' }}</td>
+                    <td><code>{{ r.pipe_code }}</code></td>
+                    <td>{{ r.dn }}</td>
+                    <td>{{ r.sales_order or '-' }}</td>
+                    <td>{{ r.customer or '-' }}</td>
+                    <td>{{ r.receipt or '-' }}</td>
+                    <td>{{ r.bundle or '-' }}</td>
+                    <td>{{ r.weight }}</td>
+                    <td>
+                        {% set fd = r.final_decision or 'PENDING' %}
+                        <span class="badge bg-{{ 'success' if fd == 'ACCEPT' else ('danger' if fd == 'REJECT' else 'warning') }}">{{ fd }}</span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="9" class="text-center text-muted py-4">{{ 'لا توجد سجلات تسليم' if current_locale == 'ar' else 'No delivery records for the selected filters' }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

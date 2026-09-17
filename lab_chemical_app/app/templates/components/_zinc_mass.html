@@ -1,0 +1,97 @@
+{# Zinc coating-mass sheet — TA zinc-mass block.
+
+   The lab strips the zinc off a known area of the pipe and weighs the sample
+   before and after; the sheet turns the difference into a coating mass:
+
+       M = C (M2 - M1) / A      g/m2
+
+   C and A are printed on the sheet (1.2 and 0.025 m2) but stay editable — a
+   different sample size is the operator's call. M is recomputed server-side at
+   save time; the live figure here is only so the operator sees the result
+   without leaving the popup.
+
+   Callers pass:
+     stage_name - the stage the inputs post under (Zinc)
+     zp         - stage.zinc_profile, or {}
+     is_ar      - locale flag
+#}
+{% macro zinc_mass_grid(stage_name, zp, is_ar) %}
+{% set zp = zp or {} %}
+<div class="table-responsive">
+    <table class="table table-sm table-bordered mb-0 text-center align-middle bg-white zinc-mass-table">
+        <thead>
+            <tr class="table-secondary">
+                <th style="min-width: 110px;">M2 <span class="fw-normal text-muted">(gm)</span></th>
+                <th style="min-width: 110px;">M1 <span class="fw-normal text-muted">(gm)</span></th>
+                <th style="min-width: 100px;">A <span class="fw-normal text-muted">(m&sup2;)</span></th>
+                <th style="min-width: 90px;">C</th>
+                <th style="min-width: 130px;">M <span class="fw-normal text-muted">(g/m&sup2;)</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                {% for key, default, hint in [
+                    ('m2', '', 'gm'),
+                    ('m1', '', 'gm'),
+                    ('area', '0.025', 'm2'),
+                    ('c', '1.2', '')] %}
+                {% set val = zp.get(key) %}
+                <td class="{{ 'table-light' if key in ('area', 'c') }}">
+                    <input type="number" name="stage_{{ stage_name }}_zinc_{{ key }}"
+                           class="form-control form-control-sm text-center zinc-in{{ ' fw-bold' if key in ('area', 'c') }}"
+                           step="0.0001" min="0" data-k="{{ key }}" placeholder="{{ hint }}"
+                           value="{{ val if val is not none else default }}">
+                </td>
+                {% endfor %}
+                <td class="table-warning">
+                    <span class="zinc-mass fw-bold text-primary fs-5">{{ zp.mass if zp.mass is not none else '' }}</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div class="small text-muted mt-2">
+    <i class="bi bi-info-circle"></i>
+    {{ 'وزن الزنك: M = C (M2 − M1) ÷ A — بالجرام لكل متر مربع. M2 و M1 وزن العينة قبل وبعد إزالة الزنك، A مساحة العينة.' if is_ar
+       else 'Zinc mass: M = C (M2 − M1) / A, in g/m². M2 and M1 are the sample weight before and after stripping; A is the stripped area.' }}
+</div>
+{% endmacro %}
+
+
+{# Live result as the operator types. Emitted once per page and bound with a
+   delegated listener, so it covers a table swapped in later (the Stage Console
+   replaces the whole pane on every pipe change) without rebinding. #}
+{% macro zinc_mass_script() %}
+<script>
+(function () {
+    if (window.__zincMassBound) { return; }
+    window.__zincMassBound = true;
+
+    function num(table, k) {
+        var el = table.querySelector('.zinc-in[data-k="' + k + '"]');
+        if (!el || el.value === '') { return null; }
+        var v = parseFloat(el.value);
+        return isNaN(v) ? null : v;
+    }
+
+    function recalc(table) {
+        var out = table.querySelector('.zinc-mass');
+        if (!out) { return; }
+        var m2 = num(table, 'm2'), m1 = num(table, 'm1');
+        var area = num(table, 'area'), c = num(table, 'c');
+        if (m2 === null || m1 === null || area === null || c === null || !area) {
+            out.textContent = '';
+            return;
+        }
+        out.textContent = (c * (m2 - m1) / area).toFixed(2);
+    }
+
+    document.addEventListener('input', function (ev) {
+        var el = ev.target;
+        if (!el.classList || !el.classList.contains('zinc-in')) { return; }
+        var table = el.closest('.zinc-mass-table');
+        if (table) { recalc(table); }
+    });
+})();
+</script>
+{% endmacro %}

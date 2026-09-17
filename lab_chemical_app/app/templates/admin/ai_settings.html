@@ -12,7 +12,7 @@
                 {{ 'إعدادات الذكاء الاصطناعي' if current_locale == 'ar' else 'AI Settings' }}
             </h2>
             <p class="text-muted mb-0">
-                {{ 'تكوين Gemini API للتحليل التلقائي' if current_locale == 'ar' else 'Configure Gemini API for auto-analysis' }}
+                {{ 'تكوين API للتحليل التلقائي' if current_locale == 'ar' else 'Configure API for auto-analysis' }}
             </p>
         </div>
         <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
@@ -24,74 +24,264 @@
     <div class="row">
         <!-- Settings Form -->
         <div class="col-lg-8">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
-                        <i class="bi bi-key"></i>
-                        {{ 'إعدادات Gemini API' if current_locale == 'ar' else 'Gemini API Settings' }}
+                        <i class="bi bi-diagram-3"></i>
+                        {{ 'إعدادات AI' if current_locale == 'ar' else 'AI Settings' }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <form action="{{ url_for('admin.update_ai_settings') }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                        <!-- API Key -->
+                        <!-- Provider Selection -->
                         <div class="mb-4">
                             <label class="form-label fw-bold">
-                                <i class="bi bi-key-fill text-warning"></i>
-                                {{ 'مفتاح API' if current_locale == 'ar' else 'API Key' }}
+                                <i class="bi bi-globe text-info"></i>
+                                {{ 'مزود الخدمة' if current_locale == 'ar' else 'AI Provider' }}
                             </label>
-                            <div class="input-group">
-                                <input type="password"
-                                       class="form-control"
-                                       id="gemini_api_key"
-                                       name="gemini_api_key"
-                                       value="{{ masked_key }}"
-                                       placeholder="{{ 'أدخل مفتاح Gemini API' if current_locale == 'ar' else 'Enter Gemini API Key' }}">
-                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                            </div>
-                            <small class="text-muted">
-                                {{ 'احصل على مفتاح API من' if current_locale == 'ar' else 'Get your API key from' }}
-                                <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
-                            </small>
-                            {% if masked_key %}
-                            <div class="mt-2">
-                                <span class="badge bg-success">
-                                    <i class="bi bi-check-circle"></i>
-                                    {{ 'مفتاح API مُعد' if current_locale == 'ar' else 'API Key configured' }}
-                                </span>
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Model Selection -->
-                        <div class="mb-4">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-cpu text-info"></i>
-                                {{ 'النموذج' if current_locale == 'ar' else 'Model' }}
-                            </label>
-                            <select class="form-select" name="gemini_model" id="gemini_model">
-                                <option value="gemini-2.5-flash" {{ 'selected' if ai_settings.get('gemini_model') == 'gemini-2.5-flash' }}>
-                                    Gemini 2.5 Flash ({{ 'سريع - موصى به' if current_locale == 'ar' else 'Fast - Recommended' }})
+                            <select class="form-select" name="provider" id="providerSelect">
+                                <option value="gemini" {{ 'selected' if ai_settings.get('provider') == 'gemini' or not ai_settings.get('provider') }}>
+                                    Google Gemini
                                 </option>
-                                <option value="gemini-3-flash-preview" {{ 'selected' if ai_settings.get('gemini_model') == 'gemini-3-flash-preview' }}>
-                                    Gemini 3 Flash ({{ 'معاينة - الأحدث' if current_locale == 'ar' else 'Preview - Latest' }})
-                                </option>
-                                <option value="gemini-3-pro-preview" {{ 'selected' if ai_settings.get('gemini_model') == 'gemini-3-pro-preview' }}>
-                                    Gemini 3 Pro ({{ 'معاينة - الأقوى' if current_locale == 'ar' else 'Preview - Most Powerful' }})
-                                </option>
-                                <option value="gemini-2.5-pro" {{ 'selected' if ai_settings.get('gemini_model') == 'gemini-2.5-pro' }}>
-                                    Gemini 2.5 Pro ({{ 'أكثر دقة' if current_locale == 'ar' else 'More accurate' }})
-                                </option>
-                                <option value="gemini-2.5-flash-lite" {{ 'selected' if ai_settings.get('gemini_model') == 'gemini-2.5-flash-lite' }}>
-                                    Gemini 2.5 Flash-Lite ({{ 'اقتصادي' if current_locale == 'ar' else 'Cost-effective' }})
-                                </option>
-                                <option value="gemini-2.0-flash" {{ 'selected' if ai_settings.get('gemini_model') == 'gemini-2.0-flash' }}>
-                                    Gemini 2.0 Flash ({{ 'قديم' if current_locale == 'ar' else 'Legacy' }})
+                                <option value="openrouter" {{ 'selected' if ai_settings.get('provider') == 'openrouter' }}>
+                                    OpenRouter (Claude, GPT, etc.)
                                 </option>
                             </select>
+                        </div>
+
+                        <!-- Gemini Settings -->
+                        <div id="geminiSettings">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-key-fill text-warning"></i>
+                                    {{ 'مفتاح Gemini API' if current_locale == 'ar' else 'Gemini API Key' }}
+                                </label>
+                                <div class="input-group">
+                                    <input type="password"
+                                           class="form-control"
+                                           id="gemini_api_key"
+                                           name="gemini_api_key"
+                                           value="{{ masked_gemini }}"
+                                           placeholder="{{ 'أدخل مفتاح Gemini API' if current_locale == 'ar' else 'Enter Gemini API Key' }}">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('gemini_api_key')">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">
+                                    {{ 'احصل على مفتاح API من' if current_locale == 'ar' else 'Get your API key from' }}
+                                    <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
+                                </small>
+                                {% if masked_gemini %}
+                                <div class="mt-2">
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i>
+                                        {{ 'مفتاح API مُعد' if current_locale == 'ar' else 'API Key configured' }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-cpu text-info"></i>
+                                    {{ 'نموذج Gemini' if current_locale == 'ar' else 'Gemini Model' }}
+                                </label>
+                                <input type="text" class="form-control" list="geminiModelList"
+                                       name="gemini_model" id="gemini_model"
+                                       value="{{ ai_settings.get('gemini_model', 'gemini-2.5-flash') }}"
+                                       placeholder="gemini-2.5-flash" autocomplete="off">
+                                <datalist id="geminiModelList">
+                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+                                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                                    <option value="gemini-flash-latest">Gemini Flash Latest</option>
+                                    <option value="gemini-flash-3.5">Gemini Flash 3.5</option>
+                                    <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                                </datalist>
+                                <small class="text-muted">
+                                    {{ 'اختر أو اكتب أي معرف نموذج Gemini. يُستخدم للتحليل النصي، و OCR الصور عند اختيار Gemini كمزود للرؤية أدناه.' if current_locale == 'ar' else 'Pick or type any Gemini model ID. Also used for image OCR when the OCR provider below is set to Gemini.' }}
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- OpenRouter Settings -->
+                        <div id="openrouterSettings" style="display: none;">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-key-fill text-warning"></i>
+                                    {{ 'مفتاح OpenRouter API' if current_locale == 'ar' else 'OpenRouter API Key' }}
+                                </label>
+                                <div class="input-group">
+                                    <input type="password"
+                                           class="form-control"
+                                           id="openrouter_api_key"
+                                           name="openrouter_api_key"
+                                           value="{{ masked_openrouter }}"
+                                           placeholder="{{ 'أدخل مفتاح OpenRouter API' if current_locale == 'ar' else 'Enter OpenRouter API Key' }}">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('openrouter_api_key')">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">
+                                    {{ 'احصل على مفتاح API من' if current_locale == 'ar' else 'Get your API key from' }}
+                                    <a href="https://openrouter.ai/settings" target="_blank">OpenRouter</a>
+                                </small>
+                                {% if masked_openrouter %}
+                                <div class="mt-2">
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i>
+                                        {{ 'مفتاح API مُعد' if current_locale == 'ar' else 'API Key configured' }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-cpu text-info"></i>
+                                    {{ 'نموذج OpenRouter' if current_locale == 'ar' else 'OpenRouter Model' }}
+                                </label>
+                                <input type="text" class="form-control" list="openrouterModelList"
+                                       name="openrouter_model" id="openrouter_model"
+                                       value="{{ ai_settings.get('openrouter_model', 'qwen/qwen3-next-80b-a3b-instruct:free') }}"
+                                       placeholder="provider/model-id" autocomplete="off">
+                                <datalist id="openrouterModelList">
+                                    <option value="openrouter/free">Free — Auto Router</option>
+                                    <option value="qwen/qwen3-next-80b-a3b-instruct:free">Free — Qwen3 Next 80B</option>
+                                    <option value="minimax/minimax-m2.5:free">Free — MiniMax M2.5</option>
+                                    <option value="stepfun/step-3.5-flash:free">Free — Step 3.5 Flash</option>
+                                    <option value="mistralai/mistral-small-3.1-24b-instruct:free">Free — Mistral Small 3.1 24B</option>
+                                    <option value="meta-llama/llama-3.3-70b-instruct:free">Free — Llama 3.3 70B</option>
+                                    <option value="deepseek/deepseek-r1-0528:free">Free — DeepSeek R1</option>
+                                    <option value="deepseek/deepseek-chat-v3-0324:free">Free — DeepSeek V3</option>
+                                    <option value="google/gemma-3-27b-it:free">Free — Gemma 3 27B</option>
+                                    <option value="microsoft/mai-ds-r1:free">Free — Microsoft MAI-DS-R1</option>
+                                    <option value="moonshotai/kimi-k2:free">Free — Kimi K2</option>
+                                    <option value="z-ai/glm-4.5-air:free">Free — GLM 4.5 Air</option>
+                                    <option value="anthropic/claude-sonnet-4.5">Paid — Claude Sonnet 4.5</option>
+                                    <option value="anthropic/claude-opus-4.1">Paid — Claude Opus 4.1</option>
+                                    <option value="anthropic/claude-haiku-4.5">Paid — Claude Haiku 4.5</option>
+                                    <option value="openai/gpt-4o">Paid — GPT-4o</option>
+                                    <option value="openai/gpt-4o-mini">Paid — GPT-4o Mini</option>
+                                    <option value="openai/gpt-4.1">Paid — GPT-4.1</option>
+                                    <option value="google/gemini-3.8-flash">Paid — Gemini 3.8 Flash (Recommended)</option>
+                                    <option value="google/gemini-3.7-flash">Paid — Gemini 3.7 Flash</option>
+                                    <option value="google/gemini-3.5-flash">Paid — Gemini 3.5 Flash</option>
+                                    <option value="google/gemini-3.5-flash-lite">Paid — Gemini 3.5 Flash Lite</option>
+                                    <option value="google/gemini-3.1-pro-preview">Paid — Gemini 3.1 Pro Preview</option>
+                                    <option value="google/gemini-2.5-pro">Paid — Gemini 2.5 Pro</option>
+                                    <option value="google/gemini-2.5-flash">Paid — Gemini 2.5 Flash</option>
+                                    <option value="x-ai/grok-4-fast">Paid — Grok 4 Fast</option>
+                                    <option value="deepseek/deepseek-chat-v3.1">Paid — DeepSeek V3.1</option>
+                                </datalist>
+                                <small class="text-success">
+                                    <i class="bi bi-star"></i>
+                                    {{ 'اختر من القائمة أو اكتب أي معرف نموذج OpenRouter' if current_locale == 'ar' else 'Pick from the list or type any OpenRouter model ID' }}
+                                </small>
+                            </div>
+
+                            <!-- Quick Switch for Free Models -->
+                            <div class="mb-4 p-3 bg-light rounded">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-lightning-charge text-warning"></i>
+                                    {{ 'تبديل سريع للنماذج' if current_locale == 'ar' else 'Quick Switch' }}
+                                </label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="quick_model" id="gemini38" value="google/gemini-3.8-flash"
+                                           {{ 'checked' if ai_settings.get('openrouter_model') == 'google/gemini-3.8-flash' }}>
+                                    <label class="btn btn-outline-primary" for="gemini38">Gemini 3.8</label>
+
+                                    <input type="radio" class="btn-check" name="quick_model" id="qwen" value="qwen/qwen3-next-80b-a3b-instruct:free" 
+                                           {{ 'checked' if ai_settings.get('openrouter_model') == 'qwen/qwen3-next-80b-a3b-instruct:free' }}>
+                                    <label class="btn btn-outline-primary" for="qwen">Qwen3</label>
+
+                                    <input type="radio" class="btn-check" name="quick_model" id="minimax" value="minimax/minimax-m2.5:free" 
+                                           {{ 'checked' if ai_settings.get('openrouter_model') == 'minimax/minimax-m2.5:free' }}>
+                                    <label class="btn btn-outline-primary" for="minimax">MiniMax</label>
+
+                                    <input type="radio" class="btn-check" name="quick_model" id="stepfun" value="stepfun/step-3.5-flash:free" 
+                                           {{ 'checked' if ai_settings.get('openrouter_model') == 'stepfun/step-3.5-flash:free' }}>
+                                    <label class="btn btn-outline-primary" for="stepfun">StepFun</label>
+
+                                    <input type="radio" class="btn-check" name="quick_model" id="mistral" value="mistralai/mistral-small-3.1-24b-instruct:free" 
+                                           {{ 'checked' if ai_settings.get('openrouter_model') == 'mistralai/mistral-small-3.1-24b-instruct:free' }}>
+                                    <label class="btn btn-outline-primary" for="mistral">Mistral</label>
+                                </div>
+                                <small class="text-muted">
+                                    {{ 'اختر نموذج أساسي - سيتم التحويل تلقائياً عند فشل النموذج' if current_locale == 'ar' else 'Select primary model - auto-switches on failure' }}
+                                </small>
+                            </div>
+
+                            <!-- Fallback Models -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-arrow-repeat text-info"></i>
+                                    {{ 'نماذج بديلة (Fallback)' if current_locale == 'ar' else 'Fallback Models' }}
+                                </label>
+                                <div id="fallbackRows">
+                                    {% for m in ai_settings.get('openrouter_fallback_models', '').split(',') if m.strip() %}
+                                    <div class="input-group mb-2 fb-row">
+                                        <input type="text" class="form-control or-fb-input" list="openrouterModelList"
+                                               value="{{ m.strip() }}" placeholder="provider/model-id" autocomplete="off">
+                                        <button class="btn btn-outline-danger fb-remove" type="button" title="Remove">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="addFallbackBtn">
+                                    <i class="bi bi-plus-lg"></i>
+                                    {{ 'إضافة نموذج' if current_locale == 'ar' else 'Add model' }}
+                                </button>
+                                <input type="hidden" name="openrouter_fallback_models" id="orFallbackHidden"
+                                       value="{{ ai_settings.get('openrouter_fallback_models', '') }}">
+                                <small class="text-muted d-block mt-1">
+                                    {{ 'تُجرَّب النماذج بالترتيب عند فشل النموذج الأساسي (يتطلب تفعيل التحويل التلقائي)' if current_locale == 'ar' else 'Tried in order if the primary model fails (requires auto-fallback enabled)' }}
+                                </small>
+                            </div>
+
+                            <!-- Auto-Fallback Toggle -->
+                            <div class="mb-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enable_auto_fallback" name="enable_auto_fallback" 
+                                           {{ 'checked' if ai_settings.get('enable_auto_fallback', True) }}>
+                                    <label class="form-check-label fw-bold" for="enable_auto_fallback">
+                                        <i class="bi bi-shuffle text-success"></i>
+                                        {{ 'تفعيل التحويل التلقائي' if current_locale == 'ar' else 'Enable Auto-Fallback' }}
+                                    </label>
+                                </div>
+                                <small class="text-muted">
+                                    {{ 'عند فشل النموذج الأساسي، يتم التحويل تلقائياً للنموذج التالي' if current_locale == 'ar' else 'Automatically switches to next model if primary fails' }}
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- OCR / Vision Provider (independent of the text provider) -->
+                        <div class="mb-4 p-3 border rounded bg-light">
+                            <label class="form-label fw-bold" for="ocr_provider">
+                                <i class="bi bi-image text-primary"></i>
+                                {{ 'مزود OCR / الرؤية (قراءة الصور)' if current_locale == 'ar' else 'OCR / Vision Provider (image reading)' }}
+                            </label>
+                            <select class="form-select" id="ocr_provider" name="ocr_provider">
+                                <option value="gemini" {{ 'selected' if ai_settings.get('ocr_provider', 'gemini') == 'gemini' }}>Gemini</option>
+                                <option value="openrouter" {{ 'selected' if ai_settings.get('ocr_provider', 'gemini') == 'openrouter' }}>OpenRouter</option>
+                            </select>
+                            <small class="text-muted d-block mt-1">
+                                {{ 'اختر المزود المستخدم لقراءة صور التحاليل والشهادات. مستقل عن مزود التحليل النصي أعلاه.' if current_locale == 'ar' else 'Provider used to read spectrometer / certificate images. Independent of the text provider above.' }}
+                            </small>
+                            <div class="mt-2">
+                                <label class="form-label small" for="ocr_openrouter_model">
+                                    {{ 'نموذج OpenRouter للرؤية (اختياري)' if current_locale == 'ar' else 'OpenRouter vision model (optional)' }}
+                                </label>
+                                <input type="text" class="form-control form-control-sm" id="ocr_openrouter_model"
+                                       name="ocr_openrouter_model"
+                                       value="{{ ai_settings.get('ocr_openrouter_model', '') }}"
+                                       placeholder="google/gemini-2.5-flash">
+                                <small class="text-muted">
+                                    {{ 'اتركه فارغاً لاستخدام نموذج OpenRouter الأساسي. يجب أن يكون النموذج داعماً للرؤية.' if current_locale == 'ar' else 'Leave blank to use the primary OpenRouter model. Must be a vision-capable model.' }}
+                                </small>
+                            </div>
                         </div>
 
                         <!-- Enable/Disable -->
@@ -107,6 +297,156 @@
                             <small class="text-muted">
                                 {{ 'إيقاف هذا سيعطل جميع ميزات التحليل التلقائي' if current_locale == 'ar' else 'Disabling this will turn off all auto-analysis features' }}
                             </small>
+                        </div>
+
+                        <!-- AI Prompts -->
+                        <hr class="my-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-chat-text text-purple"></i>
+                            {{ 'قوالب البرومبت (AI Prompts)' if current_locale == 'ar' else 'AI Prompt Templates' }}
+                        </h6>
+                        <p class="text-muted small mb-3">
+                            {{ 'اتركه فارغاً للاستخدام القالب الافتراضي. عند التعديل، استخدم {placeholders} المتاحة.' if current_locale == 'ar' else 'Leave empty to use the built-in default. When customising, use the available {placeholders} listed below each field.' }}
+                        </p>
+
+                        <!-- Chatbot System Prompt -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold" for="prompt_chatbot_system">
+                                <i class="bi bi-robot text-primary"></i>
+                                {{ 'برومبت المساعد الذكي (النظام)' if current_locale == 'ar' else 'AI Assistant System Prompt' }}
+                            </label>
+                            <textarea class="form-control font-monospace"
+                                      id="prompt_chatbot_system"
+                                      name="prompt_chatbot_system"
+                                      rows="14"
+                                      data-default="{{ default_prompts.chatbot_system | e }}"
+                                      placeholder="{{ 'اتركه فارغاً للقالب الافتراضي' if current_locale == 'ar' else 'Leave empty to use default' }}"
+                            >{{ current_prompts.get('chatbot_system') or default_prompts['chatbot_system'] }}</textarea>
+                            <div class="d-flex justify-content-between align-items-start mt-1">
+                                <small class="text-muted">
+                                    {% if current_locale == 'ar' %}
+                                    هذا هو الجزء الثابت من البرومبت (الهوية، المصطلحات، سياسة الأدوات، أسلوب الإجابة). يُضاف إليه تلقائياً عند كل رسالة: المستخدم الحالي، التاريخ/الوردية، وخريطة صفحات التطبيق حسب صلاحياته.
+                                    {% else %}
+                                    The static part of the prompt (identity, glossary, tool policy, output style). At every message the system appends: the current user and role, today's date and shift, and the page map filtered to that user's permissions.
+                                    {% endif %}
+                                </small>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2"
+                                        onclick="resetPrompt('prompt_chatbot_system')">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                    {{ 'استعادة الافتراضي' if current_locale == 'ar' else 'Reset to default' }}
+                                </button>
+                            </div>
+                            <details class="mt-2">
+                                <summary class="small text-primary" style="cursor:pointer">
+                                    <i class="bi bi-eye"></i>
+                                    {{ 'عرض البرومبت الفعلي المُرسل الآن (لحسابك)' if current_locale == 'ar' else 'Show the effective prompt sent right now (for your account)' }}
+                                    <span class="text-muted">— {{ chatbot_effective_prompt|length }} {{ 'حرف' if current_locale == 'ar' else 'chars' }}</span>
+                                </summary>
+                                <pre class="small bg-light border rounded p-2 mt-2" style="max-height:24rem;overflow:auto;white-space:pre-wrap">{{ chatbot_effective_prompt }}</pre>
+                            </details>
+                        </div>
+
+                        <!-- Mechanical Decision Prompt -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold" for="prompt_mechanical_decision">
+                                <i class="bi bi-gear text-secondary"></i>
+                                {{ 'برومبت الاختبار الميكانيكي' if current_locale == 'ar' else 'Mechanical Decision Prompt' }}
+                            </label>
+                            <textarea class="form-control font-monospace"
+                                      id="prompt_mechanical_decision"
+                                      name="prompt_mechanical_decision"
+                                      rows="5"
+                                      data-default="{{ default_prompts.mechanical_decision | e }}"
+                                      placeholder="{{ 'اتركه فارغاً للقالب الافتراضي' if current_locale == 'ar' else 'Leave empty to use default' }}"
+                            >{{ current_prompts.get('mechanical_decision') or default_prompts['mechanical_decision'] }}</textarea>
+                            <div class="d-flex justify-content-between align-items-start mt-1">
+                                <small class="text-muted">
+                                    {{ 'المتغيرات المتاحة:' if current_locale == 'ar' else 'Available placeholders:' }}
+                                    <code>{test_results}</code>
+                                </small>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2"
+                                        onclick="resetPrompt('prompt_mechanical_decision')">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                    {{ 'استعادة الافتراضي' if current_locale == 'ar' else 'Reset to default' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Chemical Decision Prompt -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold" for="prompt_chemical_decision">
+                                <i class="bi bi-droplet text-info"></i>
+                                {{ 'برومبت التحليل الكيميائي' if current_locale == 'ar' else 'Chemical Analysis Prompt' }}
+                            </label>
+                            <textarea class="form-control font-monospace"
+                                      id="prompt_chemical_decision"
+                                      name="prompt_chemical_decision"
+                                      rows="5"
+                                      data-default="{{ default_prompts.chemical_decision | e }}"
+                                      placeholder="{{ 'اتركه فارغاً للقالب الافتراضي' if current_locale == 'ar' else 'Leave empty to use default' }}"
+                            >{{ current_prompts.get('chemical_decision') or default_prompts['chemical_decision'] }}</textarea>
+                            <div class="d-flex justify-content-between align-items-start mt-1">
+                                <small class="text-muted">
+                                    {{ 'المتغيرات المتاحة:' if current_locale == 'ar' else 'Available placeholders:' }}
+                                    <code>{elements_text}</code>, <code>{decision}</code>, <code>{worst_elements}</code>
+                                </small>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2"
+                                        onclick="resetPrompt('prompt_chemical_decision')">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                    {{ 'استعادة الافتراضي' if current_locale == 'ar' else 'Reset to default' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Auto Decision Summary Prompt -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold" for="prompt_auto_decision_summary">
+                                <i class="bi bi-lightning text-warning"></i>
+                                {{ 'برومبت ملخص القرار التلقائي' if current_locale == 'ar' else 'Auto Decision Summary Prompt' }}
+                            </label>
+                            <textarea class="form-control font-monospace"
+                                      id="prompt_auto_decision_summary"
+                                      name="prompt_auto_decision_summary"
+                                      rows="5"
+                                      data-default="{{ default_prompts.auto_decision_summary | e }}"
+                                      placeholder="{{ 'اتركه فارغاً للقالب الافتراضي' if current_locale == 'ar' else 'Leave empty to use default' }}"
+                            >{{ current_prompts.get('auto_decision_summary') or default_prompts['auto_decision_summary'] }}</textarea>
+                            <div class="d-flex justify-content-between align-items-start mt-1">
+                                <small class="text-muted">
+                                    {{ 'المتغيرات المتاحة:' if current_locale == 'ar' else 'Available placeholders:' }}
+                                    <code>{elements_text}</code>, <code>{decision}</code>, <code>{worst_elements}</code>
+                                </small>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2"
+                                        onclick="resetPrompt('prompt_auto_decision_summary')">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                    {{ 'استعادة الافتراضي' if current_locale == 'ar' else 'Reset to default' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Microstructure Image Prompt -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold" for="prompt_microstructure_image">
+                                <i class="bi bi-image text-success"></i>
+                                {{ 'برومبت استخراج الصورة المجهرية' if current_locale == 'ar' else 'Microstructure Image (OCR) Prompt' }}
+                            </label>
+                            <textarea class="form-control font-monospace"
+                                      id="prompt_microstructure_image"
+                                      name="prompt_microstructure_image"
+                                      rows="6"
+                                      data-default="{{ default_prompts.microstructure_image | e }}"
+                                      placeholder="{{ 'اتركه فارغاً للقالب الافتراضي' if current_locale == 'ar' else 'Leave empty to use default' }}"
+                            >{{ current_prompts.get('microstructure_image') or default_prompts['microstructure_image'] }}</textarea>
+                            <div class="d-flex justify-content-between align-items-start mt-1">
+                                <small class="text-muted">
+                                    {{ 'لا توجد متغيرات — النص يُرسل مباشرةً إلى Gemini Vision' if current_locale == 'ar' else 'No placeholders — text is sent directly to Gemini Vision as-is.' }}
+                                </small>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2"
+                                        onclick="resetPrompt('prompt_microstructure_image')">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                    {{ 'استعادة الافتراضي' if current_locale == 'ar' else 'Reset to default' }}
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Submit Buttons -->
@@ -166,11 +506,95 @@
 
 {% block extra_js %}
 <script>
-// Toggle password visibility
-document.getElementById('togglePassword').addEventListener('click', function() {
-    const input = document.getElementById('gemini_api_key');
-    const icon = this.querySelector('i');
+const providerSelect = document.getElementById('providerSelect');
+const geminiSettings = document.getElementById('geminiSettings');
+const openrouterSettings = document.getElementById('openrouterSettings');
+const modelSelect = document.getElementById('openrouter_model');
+const quickSwitches = document.querySelectorAll('input[name="quick_model"]');
 
+providerSelect.addEventListener('change', function() {
+    if (this.value === 'openrouter') {
+        geminiSettings.style.display = 'none';
+        openrouterSettings.style.display = 'block';
+    } else {
+        geminiSettings.style.display = 'block';
+        openrouterSettings.style.display = 'none';
+    }
+});
+
+// Initialize on page load
+if (providerSelect.value === 'openrouter') {
+    geminiSettings.style.display = 'none';
+    openrouterSettings.style.display = 'block';
+}
+
+// Sync quick switches with dropdown
+quickSwitches.forEach(radio => {
+    radio.addEventListener('change', function() {
+        if (this.checked) {
+            modelSelect.value = this.value;
+        }
+    });
+});
+
+// Sync dropdown with quick switches
+modelSelect.addEventListener('change', function() {
+    quickSwitches.forEach(radio => {
+        if (radio.value === modelSelect.value) {
+            radio.checked = true;
+        }
+    });
+});
+
+// OpenRouter fallback models: add/remove rows -> serialize to hidden CSV field
+(function () {
+    const rowsWrap = document.getElementById('fallbackRows');
+    const hidden = document.getElementById('orFallbackHidden');
+    const addBtn = document.getElementById('addFallbackBtn');
+    if (!rowsWrap || !hidden || !addBtn) return;
+
+    function sync() {
+        const vals = Array.from(rowsWrap.querySelectorAll('.or-fb-input'))
+            .map(i => i.value.trim())
+            .filter(Boolean);
+        hidden.value = vals.join(',');
+    }
+
+    function makeRow(val) {
+        const row = document.createElement('div');
+        row.className = 'input-group mb-2 fb-row';
+        row.innerHTML =
+            '<input type="text" class="form-control or-fb-input" list="openrouterModelList" placeholder="provider/model-id" autocomplete="off">' +
+            '<button class="btn btn-outline-danger fb-remove" type="button" title="Remove"><i class="bi bi-x-lg"></i></button>';
+        row.querySelector('.or-fb-input').value = val || '';
+        return row;
+    }
+
+    addBtn.addEventListener('click', function () {
+        rowsWrap.appendChild(makeRow(''));
+        sync();
+    });
+
+    rowsWrap.addEventListener('click', function (e) {
+        const btn = e.target.closest('.fb-remove');
+        if (btn) {
+            btn.closest('.fb-row').remove();
+            sync();
+        }
+    });
+
+    rowsWrap.addEventListener('input', sync);
+
+    const form = hidden.closest('form');
+    if (form) form.addEventListener('submit', sync);
+
+    sync();
+})();
+
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = input.nextElementSibling.querySelector('i');
+    
     if (input.type === 'password') {
         input.type = 'text';
         icon.classList.remove('bi-eye');
@@ -180,7 +604,7 @@ document.getElementById('togglePassword').addEventListener('click', function() {
         icon.classList.remove('bi-eye-slash');
         icon.classList.add('bi-eye');
     }
-});
+}
 
 // Test connection
 document.getElementById('testConnection').addEventListener('click', async function() {
@@ -196,7 +620,8 @@ document.getElementById('testConnection').addEventListener('click', async functi
         const response = await fetch('{{ url_for("admin.test_ai_connection") }}', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             }
         });
 
@@ -222,10 +647,23 @@ document.getElementById('testConnection').addEventListener('click', async functi
 });
 
 // Clear masked key when user starts typing
-document.getElementById('gemini_api_key').addEventListener('focus', function() {
-    if (this.value.startsWith('*')) {
-        this.value = '';
+['gemini_api_key', 'openrouter_api_key'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('focus', function() {
+            if (this.value.startsWith('*')) {
+                this.value = '';
+            }
+        });
     }
 });
+
+// Reset a prompt textarea to its built-in default
+function resetPrompt(inputId) {
+    const el = document.getElementById(inputId);
+    if (el) {
+        el.value = '';
+    }
+}
 </script>
 {% endblock %}

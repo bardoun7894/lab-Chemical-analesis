@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Historical Data Import{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-upload"></i> Historical Data Import</h2>
+        <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Reports
+        </a>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>CSV or Excel (.xlsx):</strong> the header row must use the column names listed
+        below for the selected target — every column of the table is importable. Extra virtual
+        columns (<code>pipe_no_code</code>, <code>furnace_code</code>) resolve to the matching
+        record automatically. Duplicates (by the target's key) are skipped, not overwritten.
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Target Table</label>
+                        <select name="target" class="form-select">
+                            {% for key, t in targets.items() %}
+                            <option value="{{ key }}">{{ t.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">CSV / XLSX File</label>
+                        <input type="file" name="file" class="form-control" accept=".csv,.xlsx" required>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Import
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header">Column Templates (header names per target)</div>
+        <div class="card-body">
+            {% for key, t in targets.items() %}
+            <h6>{{ t.label }}
+                {% if t.required %}<small class="text-danger">required: {{ t.required|join(', ') }}</small>{% endif %}
+            </h6>
+            <code class="small d-block mb-1">
+                {{ t.columns|join(', ') }}
+            </code>
+            {% if t.virtuals %}
+            <small class="text-muted d-block mb-3">virtual (resolved automatically): {{ t.virtuals|join(', ') }}</small>
+            {% else %}
+            <div class="mb-3"></div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="card border-warning mt-4">
+        <div class="card-header bg-warning">Import Messages</div>
+        <div class="card-body">
+            <ul class="mb-0">
+                {% for m in messages %}<li class="small">{{ m }}</li>{% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

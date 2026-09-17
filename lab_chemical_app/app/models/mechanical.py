@@ -50,6 +50,17 @@ class MechanicalTest(db.Model):
     hardness = db.Column(db.Float)
     carbides = db.Column(db.Float)
 
+    # Additional test data
+    tensile_mpa = db.Column(db.Float)  # tensile_strength * 9.8
+    image_as_polished = db.Column(db.String(255))  # path to as-polished image
+    image_etched = db.Column(db.String(255))  # path to etched image
+
+    # Retest tracking
+    status = db.Column(db.String(20), default='ACTIVE')  # ACTIVE, SUPERSEDED
+    retest_reason = db.Column(db.Text)
+    superseded_by_id = db.Column(db.Integer, db.ForeignKey('mechanical_tests.id'))
+    original_test_id = db.Column(db.Integer, db.ForeignKey('mechanical_tests.id'))
+
     # Quality Control
     shift = db.Column(db.Integer)
     tester_name = db.Column(db.String(100))
@@ -61,7 +72,15 @@ class MechanicalTest(db.Model):
 
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    modified_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    # Self-referential relationships for retest chain
+    superseded_by = db.relationship('MechanicalTest', remote_side=[id],
+                                   foreign_keys=[superseded_by_id], uselist=False)
+    original_test = db.relationship('MechanicalTest', remote_side=[id],
+                                   foreign_keys=[original_test_id], uselist=False)
 
     # Relationships defined via backref in ChemicalAnalysis and Pipe
 
@@ -78,6 +97,10 @@ class MechanicalTest(db.Model):
         # Calculate tensile strength
         if self.force_kgf and self.area_d_squared and self.area_d_squared > 0:
             self.tensile_strength = self.force_kgf / self.area_d_squared
+
+        # Calculate tensile in MPa
+        if self.tensile_strength:
+            self.tensile_mpa = self.tensile_strength * 9.8
 
     def __repr__(self):
         return f'<MechanicalTest {self.code} - {self.test_date}>'

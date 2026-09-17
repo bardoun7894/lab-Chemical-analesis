@@ -33,30 +33,41 @@
                     </h5>
                 </div>
                 <div class="card-body">
+                    {# Internal is the default — the floor prints far more
+                       labels than ship; the customer print is the explicit
+                       choice. #}
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'الطباعة' if current_locale == 'ar' else 'Print for' }}</label>
+                        <select class="form-select" id="modeSelect" name="mode">
+                            <option value="internal" {{ 'selected' if internal }}>
+                                {{ 'داخلي — مع المرحلة' if current_locale == 'ar' else 'Internal — with stage' }}
+                            </option>
+                            <option value="external" {{ 'selected' if not internal }}>
+                                {{ 'خارجي — القرار فقط' if current_locale == 'ar' else 'External — decision only' }}
+                            </option>
+                        </select>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label">{{ 'حجم الملصق' if current_locale == 'ar' else 'Sticker Size' }}</label>
                         <div class="btn-group-vertical w-100" role="group">
-                            <input type="radio" class="btn-check" name="stickerSize" id="sizeSmall" value="small">
-                            <label class="btn btn-outline-primary" for="sizeSmall">
-                                {{ 'صغير' if current_locale == 'ar' else 'Small' }} (50x30mm)
+                            {% for key, dims in sizes.items() %}
+                            <input type="radio" class="btn-check" name="stickerSize" id="size{{ key|capitalize }}"
+                                   value="{{ key }}" {{ 'checked' if key == default_size }}>
+                            <label class="btn btn-outline-primary" for="size{{ key|capitalize }}">
+                                {{ key|capitalize }} ({{ dims[0] }}x{{ dims[1] }}mm)
                             </label>
-
-                            <input type="radio" class="btn-check" name="stickerSize" id="sizeMedium" value="medium" checked>
-                            <label class="btn btn-outline-primary" for="sizeMedium">
-                                {{ 'متوسط' if current_locale == 'ar' else 'Medium' }} (70x50mm)
-                            </label>
-
-                            <input type="radio" class="btn-check" name="stickerSize" id="sizeLarge" value="large">
-                            <label class="btn btn-outline-primary" for="sizeLarge">
-                                {{ 'كبير' if current_locale == 'ar' else 'Large' }} (100x70mm)
-                            </label>
+                            {% endfor %}
                         </div>
                     </div>
+
+                    {% include 'stickers/_verdict_legend.html' %}
 
                     <hr>
 
                     <div class="d-grid gap-2">
-                        <a id="downloadPdfBtn" href="{{ url_for('production_orders.generate_batch_stickers', id=order.id) }}?size=medium"
+                        <a id="downloadPdfBtn"
+                           href="{{ url_for('production_orders.generate_batch_stickers', id=order.id) }}?size={{ default_size }}&mode={{ 'internal' if internal else 'external' }}"
                            class="btn btn-success btn-lg">
                             <i class="bi bi-file-pdf"></i>
                             {{ 'تحميل PDF للطباعة' if current_locale == 'ar' else 'Download PDF for Print' }}
@@ -175,13 +186,17 @@
 
 {% block extra_js %}
 <script>
-// Update PDF download link when size changes
+// Update PDF download link when size or mode changes
+function updatePdfLink() {
+    const size = document.querySelector('input[name="stickerSize"]:checked').value;
+    const mode = document.getElementById('modeSelect').value;
+    const btn = document.getElementById('downloadPdfBtn');
+    btn.href = "{{ url_for('production_orders.generate_batch_stickers', id=order.id) }}?size=" + size + "&mode=" + mode;
+}
 document.querySelectorAll('input[name="stickerSize"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        const btn = document.getElementById('downloadPdfBtn');
-        btn.href = "{{ url_for('production_orders.generate_batch_stickers', id=order.id) }}?size=" + this.value;
-    });
+    radio.addEventListener('change', updatePdfLink);
 });
+document.getElementById('modeSelect').addEventListener('change', updatePdfLink);
 
 function selectAll() {
     document.querySelectorAll('.pipe-checkbox').forEach(cb => cb.checked = true);
@@ -209,6 +224,7 @@ function printSelected() {
     }
 
     const size = document.querySelector('input[name="stickerSize"]:checked').value;
+    const mode = document.getElementById('modeSelect').value;
 
     // Open print window with selected stickers
     const printWindow = window.open('', '_blank');
@@ -231,7 +247,7 @@ function printSelected() {
     selectedIds.forEach(id => {
         printWindow.document.write(`
             <div class="sticker">
-                <img src="/stickers/generate/${id}?size=${size}" alt="Sticker">
+                <img src="${window.APP_ROOT}/stickers/generate/${id}?size=${size}&mode=${mode}" alt="Sticker">
             </div>
         `);
     });

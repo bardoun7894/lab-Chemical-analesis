@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'إدارة الأفران' if current_locale == 'ar' else 'Manage Furnaces' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-fire"></i>
+            {{ 'إدارة الأفران' if current_locale == 'ar' else 'Furnace Management' }}
+        </h2>
+        <div>
+            <a href="{{ url_for('admin.add_furnace') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i>
+                {{ 'إضافة فرن' if current_locale == 'ar' else 'Add Furnace' }}
+            </a>
+            <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        {{ 'الأفران النشطة فقط تظهر في نموذج التحليل الكيميائي الجديد. الفرن المستخدم في تحاليل سابقة لا يمكن حذفه — قم بإلغاء تفعيله.' if current_locale == 'ar' else 'Only active furnaces appear in the New Chemical Analysis form. A furnace used by existing analyses cannot be deleted — deactivate it instead.' }}
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table data-enhance data-page-size="20" class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ 'رمز الفرن' if current_locale == 'ar' else 'Furnace Code' }}</th>
+                            <th>{{ 'اسم الفرن' if current_locale == 'ar' else 'Furnace Name' }}</th>
+                            <th>{{ 'عدد التحاليل' if current_locale == 'ar' else 'Analyses' }}</th>
+                            <th>{{ 'الحالة' if current_locale == 'ar' else 'Status' }}</th>
+                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for furnace in furnaces %}
+                        <tr class="{{ '' if furnace.is_active else 'table-secondary' }}">
+                            <td><strong><code>{{ furnace.furnace_code }}</code></strong></td>
+                            <td>{{ furnace.furnace_name or '-' }}</td>
+                            <td>{{ usage.get(furnace.id, 0) }}</td>
+                            <td>
+                                {% if furnace.is_active %}
+                                <span class="badge bg-success">{{ 'نشط' if current_locale == 'ar' else 'Active' }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ 'غير نشط' if current_locale == 'ar' else 'Inactive' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if can('admin', 'furnaces_edit') %}<a href="{{ url_for('admin.edit_furnace', id=furnace.id) }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>{% endif %}
+                                    <form method="POST" action="{{ url_for('admin.toggle_furnace', id=furnace.id) }}" style="display:inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-warning" title="{{ 'تفعيل/إلغاء تفعيل' if current_locale == 'ar' else 'Activate/Deactivate' }}">
+                                            <i class="bi bi-power"></i>
+                                        </button>
+                                    </form>
+                                    {% if usage.get(furnace.id, 0) == 0 %}
+                                    {% if can('admin', 'furnaces_delete') %}<form method="POST" action="{{ url_for('admin.delete_furnace', id=furnace.id) }}"
+                                          onsubmit="return confirm('{{ 'هل أنت متأكد من الحذف؟' if current_locale == 'ar' else 'Are you sure you want to delete?' }}');" style="display:inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        {% if can('admin', 'furnaces_delete') %}<button type="submit" class="btn btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>{% endif %}
+                                    </form>{% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if not furnaces %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-3">{{ 'لا توجد أفران' if current_locale == 'ar' else 'No furnaces found' }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

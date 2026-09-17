@@ -1,0 +1,179 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block filters %}
+<div class="col-md-2">
+    <label class="form-label small">{{ 'من تاريخ' if current_locale == 'ar' else 'From date' }}</label>
+    <input type="date" name="date_from" class="form-control form-control-sm"
+           value="{{ data.filters.date_from or '' }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">{{ 'إلى تاريخ' if current_locale == 'ar' else 'To date' }}</label>
+    <input type="date" name="date_to" class="form-control form-control-sm"
+           value="{{ data.filters.date_to or '' }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</label>
+    <select name="shift" class="form-select form-select-sm">
+        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+        {% for s in [1, 2, 3] %}
+        <option value="{{ s }}" {{ 'selected' if data.filters.shift == s }}>
+            {{ ('وردية ' if current_locale == 'ar' else 'Shift ') }}{{ s }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+<div class="col-md-3">
+    <label class="form-label small">{{ 'مهندس الوردية' if current_locale == 'ar' else 'Shift Engineer' }}</label>
+    <select name="shift_engineer" class="form-select form-select-sm">
+        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+        {% for e in data.engineers %}
+        <option value="{{ e }}" {{ 'selected' if data.filters.shift_engineer == e }}>{{ e }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endblock %}
+
+{% block body %}
+<!-- KPIs -->
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary"><div class="card-body text-center">
+            <h6 class="text-white-50">{{ 'إجمالي الإنتاج' if current_locale == 'ar' else 'Total Produced' }}</h6>
+            <h1 class="mb-0">{{ data.stats.total }}</h1>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success"><div class="card-body text-center">
+            <h6 class="text-white-50">{{ 'مقبول' if current_locale == 'ar' else 'Accepted' }}</h6>
+            <h1 class="mb-0">{{ data.stats.accepted }}</h1>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger"><div class="card-body text-center">
+            <h6 class="text-white-50">{{ 'مرفوض' if current_locale == 'ar' else 'Rejected' }}</h6>
+            <h1 class="mb-0">{{ data.stats.rejected }}</h1>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning"><div class="card-body text-center">
+            <h6 class="text-dark">{{ 'قيد الانتظار' if current_locale == 'ar' else 'Pending' }}</h6>
+            <h1 class="mb-0 text-dark">{{ data.stats.pending }}</h1>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Waiting for decision -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="bi bi-hourglass-split"></i>
+                    {{ 'في انتظار قرار المعمل' if current_locale == 'ar' else 'Waiting for Lab Decision' }}
+                    ({{ data.waiting|length }})</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if data.waiting %}
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Pipe</th><th>DN</th><th>Ladle</th><th>Role</th><th></th></tr></thead>
+                    <tbody>
+                        {% for p in data.waiting %}
+                        <tr>
+                            <td><code>{{ p.no_code }}</code></td>
+                            <td>DN{{ p.diameter }}</td>
+                            <td>{{ p.ladle_id or '-' }}</td>
+                            <td>
+                                {% if p.mechanical_test_role in ('FIRST', 'LAST') %}
+                                <span class="badge bg-dark">{{ p.mechanical_test_role }} &#11088;</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ p.mechanical_test_role or '-' }}</span>
+                                {% endif %}
+                            </td>
+                            <td><a href="{{ url_for('stages.view', id=p.id) }}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted text-center py-3 mb-0">{{ 'لا توجد أنابيب في الانتظار' if current_locale == 'ar' else 'No pipes waiting' }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Defects -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i>
+                    {{ 'العيوب' if current_locale == 'ar' else 'Defects' }} ({{ data.defects|length }})</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if data.defects %}
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Pipe</th><th>Stage</th><th>Defect</th><th>Reason</th></tr></thead>
+                    <tbody>
+                        {% for s in data.defects %}
+                        <tr>
+                            <td><code>{{ s.pipe.no_code if s.pipe else '-' }}</code></td>
+                            <td>{{ s.stage_name }}</td>
+                            <td><span class="badge bg-warning text-dark">{{ s.defect_type or 'Yes' }}</span></td>
+                            <td class="small">{{ s.defect_reason or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-success text-center py-3 mb-0">{{ 'لا توجد عيوب' if current_locale == 'ar' else 'No defects' }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- All pipes -->
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-header">
+        <h6 class="mb-0">{{ 'كل الأنابيب' if current_locale == 'ar' else 'All Pipes' }} ({{ data.pipes|length }})</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Code</th><th>DN</th><th>Class</th><th>Ladle</th><th>Mold</th>
+                        <th>{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</th>
+                        <th>{{ 'المهندس' if current_locale == 'ar' else 'Engineer' }}</th>
+                        <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                        <th>Lab</th><th>Final</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in data.pipes %}
+                    <tr>
+                        <td><strong>{{ p.no_code }}</strong></td>
+                        <td>DN{{ p.diameter }}</td>
+                        <td>{{ p.pipe_class or '-' }}</td>
+                        <td>{{ p.ladle_id or '-' }}</td>
+                        <td>{{ p.mold_number or '-' }}</td>
+                        <td>{{ p.shift if p.shift is not none else '-' }}</td>
+                        <td>{{ p.shift_engineer or '-' }}</td>
+                        <td>{{ p.production_date or '-' }}</td>
+                        <td>
+                            {% set ld = p.lab_decision or '' %}
+                            <span class="badge bg-{{ 'success' if ld == 'ACCEPT' else ('danger' if ld in ('REJECT','BLOCKED') else ('warning' if ld == 'HOLD' else ('info' if ld == 'WAITING' else ('primary' if ld == 'FROZEN' else 'secondary')))) }}">{{ ld or '-' }}</span>
+                        </td>
+                        <td>
+                            {% set fd = p.final_decision_value or '' %}
+                            <span class="badge bg-{{ 'success' if fd == 'ACCEPT' else ('danger' if fd == 'REJECT' else ('warning' if fd == 'HOLD' else 'secondary')) }}">{{ fd or '-' }}</span>
+                        </td>
+                        <td><a href="{{ url_for('stages.view', id=p.id) }}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye"></i></a></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="11" class="text-center text-muted py-3">{{ 'لا توجد بيانات للفلاتر المختارة' if current_locale == 'ar' else 'No pipes match the selected filters' }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

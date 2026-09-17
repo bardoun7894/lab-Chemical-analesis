@@ -1,0 +1,78 @@
+{#
+  Server-side pagination footer for a Flask-SQLAlchemy Pagination object.
+
+  Usage:
+    {% from 'components/pagination.html' import pagination %}
+    {{ pagination(pipes, 'stages.list', per_page=per_page,
+                  per_page_options=per_page_options,
+                  unit_ar='أنبوب', unit_en='pipes') }}
+
+  Args:
+    pager             a Pagination object (has .total/.page/.pages/.has_prev/…)
+    endpoint          url_for endpoint name for the page links
+    per_page          current per-page size (included in links + selector).
+                      Omit for a fixed page size (no per_page in the URL).
+    per_page_options  iterable of sizes → renders a "Per page" selector.
+                      Omit to hide the selector.
+    unit_ar / unit_en localized noun for the "Total: N <unit>" label.
+
+  Preserves every other current query-string arg (filters, group_by, cols)
+  across page links. Renders nothing when the result set is empty.
+#}
+{% macro pagination(pager, endpoint, per_page=None, per_page_options=None, unit_ar='عنصر', unit_en='items') %}
+{% if pager and pager.total > 0 %}
+{% set base_args = request.args.to_dict() %}
+{% set _ = base_args.pop('page', None) %}
+{% set _ = base_args.pop('per_page', None) %}
+{% if per_page %}{% set _ = base_args.update({'per_page': per_page}) %}{% endif %}
+<div class="card-footer bg-white">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <small class="text-muted">
+            {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ pager.total }}
+            {{ unit_ar if current_locale == 'ar' else unit_en }}
+            {% if pager.pages > 1 %}
+            &middot; {{ 'صفحة' if current_locale == 'ar' else 'Page' }} {{ pager.page }} / {{ pager.pages }}
+            {% endif %}
+        </small>
+        {% if pager.pages > 1 %}
+        <nav aria-label="{{ 'ترقيم الصفحات' if current_locale == 'ar' else 'Pagination' }}">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {{ 'disabled' if not pager.has_prev }}">
+                    <a class="page-link" href="{{ url_for(endpoint, page=pager.prev_num, **base_args) if pager.has_prev else '#' }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% for p in pager.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == pager.page }}">
+                        <a class="page-link" href="{{ url_for(endpoint, page=p, **base_args) }}">{{ p }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {{ 'disabled' if not pager.has_next }}">
+                    <a class="page-link" href="{{ url_for(endpoint, page=pager.next_num, **base_args) if pager.has_next else '#' }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+        {% if per_page_options and per_page %}
+        {% set sel_args = request.args.to_dict() %}
+        {% set _ = sel_args.pop('page', None) %}
+        {% set _ = sel_args.pop('per_page', None) %}
+        <div class="d-flex align-items-center gap-1">
+            <small class="text-muted">{{ 'لكل صفحة' if current_locale == 'ar' else 'Per page' }}</small>
+            <select class="form-select form-select-sm" style="width: auto;" onchange="window.location.href = this.value;">
+                {% for opt in per_page_options %}
+                <option value="{{ url_for(endpoint, page=1, per_page=opt, **sel_args) }}" {{ 'selected' if opt == per_page }}>{{ opt }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endmacro %}

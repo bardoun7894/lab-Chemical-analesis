@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="{{ current_locale or 'en' }}" {% if current_locale == 'ar' %}dir="rtl"{% endif %}>
+<head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 16px; color: #111; }
+        h1 { font-size: 16px; margin: 0 0 4px; }
+        .meta { font-size: 11px; color: #555; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th, td { border: 1px solid #999; padding: 3px 5px; text-align: {{ 'right' if current_locale == 'ar' else 'left' }}; vertical-align: top; }
+        thead th { background: #d3d3d3; font-weight: 700; }
+        tbody tr:nth-child(even) { background: #f4f4f4; }
+        .toolbar { margin-bottom: 12px; }
+        .btn { font: inherit; padding: 6px 12px; margin-inline-end: 8px; cursor: pointer; border: 1px solid #888; border-radius: 4px; background: #fff; }
+        @media print { .toolbar { display: none !important; } body { margin: 0; } }
+        @page { size: landscape; margin: 10mm; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="btn" onclick="window.print()">{{ 'طباعة' if current_locale == 'ar' else 'Print' }}</button>
+        <button class="btn" onclick="window.close()">{{ 'إغلاق' if current_locale == 'ar' else 'Close' }}</button>
+    </div>
+    <h1>{{ title }}</h1>
+    <div class="meta">{{ count }} {{ 'سجل' if current_locale == 'ar' else 'records' }}</div>
+    <table>
+        <thead>
+            <tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <script>
+        // Auto-open the print dialog once rendered (skip with ?noauto=1).
+        if (!new URLSearchParams(location.search).has('noauto')) {
+            window.addEventListener('load', function () { setTimeout(window.print, 250); });
+        }
+    </script>
+</body>
+</html>

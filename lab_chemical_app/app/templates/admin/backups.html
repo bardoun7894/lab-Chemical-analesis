@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% set is_ar = current_locale == 'ar' %}
+
+{% block title %}{{ 'النسخ الاحتياطي' if is_ar else 'Backups' }}{% endblock %}
+
+{% macro filesize(n) %}{% if n is none %}—{% elif n > 1073741824 %}{{ '%.1f'|format(n / 1073741824) }} GB{% elif n > 1048576 %}{{ '%.1f'|format(n / 1048576) }} MB{% else %}{{ (n // 1024) or 1 }} KB{% endif %}{% endmacro %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-shield-check text-success"></i>
+                {{ 'النسخ الاحتياطي' if is_ar else 'Backups' }}
+            </h1>
+            <p class="text-muted mb-0 small">
+                {{ 'كل نسخة ملف zip واحد يحتوي قاعدة البيانات كاملة + ملفات الإعدادات (قواعد العناصر، الاختبارات، إعدادات النظام)'
+                   if is_ar else
+                   'Each backup is a single zip holding the full database plus the settings files (element rules, mechanical rules, app settings, KPIs, dashboards)' }}
+            </p>
+        </div>
+        <form method="post" action="{{ url_for('admin.backups_create') }}" class="d-flex gap-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="note" class="form-control form-control-sm" style="max-width:220px"
+                   placeholder="{{ 'ملاحظة (اختياري)' if is_ar else 'Note (optional)' }}">
+            <button type="submit" class="btn btn-success btn-sm text-nowrap">
+                <i class="bi bi-plus-circle"></i> {{ 'أخذ نسخة الآن' if is_ar else 'Back up now' }}
+            </button>
+        </form>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+                <div class="card-body py-3">
+                    <div class="text-muted small">{{ 'عدد النسخ' if is_ar else 'Backups' }}</div>
+                    <div class="h3 mb-0">{{ summary.count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-secondary">
+                <div class="card-body py-3">
+                    <div class="text-muted small">{{ 'المساحة المستخدمة' if is_ar else 'Space used' }}</div>
+                    <div class="h3 mb-0">{{ filesize(summary.used) }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+                <div class="card-body py-3">
+                    <div class="text-muted small">{{ 'المساحة المتاحة' if is_ar else 'Free space' }}</div>
+                    <div class="h3 mb-0">{{ filesize(summary.free) }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info small d-flex gap-2">
+        <i class="bi bi-info-circle mt-1"></i>
+        <div>
+            {% if is_ar %}
+            النسخة تُؤخذ عبر آلية SQLite الرسمية للنسخ أثناء التشغيل، فهي متسقة حتى لو كان أحدهم يسجّل بيانات في نفس اللحظة.
+            <br>
+            <strong>الاستعادة</strong> غير متاحة من الشاشة عمداً — استبدال قاعدة بيانات تعمل تحت أربعة عمال قد يُفسدها. للاستعادة: نزّل الملف، أوقف التطبيق، استبدل <code>lab_chemical.db</code>، ثم شغّله.
+            <br>
+            المسار: <code>{{ backup_dir }}</code>
+            {% else %}
+            Snapshots are taken through SQLite's online-backup API, so a backup is consistent even if someone is saving data at that moment.
+            <br>
+            <strong>Restore is deliberately not a button here</strong> — swapping the database file under four running workers can corrupt it. To restore: download the zip, stop the app, replace <code>lab_chemical.db</code>, start it again.
+            <br>
+            Stored in <code>{{ backup_dir }}</code> (a host-mounted directory, so backups survive a container rebuild).
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            {% if not backups %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox" style="font-size:2.5rem"></i>
+                <p class="mt-3 mb-0">{{ 'لا توجد نسخ احتياطية بعد' if is_ar else 'No backups yet' }}</p>
+            </div>
+            {% else %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle small mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ 'الملف' if is_ar else 'File' }}</th>
+                            <th>{{ 'التاريخ' if is_ar else 'Taken' }}</th>
+                            <th>{{ 'بواسطة' if is_ar else 'By' }}</th>
+                            <th>{{ 'الحجم' if is_ar else 'Size' }}</th>
+                            <th>{{ 'المحتوى' if is_ar else 'Contents' }}</th>
+                            <th class="text-end"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in backups %}
+                        <tr class="{{ 'table-danger' if b.corrupt }}">
+                            <td>
+                                <code>{{ b.filename }}</code>
+                                {% if b.corrupt %}
+                                <span class="badge bg-danger">{{ 'تالف' if is_ar else 'Unreadable' }}</span>
+                                {% endif %}
+                                {% if b.manifest and b.manifest.note %}
+                                <div class="text-muted">{{ b.manifest.note }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-nowrap">{{ b.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ b.manifest.created_by if b.manifest else '—' }}</td>
+                            <td class="text-nowrap">{{ filesize(b.size) }}</td>
+                            <td>
+                                {% if b.manifest %}
+                                {% set rc = b.manifest.row_counts or {} %}
+                                <span class="text-muted">
+                                    {{ rc.get('pipes') if rc.get('pipes') is not none else '?' }} {{ 'أنبوب' if is_ar else 'pipes' }},
+                                    {{ rc.get('chemical_analyses') if rc.get('chemical_analyses') is not none else '?' }} {{ 'تحليل' if is_ar else 'analyses' }},
+                                    {{ rc.get('mechanical_tests') if rc.get('mechanical_tests') is not none else '?' }} {{ 'اختبار' if is_ar else 'tests' }}
+                                    {% if b.manifest.data_files %}· {{ b.manifest.data_files|length }} {{ 'ملف إعدادات' if is_ar else 'settings files' }}{% endif %}
+                                </span>
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <a href="{{ url_for('admin.backups_download', filename=b.filename) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-download"></i> {{ 'تنزيل' if is_ar else 'Download' }}
+                                </a>
+                                <form method="post" action="{{ url_for('admin.backups_delete', filename=b.filename) }}"
+                                      class="d-inline"
+                                      onsubmit="return confirm('{{ 'حذف هذه النسخة نهائياً؟' if is_ar else 'Delete this backup permanently?' }}')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

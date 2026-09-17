@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'تعديل المعامل' if param else 'إضافة معامل' if current_locale == 'ar' else 'Edit Parameter' if param else 'Add Parameter' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-sliders"></i>
+            {% if param %}
+                {{ 'تعديل المعامل' if current_locale == 'ar' else 'Edit Parameter' }}
+            {% else %}
+                {{ 'إضافة معامل جديد' if current_locale == 'ar' else 'Add New Parameter' }}
+            {% endif %}
+        </h2>
+        <a href="{{ url_for('admin.product_parameters') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.edit_product_parameter', id=param.id) if param else url_for('admin.add_product_parameter') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'نوع المعامل' if current_locale == 'ar' else 'Parameter Type' }} *</label>
+                            <select name="param_type" class="form-select" required {{ 'disabled' if param }}>
+                                <option value="">-- {{ 'اختر النوع' if current_locale == 'ar' else 'Select Type' }} --</option>
+                                {% for pt in param_types %}
+                                <option value="{{ pt }}" {{ 'selected' if param and param.param_type == pt }}>{{ param_type_labels[pt][1] if current_locale != 'ar' else param_type_labels[pt][0] }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if param %}
+                            <input type="hidden" name="param_type" value="{{ param.param_type }}">
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الرمز' if current_locale == 'ar' else 'Code' }} *</label>
+                            <input type="text" name="code" class="form-control" required
+                                   value="{{ param.code if param else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الاسم (إنجليزي)' if current_locale == 'ar' else 'Name EN' }} *</label>
+                            <input type="text" name="name_en" class="form-control" required
+                                   value="{{ param.name_en if param else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الاسم (عربي)' if current_locale == 'ar' else 'Name AR' }}</label>
+                            <input type="text" name="name_ar" class="form-control"
+                                   value="{{ param.name_ar if param else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الوصف (إنجليزي)' if current_locale == 'ar' else 'Description EN' }}</label>
+                            <textarea name="description_en" class="form-control" rows="2">{{ param.description_en if param else '' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الوصف (عربي)' if current_locale == 'ar' else 'Description AR' }}</label>
+                            <textarea name="description_ar" class="form-control" rows="2">{{ param.description_ar if param else '' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'ترتيب العرض' if current_locale == 'ar' else 'Sort Order' }}</label>
+                            <input type="number" name="sort_order" class="form-control"
+                                   value="{{ param.sort_order if param else 0 }}">
+                        </div>
+
+                        {# Intended Use decides which Application standards a product
+                           may be built to: sewage has its own pair, water has another,
+                           AWWA applies to both. Only this parameter type carries it. #}
+                        <div class="mb-3" id="applicationGroupRow"
+                             {{ 'hidden' if param and param.param_type != 'INTENT_USE' }}>
+                            <label class="form-label">
+                                {{ 'مجموعة المواصفات' if current_locale == 'ar' else 'Standards group' }}
+                            </label>
+                            <select name="application_group" class="form-select">
+                                <option value="both" {{ 'selected' if not param or (param.application_group or 'both') == 'both' }}>
+                                    {{ 'الاثنين (كل المواصفات)' if current_locale == 'ar' else 'Both (all standards)' }}
+                                </option>
+                                <option value="sewage" {{ 'selected' if param and param.application_group == 'sewage' }}>
+                                    {{ 'صرف صحي — ISO 8179 / EN 598' if current_locale == 'ar' else 'Sewage — ISO 8179 / EN 598' }}
+                                </option>
+                                <option value="water" {{ 'selected' if param and param.application_group == 'water' }}>
+                                    {{ 'مياه — ISO 2531 / EN 545' if current_locale == 'ar' else 'Water — ISO 2531 / EN 545' }}
+                                </option>
+                            </select>
+                            <div class="form-text">
+                                {{ 'يظهر على المنتج: اختيار هذا الاستخدام يعرض هذه المواصفات فقط (AWWA متاحة دائماً).' if current_locale == 'ar'
+                                   else 'On the product form, picking this intended use offers only these standards (AWWA is always offered).' }}
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-4">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+                                   {{ 'checked' if not param or param.is_active }}>
+                            <label class="form-check-label" for="is_active">
+                                {{ 'نشط' if current_locale == 'ar' else 'Active' }}
+                            </label>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-lg"></i>
+                                {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
+                            </button>
+                            <a href="{{ url_for('admin.product_parameters') }}" class="btn btn-outline-secondary">
+                                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+                            </a>
+                        </div>
+                    </form>
+
+                    {# On a new parameter the type is still being chosen, so the
+                       group row follows the dropdown. On an existing one the type
+                       is fixed and the row was already decided server-side. #}
+                    <script>
+                    (function () {
+                        var sel = document.querySelector('select[name="param_type"]:not([disabled])');
+                        var row = document.getElementById('applicationGroupRow');
+                        if (!sel || !row) { return; }
+                        function sync() { row.hidden = sel.value !== 'INTENT_USE'; }
+                        sel.addEventListener('change', sync);
+                        sync();
+                    })();
+                    </script>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

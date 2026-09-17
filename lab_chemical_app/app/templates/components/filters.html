@@ -1,0 +1,158 @@
+{# Reusable filter macro for all list views #}
+
+{% macro render_filters(filters, show_fields=None, action_url='', furnaces=None, stages=None) %}
+{% set all_fields = show_fields or ['date_range', 'shift', 'dn', 'pipe_class', 'decision', 'search'] %}
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ action_url }}" class="row g-2 align-items-end">
+            {% if 'date_range' in all_fields %}
+            <div class="col-md-2">
+                <label class="form-label small mb-0">
+                    {{ 'من تاريخ' if current_locale == 'ar' else 'Date From' }}
+                </label>
+                <input type="date" class="form-control form-control-sm" name="date_from"
+                       value="{{ filters.date_from or '' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-0">
+                    {{ 'إلى تاريخ' if current_locale == 'ar' else 'Date To' }}
+                </label>
+                <input type="date" class="form-control form-control-sm" name="date_to"
+                       value="{{ filters.date_to or '' }}">
+            </div>
+            {% endif %}
+
+            {% if 'shift' in all_fields %}
+            <div class="col-md-1">
+                <label class="form-label small mb-0">{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</label>
+                <select class="form-select form-select-sm" name="shift">
+                    <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                    <option value="1" {{ 'selected' if filters.shift == '1' }}>1</option>
+                    <option value="2" {{ 'selected' if filters.shift == '2' }}>2</option>
+                    <option value="3" {{ 'selected' if filters.shift == '3' }}>3</option>
+                </select>
+            </div>
+            {% endif %}
+
+            {% if 'dn' in all_fields %}
+            <div class="col-md-1">
+                <label class="form-label small mb-0">DN</label>
+                <select class="form-select form-select-sm" name="dn">
+                    <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                    {% for d in [80, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200] %}
+                    <option value="{{ d }}" {{ 'selected' if filters.dn == d|string }}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if 'pipe_class' in all_fields %}
+            <div class="col-md-1">
+                <label class="form-label small mb-0">{{ 'الفئة' if current_locale == 'ar' else 'Class' }}</label>
+                <select class="form-select form-select-sm" name="pipe_class">
+                    <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                    {% for c in ['K9', 'K10', 'K12', 'C25', 'C30', 'C40', 'C50', 'C64'] %}
+                    <option value="{{ c }}" {{ 'selected' if filters.pipe_class == c }}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if 'furnace' in all_fields and furnaces %}
+            <div class="col-md-2">
+                <label class="form-label small mb-0">{{ 'الفرن' if current_locale == 'ar' else 'Furnace' }}</label>
+                <select class="form-select form-select-sm" name="furnace_id">
+                    <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                    {% for f in furnaces %}
+                    <option value="{{ f.id }}" {{ 'selected' if filters.furnace_id == f.id|string }}>{{ f.furnace_code }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if 'decision' in all_fields %}
+            <div class="col-md-2">
+                <label class="form-label small mb-0">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</label>
+                <select class="form-select form-select-sm" name="decision">
+                    <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                    <option value="ACCEPT" {{ 'selected' if filters.decision == 'ACCEPT' }}>Accept</option>
+                    <option value="REJECT" {{ 'selected' if filters.decision == 'REJECT' }}>Reject</option>
+                    <option value="HOLD" {{ 'selected' if filters.decision == 'HOLD' }}>Hold</option>
+                </select>
+            </div>
+            {% endif %}
+
+            {% if 'final_decision' in all_fields %}
+            <div class="col-md-2">
+                <label class="form-label small mb-0">{{ 'القرار النهائي' if current_locale == 'ar' else 'Final Decision' }}</label>
+                <select class="form-select form-select-sm" name="final_decision">
+                    <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                    <option value="ACCEPT" {{ 'selected' if filters.final_decision == 'ACCEPT' }}>Accept</option>
+                    <option value="REJECT" {{ 'selected' if filters.final_decision == 'REJECT' }}>Reject</option>
+                    <option value="HOLD" {{ 'selected' if filters.final_decision == 'HOLD' }}>Hold</option>
+                </select>
+            </div>
+            {% endif %}
+
+            {% if 'production_order' in all_fields %}
+            <div class="col-md-2">
+                <label class="form-label small mb-0">{{ 'أمر الإنتاج' if current_locale == 'ar' else 'Prod. Order' }}</label>
+                <input type="text" class="form-control form-control-sm" name="production_order"
+                       value="{{ filters.production_order or '' }}" placeholder="PO-...">
+            </div>
+            {% endif %}
+
+            {% if 'ladle_id' in all_fields %}
+            <div class="col-md-2">
+                <label class="form-label small mb-0">{{ 'رقم المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</label>
+                <input type="text" class="form-control form-control-sm" name="ladle_id"
+                       value="{{ filters.ladle_id or '' }}">
+            </div>
+            {% endif %}
+
+            {% if 'search' in all_fields %}
+            <div class="col-md-2">
+                <label class="form-label small mb-0">{{ 'بحث' if current_locale == 'ar' else 'Search' }}</label>
+                <input type="text" class="form-control form-control-sm" name="search"
+                       value="{{ filters.search or '' }}" placeholder="{{ 'بحث...' if current_locale == 'ar' else 'Search...' }}">
+            </div>
+            {% endif %}
+
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-funnel"></i> {{ 'تصفية' if current_locale == 'ar' else 'Filter' }}
+                </button>
+                <a href="{{ action_url }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-circle"></i> {{ 'مسح' if current_locale == 'ar' else 'Clear' }}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endmacro %}
+
+{# Macro to show pipe basic data card #}
+{% macro pipe_info_card(pipe) %}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 small">
+            <div class="col-auto"><strong>{{ 'كود' if current_locale == 'ar' else 'Code' }}:</strong> {{ pipe.no_code or 'N/A' }}</div>
+            <div class="col-auto"><strong>DN:</strong> {{ pipe.diameter or '?' }}</div>
+            <div class="col-auto"><strong>{{ 'الفئة' if current_locale == 'ar' else 'Class' }}:</strong> {{ pipe.pipe_class or '?' }}</div>
+            <div class="col-auto"><strong>{{ 'المغرفة' if current_locale == 'ar' else 'Ladle' }}:</strong> {{ pipe.ladle_id or 'N/A' }}</div>
+            {% if pipe.production_order %}
+            <div class="col-auto"><strong>{{ 'أمر الإنتاج' if current_locale == 'ar' else 'PO' }}:</strong> {{ pipe.production_order.order_number }}</div>
+            {% endif %}
+            {% if pipe.final_decision %}
+            <div class="col-auto">
+                <strong>{{ 'القرار النهائي' if current_locale == 'ar' else 'Final' }}:</strong>
+                <span class="badge bg-{{ 'success' if pipe.final_decision == 'ACCEPT' else ('danger' if pipe.final_decision == 'REJECT' else 'warning') }}">
+                    {{ pipe.final_decision }}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endmacro %}

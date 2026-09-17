@@ -1,0 +1,79 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header py-2"><span class="small fw-bold">{title}</span></div>
+    <div class="card-body"><canvas id="rftChart" height="90"></canvas></div>
+</div>
+<script>
+(function(){
+const rows = {{ data.rows | tojson }};
+    new Chart(document.getElementById('rftChart'), { type: 'bar',
+        data: { labels: rows.map(r => r.group),
+                datasets: [{ label: 'RFT %', data: rows.map(r => r.rft_pct), backgroundColor: '#059669' }] },
+        options: { responsive: true, plugins: { legend: { display: false } },
+                   scales: { y: { beginAtZero: true, max: 100 } } } });
+})();
+</script>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body">
+                <h6 class="text-muted small">Overall RFT</h6>
+                <h2 class="mb-0 text-success">{{ data.summary.overall_rft }}%</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-primary">
+            <div class="card-body">
+                <h6 class="text-muted small">Total Pipes</h6>
+                <h2 class="mb-0">{{ data.summary.total_pipes }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-info">
+            <div class="card-body">
+                <h6 class="text-muted small">First Pass</h6>
+                <h2 class="mb-0 text-info">{{ data.summary.total_first_pass }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>{{ data.filters.group_by|capitalize }}</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">First Pass</th>
+                    <th class="text-end">Rework</th>
+                    <th class="text-end">RFT %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.rows %}
+                <tr>
+                    <td><strong>{{ r.group }}</strong></td>
+                    <td class="text-end">{{ r.total }}</td>
+                    <td class="text-end text-success">{{ r.first_pass }}</td>
+                    <td class="text-end text-warning">{{ r.rework }}</td>
+                    <td class="text-end">
+                        <span class="badge bg-{{ 'success' if r.rft_pct >= 95 else ('warning' if r.rft_pct >= 85 else 'danger') }}">
+                            {{ r.rft_pct }}%
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No data</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Delivery Date</th><th>Receipt</th><th>Bundle</th>
+                    <th>Sales Order</th><th>Customer</th><th>Pipe Code</th>
+                    <th>DN</th><th class="text-end">Weight</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.rows %}
+                <tr>
+                    <td>{{ r.delivery_date or '-' }}</td>
+                    <td>{{ r.receipt or '-' }}</td>
+                    <td>{{ r.bundle or '-' }}</td>
+                    <td>{{ r.sales_order or '-' }}</td>
+                    <td>{{ r.customer or '-' }}</td>
+                    <td><code>{{ r.pipe_code }}</code></td>
+                    <td>DN{{ r.diameter }}</td>
+                    <td class="text-end">{{ r.weight }} kg</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-center text-muted py-4">No deliveries</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if data.rows %}
+            <tfoot class="table-secondary">
+                <tr>
+                    <th colspan="7">Total ({{ data.summary.deliveries }} pipes)</th>
+                    <th class="text-end">{{ data.summary.total_weight }} kg</th>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+{% endblock %}

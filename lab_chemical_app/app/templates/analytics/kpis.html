@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+
+{% block title %}KPI Designer{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-speedometer"></i> KPI Designer</h2>
+        <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Reports
+        </a>
+    </div>
+
+    {% if can('analytics', 'kpis_manage') %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="bi bi-plus-circle"></i> Add New KPI</h6>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('analytics.add_kpi') }}" class="row g-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-3">
+                    <label class="form-label">Name</label>
+                    <input type="text" name="name" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Formula</label>
+                    <select name="formula" class="form-select form-select-sm" required>
+                        <option value="">-- Select --</option>
+                        {% for key, f in formulas.items() %}
+                        <option value="{{ key }}">{{ f.label }} ({{ f.unit }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Target</label>
+                    <input type="number" name="target" step="0.01" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Red &lt;</label>
+                    <input type="number" name="red_threshold" step="0.01" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary btn-sm w-100">Add KPI</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <h4 class="text-muted text-uppercase small mb-2">Active KPIs</h4>
+    <div class="row g-3">
+        {% for k in kpis %}
+        <div class="col-md-4 col-lg-3">
+            {% set pct = (k.current_value / k.target * 100) if k.target else 0 %}
+            {% set color = 'success' if k.current_value is number and k.current_value >= k.red_threshold else 'danger' %}
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong class="small">{{ k.name }}</strong>
+                    {% if can('analytics', 'kpis_manage') %}
+                    <form method="POST" action="{{ url_for('analytics.delete_kpi', kpi_id=k.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="card-body text-center">
+                    <h2 class="text-{{ color }}">{{ k.current_value if k.current_value is not none else '-' }}</h2>
+                    {% if k.target %}
+                    <small class="text-muted">Target: {{ k.target }}</small>
+                    {% endif %}
+                    <div class="mt-2">
+                        {% if k.kind == 'crosstab' %}
+                        {# A saved selection recomputes on every view, so the
+                           badge names the selection rather than a formula. #}
+                        <span class="badge bg-info text-dark">
+                            {{ k.selection.rows | join(' / ') }}
+                            {%- if k.selection.pivot %} × {{ k.selection.pivot | join(' / ') }}{% endif %}
+                        </span>
+                        <span class="badge bg-secondary">{{ k.selection.measure }}</span>
+                        {% if k.selection.filters %}
+                        <div class="small text-muted mt-1">
+                            بفلاتر:
+                            {%- for key, value in k.selection.filters.items() %}
+                            {{ key }}={{ value }}{{ '، ' if not loop.last }}
+                            {%- endfor %}
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <span class="badge bg-secondary">{{ k.formula }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">No KPIs defined yet. Admins can add KPIs above.</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% set saved_charts = kpis | selectattr('render', 'equalto', 'chart') | list %}
+    {% if saved_charts %}
+    <h4 class="text-muted text-uppercase small mt-4 mb-2">الرسوم المحفوظة</h4>
+    <div class="row g-3">
+      {% for k in saved_charts %}
+      <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong class="small">{{ k.name }}</strong>
+            {% if can('analytics', 'kpis_manage') %}
+            <form method="POST" action="{{ url_for('analytics.delete_kpi', kpi_id=k.id) }}" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
+            </form>
+            {% endif %}
+          </div>
+          <div class="card-body">
+            {% if not k.crosstab or not k.crosstab.rows %}
+            <div class="text-muted small">
+              لا توجد بيانات لهذا التحديد الآن — قد تكون الفلاتر المحفوظة لم تعد تطابق شيئاً.
+            </div>
+            {% else %}
+            <div style="height: 260px;">
+              <canvas id="savedChart{{ k.id }}"
+                      data-chart="{{ {'type': k.selection.chart_type or 'bar',
+                                      'measure': k.selection.measure,
+                                      'rows': k.crosstab.rows,
+                                      'leaves': k.crosstab.leaf_keys} | tojson | forceescape }}"></canvas>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% set saved_tables = kpis | selectattr('render', 'equalto', 'table') | list %}
+    {% if saved_tables %}
+    <h4 class="text-muted text-uppercase small mt-4 mb-2">الجداول المحفوظة</h4>
+    {% for k in saved_tables %}
+    <div class="card shadow-sm mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong class="small">{{ k.name }}</strong>
+            {% if can('analytics', 'kpis_manage') %}
+            <form method="POST" action="{{ url_for('analytics.delete_kpi', kpi_id=k.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="card-body p-0 table-responsive">
+            {% if not k.crosstab or not k.crosstab.rows %}
+            <div class="p-3 text-muted small">
+                لا توجد بيانات لهذا التحديد الآن — قد تكون الفلاتر المحفوظة لم تعد تطابق شيئاً.
+            </div>
+            {% else %}
+            <table class="table table-sm table-bordered mb-0 text-center">
+                <thead class="table-light">
+                    <tr>
+                        {% for label in k.crosstab.row_labels_ar %}<th>{{ label }}</th>{% endfor %}
+                        {% for leaf in k.crosstab.leaf_keys %}
+                            {% for m in k.crosstab.measures %}
+                            <th>{{ leaf | join(' / ') }} — {{ k.crosstab.measure_meta[m].label[1] }}</th>
+                            {% endfor %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in k.crosstab.rows %}
+                    <tr>
+                        {% for lbl in row.labels %}<th>{{ lbl }}</th>{% endfor %}
+                        {% for cell in row.cells %}
+                            {% for m in k.crosstab.measures %}
+                            <td>{{ cell[m] if cell[m] is not none else '—' }}</td>
+                            {% endfor %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// Each pinned chart carries its own data on the canvas, so adding another one
+// needs no extra wiring.
+document.querySelectorAll('canvas[data-chart]').forEach(function (canvas) {
+  var spec;
+  try { spec = JSON.parse(canvas.getAttribute('data-chart')); }
+  catch (e) { return; }
+  var labels = spec.rows.map(function (r) { return r.labels.join(' / '); });
+  var leaves = spec.leaves.length
+    ? spec.leaves.map(function (l) { return l.join(' / '); })
+    : ['الإجمالي'];
+  var datasets = leaves.map(function (name, i) {
+    return {
+      label: name,
+      data: spec.rows.map(function (r) {
+        var cell = r.cells[i];
+        var v = cell ? cell[spec.measure] : null;
+        return (v === null || v === undefined) ? null : v;
+      }),
+    };
+  });
+  new Chart(canvas, {
+    type: spec.type,
+    data: {
+      labels: labels,
+      datasets: spec.type === 'doughnut' ? [datasets[0]] : datasets,
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+    },
+  });
+});
+</script>
+{% endblock %}

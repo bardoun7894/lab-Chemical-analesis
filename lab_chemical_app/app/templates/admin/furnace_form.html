@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{{ ('تعديل فرن' if furnace else 'إضافة فرن') if current_locale == 'ar' else ('Edit Furnace' if furnace else 'Add Furnace') }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-fire"></i>
+                        {{ ('تعديل فرن' if furnace else 'إضافة فرن جديد') if current_locale == 'ar' else ('Edit Furnace' if furnace else 'Add New Furnace') }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'رمز الفرن' if current_locale == 'ar' else 'Furnace Code' }} <span class="text-danger">*</span></label>
+                            <input type="text" name="furnace_code" class="form-control" required maxlength="10"
+                                   value="{{ furnace.furnace_code if furnace else '' }}"
+                                   placeholder="A1, B2, C1...">
+                            <small class="text-muted">{{ 'رمز قصير فريد (مثل A1)' if current_locale == 'ar' else 'Short unique code (e.g. A1)' }}</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'اسم الفرن' if current_locale == 'ar' else 'Furnace Name' }}</label>
+                            <input type="text" name="furnace_name" class="form-control"
+                                   value="{{ furnace.furnace_name if furnace else '' }}"
+                                   placeholder="Furnace A1">
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="isActive"
+                                   {{ 'checked' if (furnace and furnace.is_active) or not furnace }}>
+                            <label class="form-check-label" for="isActive">
+                                {{ 'نشط' if current_locale == 'ar' else 'Active' }}
+                            </label>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i>
+                                {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
+                            </button>
+                            <a href="{{ url_for('admin.furnaces') }}" class="btn btn-outline-secondary">
+                                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

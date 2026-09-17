@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'ترتيب كود المنتج' if current_locale == 'ar' else 'Product Code Order' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-sort-numeric-down"></i>
+            {{ 'ترتيب كود المنتج' if current_locale == 'ar' else 'Product Code Order' }}
+        </h2>
+        <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <strong>
+                        {{ 'ترتيب الحقول' if current_locale == 'ar' else 'Field order' }}
+                    </strong>
+                    <small class="text-muted d-block">
+                        {{ 'استخدم الأسهم لإعادة ترتيب الحقول ثم احفظ' if current_locale == 'ar' else 'Use arrows to reorder, then save' }}
+                    </small>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="orderForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="order" id="orderField" value="{{ order|join(',') }}">
+                        <ul class="list-group" id="orderList">
+                            {% for pt in order %}
+                            {% set label_ar, label_en = labels.get(pt, (pt, pt)) %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center" data-type="{{ pt }}">
+                                <div>
+                                    <span class="badge bg-secondary me-2">{{ loop.index }}</span>
+                                    <strong>{{ label_ar if current_locale == 'ar' else label_en }}</strong>
+                                    <small class="text-muted ms-2">{{ pt }}</small>
+                                    <small class="text-muted ms-2">
+                                        {{ 'العرض:' if current_locale == 'ar' else 'width:' }} {{ widths.get(pt, 0) }}
+                                    </small>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary move-up" title="Up">
+                                        <i class="bi bi-arrow-up"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary move-down" title="Down">
+                                        <i class="bi bi-arrow-down"></i>
+                                    </button>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i>
+                                {{ 'حفظ الترتيب' if current_locale == 'ar' else 'Save order' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <strong>
+                        {{ 'تنسيق الكود' if current_locale == 'ar' else 'Code format' }}
+                    </strong>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">
+                        {{ 'يُبنى كود المنتج بدمج أكواد المعاملات بالترتيب المُحدد. يتم حشو الخانات الفارغة بصفر حتى تطابق العرض المُعلن.' if current_locale == 'ar'
+                           else 'The product code is built by concatenating parameter codes in the order above. Empty slots are zero-padded to the declared width.' }}
+                    </p>
+                    <hr>
+                    <div class="small">
+                        <div class="fw-bold mb-1">{{ 'العرض الحالي' if current_locale == 'ar' else 'Current widths' }}</div>
+                        <ul class="mb-0">
+                            {% for pt in order %}
+                            <li><code>{{ pt }}</code> → {{ widths.get(pt, 0) }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const list = document.getElementById('orderList');
+    const orderField = document.getElementById('orderField');
+
+    function sync() {
+        const types = Array.from(list.querySelectorAll('li')).map(li => li.dataset.type);
+        orderField.value = types.join(',');
+        list.querySelectorAll('li').forEach((li, i) => {
+            const badge = li.querySelector('.badge');
+            if (badge) badge.textContent = (i + 1).toString();
+        });
+    }
+
+    list.addEventListener('click', function(e) {
+        const up = e.target.closest('.move-up');
+        const down = e.target.closest('.move-down');
+        if (!up && !down) return;
+        const li = e.target.closest('li');
+        if (!li) return;
+        if (up && li.previousElementSibling) {
+            list.insertBefore(li, li.previousElementSibling);
+        } else if (down && li.nextElementSibling) {
+            list.insertBefore(li.nextElementSibling, li);
+        }
+        sync();
+    });
+})();
+</script>
+{% endblock %}

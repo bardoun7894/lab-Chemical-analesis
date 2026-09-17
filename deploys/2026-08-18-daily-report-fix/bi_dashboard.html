@@ -1,0 +1,630 @@
+{% extends 'reports/_analytics_base.html' %} {% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  /* ── Daily report (v52 parity) ─────────────────────────────── */
+  #dailyReport { direction: rtl; }
+  .dr-kpi { border-top: 4px solid; }
+  .dr-th { background: #f1f5f9; }
+  .dr-row-red { background: #fef2f2; }
+  .dr-row-amber { background: #fffbeb; }
+  .dr-row-green { background: #f0fdf4; }
+  .dr-signature { border-top: 2px solid #e2e8f0; padding-top: 8px;
+                  text-align: center; font-size: .75rem; color: #64748b; }
+  @media print {
+    body * { visibility: hidden; }
+    #dailyReport, #dailyReport * { visibility: visible; }
+    #dailyReport { position: absolute; inset: 0 auto auto 0; width: 100%; }
+    .no-print { display: none !important; }
+  }
+</style>
+
+{% macro dr_arrow(cur, prev, lower_better=false) -%}
+  {%- if prev is none -%}
+    <span class="text-muted">—</span>
+  {%- elif (cur - prev)|abs < 0.01 -%}
+    <span class="text-muted">→ مستقر</span>
+  {%- else -%}
+    {%- set better = (cur - prev) < 0 if lower_better else (cur - prev) > 0 -%}
+    {%- set pct = ((cur - prev) / prev * 100)|round(1) -%}
+    <span class="fw-bold {{ 'text-success' if better else 'text-danger' }}">
+      {{ '▲' if cur > prev else '▼' }} {{ pct }}%
+    </span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro dr_pct_class(pct) -%}
+  {{ 'text-danger' if pct > 7 else 'text-warning-emphasis' if pct > 4 else 'text-success' }}
+{%- endmacro %}
+
+{% macro dr_row_class(pct) -%}
+  {{ 'dr-row-red' if pct > 7 else 'dr-row-amber' if pct > 4 else 'dr-row-green' }}
+{%- endmacro %}
+
+<!-- ══════════ 📋 التقرير اليومي (v52 parity) ══════════ -->
+{% set dr = data.daily_report %}
+<div class="card border-0 shadow-sm mb-4 no-print">
+  <div class="card-body d-flex align-items-center flex-wrap gap-2 py-2">
+    <div class="fw-bold small" style="color: #2563eb">📋 التقرير اليومي</div>
+    <form method="get" action="{{ url_for('reports.bi_dashboard') }}"
+          class="d-flex align-items-center gap-2">
+      <label class="small text-muted fw-bold mb-0">تاريخ التقرير:</label>
+      <input type="date" name="rpt_date" value="{{ dr.date if dr else '' }}"
+             class="form-control form-control-sm" style="width: 160px">
+      <button type="submit" class="btn btn-primary btn-sm">⚡ توليد التقرير</button>
+    </form>
+    <div class="d-flex gap-2 ms-auto">
+      <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">🖨️ طباعة</button>
+      {% if dr %}
+      <a href="{{ url_for('reports.export_daily_report_pdf', date=dr.date) }}"
+         class="btn btn-outline-secondary btn-sm">📄 PDF</a>
+      {% endif %}
+      <button onclick="copyDailySummary()" class="btn btn-outline-secondary btn-sm">📋 نسخ النص</button>
+    </div>
+  </div>
+</div>
+
+{% if not dr %}
+<div class="alert alert-light text-center">📂 لا توجد بيانات إنتاج بعد</div>
+{% else %}
+<div id="dailyReport" class="mb-4">
+
+  <!-- Header -->
+  <div class="text-white rounded-4 p-3 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2"
+       style="background: linear-gradient(135deg,#1d4ed8,#7c3aed)">
+    <div>
+      <div class="fw-bold fs-5">📋 التقرير اليومي للإنتاج والجودة</div>
+      <div class="small" style="opacity:.85">مصنع CCM — أنابيب الحديد الزهر المطيل</div>
+    </div>
+    <div class="text-end">
+      <div class="fw-bold">{{ dr.arabic_date }}</div>
+      <div class="small" style="opacity:.8">{{ dr.date }}</div>
+    </div>
+  </div>
+
+  <!-- Status banner -->
+  <div class="text-white rounded-3 px-3 py-2 mb-3 d-flex justify-content-between align-items-center flex-wrap"
+       style="background: {{ dr.status.color }}">
+    <div class="fw-bold small">الحالة العامة: {{ dr.status.text }}</div>
+    <div class="small" style="opacity:.9">معدل الرفض: {{ '%.2f'|format(dr.today.rej_pct) }}%</div>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="row g-2 mb-3">
+    <div class="col-6 col-lg-3">
+      <div class="card dr-kpi h-100" style="border-color:#e2e8f0;border-top-color:#1d4ed8">
+        <div class="card-body py-2">
+          <div class="small text-muted fw-bold">🏭 إجمالي الإنتاج</div>
+          <div class="fs-3 fw-bold" style="color:#1d4ed8">{{ dr.today.produced }}</div>
+          <div class="small">{{ dr_arrow(dr.today.produced, dr.yest.produced if dr.yest) if dr.yest else '—' }} عن أمس</div>
+          {% if dr.today.produced != dr.today.n %}
+            <div class="small text-muted">
+              {{ dr.today.n }} تم البت فيها ·
+              <span class="text-warning-emphasis">{{ dr.today.produced - dr.today.n }} بانتظار القرار</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card dr-kpi h-100" style="border-color:#e2e8f0;border-top-color:#dc2626">
+        <div class="card-body py-2">
+          <div class="small text-muted fw-bold">❌ المرفوض</div>
+          <div class="fs-3 fw-bold text-danger">{{ dr.today.rejects }}</div>
+          <div class="small">{{ dr_arrow(dr.today.rejects, dr.yest.rejects if dr.yest, true) if dr.yest else '—' }} عن أمس</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card dr-kpi h-100" style="border-color:#e2e8f0;border-top-color:{{ dr.status.color }}">
+        <div class="card-body py-2">
+          <div class="small text-muted fw-bold">
+            📊 معدل الرفض
+            <span class="fw-normal">(من {{ dr.today.n }} تم البت فيها)</span>
+          </div>
+          <div class="fs-3 fw-bold" style="color:{{ dr.status.color }}">{{ '%.2f'|format(dr.today.rej_pct) }}%</div>
+          <div class="small">
+            {{ dr_arrow(dr.today.rej_pct, dr.yest.rej_pct if dr.yest, true) if dr.yest else '—' }}
+            {% if dr.week_avg %} | متوسط أسبوع: {{ '%.1f'|format(dr.week_avg.rej_pct) }}%{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card dr-kpi h-100" style="border-color:#e2e8f0;border-top-color:{{ '#16a34a' if dr.today.sav_pct > 2 else '#d97706' }}">
+        <div class="card-body py-2">
+          <div class="small text-muted fw-bold">💰 Saving %</div>
+          <div class="fs-3 fw-bold" style="color:{{ '#16a34a' if dr.today.sav_pct > 2 else '#d97706' }}">{{ '%.2f'|format(dr.today.sav_pct) }}%</div>
+          <div class="small">Saving: {{ '%.2f'|format(dr.today.sav_kg / 1000) }} MT</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Machine / Supervisor tables -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="card h-100" style="border-color:#e2e8f0">
+        <div class="card-header small fw-bold" style="background:#f8fafc">🏭 الأداء بالماكينة</div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 small text-center align-middle">
+            <thead><tr class="dr-th">
+              <th class="text-start">الماكينة</th><th>الإجمالي</th><th>مرفوض</th><th>نسبة %</th><th>التغيير</th>
+            </tr></thead>
+            <tbody>
+              {% for r in dr.machine_rows %}
+              <tr class="{{ dr_row_class(r.pct) }}">
+                <td class="text-start fw-bold">{{ r.key }}</td>
+                <td>{{ r.total }}</td>
+                <td class="text-danger fw-bold">{{ r.rejects }}</td>
+                <td class="fw-bold {{ dr_pct_class(r.pct) }}">{{ '%.1f'|format(r.pct) }}%</td>
+                <td class="small">{{ dr_arrow(r.pct, r.y_pct, true) }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center text-muted">لا توجد بيانات</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card h-100" style="border-color:#e2e8f0">
+        <div class="card-header small fw-bold" style="background:#f8fafc">👤 الأداء بالمشرف</div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 small text-center align-middle">
+            <thead><tr class="dr-th">
+              <th class="text-start">المشرف</th><th>الإجمالي</th><th>مرفوض</th><th>نسبة %</th><th>التغيير</th>
+            </tr></thead>
+            <tbody>
+              {% for r in dr.sup_rows %}
+              <tr>
+                <td class="text-start fw-bold">{{ r.key }}</td>
+                <td>{{ r.total }}</td>
+                <td class="text-danger fw-bold">{{ r.rejects }}</td>
+                <td class="fw-bold {{ dr_pct_class(r.pct) }}">{{ '%.1f'|format(r.pct) }}%</td>
+                <td class="small">{{ dr_arrow(r.pct, r.y_pct, true) }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center text-muted">لا توجد بيانات</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reasons / Shift tables -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="card h-100" style="border-color:#fecaca">
+        <div class="card-header small fw-bold" style="background:#fef2f2">🔍 أسباب الرفض الأكثر تكراراً</div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 small text-center align-middle">
+            <thead><tr class="dr-th">
+              <th>#</th><th class="text-start">السبب</th><th>العدد</th><th>%</th>
+            </tr></thead>
+            <tbody>
+              {% for r in dr.top_reasons %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td class="text-start fw-bold">{{ r.reason }}</td>
+                <td class="text-danger fw-bold">{{ r.count }}</td>
+                <td>{{ '%.1f'|format(r.pct) }}%</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted">لا توجد أسباب مسجلة</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card h-100" style="border-color:#e2e8f0">
+        <div class="card-header small fw-bold" style="background:#f8fafc">⏰ الأداء بالوردية</div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 small text-center align-middle">
+            <thead><tr class="dr-th">
+              <th class="text-start">الوردية</th><th>الإجمالي</th><th>مرفوض</th><th>%</th>
+            </tr></thead>
+            <tbody>
+              {% for r in dr.shift_rows %}
+              <tr>
+                <td class="text-start fw-bold">الوردية {{ r.key }}</td>
+                <td>{{ r.total }}</td>
+                <td class="text-danger fw-bold">{{ r.rejects }}</td>
+                <td class="fw-bold {{ dr_pct_class(r.pct) }}">{{ '%.1f'|format(r.pct) }}%</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted">لا توجد بيانات</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if dr.week_avg %}
+        <div class="card-footer small" style="background:#f0f9ff;color:#0369a1">
+          📊 متوسط آخر أسبوع: {{ '%.2f'|format(dr.week_avg.rej_pct) }}% رفض
+          | {{ dr.week_avg.n_per_day }} ماسورة/يوم
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Molds (bonus — computed in v52 but never rendered there) -->
+  {% if dr.top_molds %}
+  <div class="card mb-3" style="border-color:#e2e8f0">
+    <div class="card-header small fw-bold" style="background:#f8fafc">🧱 أكثر القوالب رفضاً (Top 3)</div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0 small text-center align-middle">
+        <thead><tr class="dr-th"><th>#</th><th class="text-start">القالب</th><th>مرفوض</th></tr></thead>
+        <tbody>
+          {% for m in dr.top_molds %}
+          <tr><td>{{ loop.index }}</td>
+              <td class="text-start fw-bold">{{ m.mold }}</td>
+              <td class="text-danger fw-bold">{{ m.count }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Shift × DN × Class detail -->
+  <div class="card mb-3" style="border-color:#e2e8f0">
+    <div class="card-header small fw-bold" style="background:#f8fafc">📐 تفاصيل الإنتاج بالوردية — القطر والنوع ومتخذ القرار</div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0 small text-center align-middle">
+        <thead><tr class="dr-th">
+          <th class="text-start">القطر DN</th><th class="text-start">النوع</th>
+          <th class="text-start">متخذ القرار</th><th>الإجمالي</th><th>مرفوض</th><th>%</th>
+        </tr></thead>
+        <tbody>
+          {% set ns = namespace(last_shift=None) %}
+          {% for r in dr.shift_detail_rows %}
+          {% if r.shift != ns.last_shift %}
+          {% set ns.last_shift = r.shift %}
+          <tr style="background:#eef2ff">
+            <td colspan="6" class="text-start fw-bold small" style="color:#3730a3">⏰ الوردية {{ r.shift }}</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <td class="text-start fw-bold">DN{{ r.dn }}</td>
+            <td class="text-start fw-bold">{{ r.cls }}</td>
+            <td class="text-start small text-secondary">{{ r.approver }}</td>
+            <td>{{ r.total }}</td>
+            <td class="text-danger fw-bold">{{ r.rejects }}</td>
+            <td class="fw-bold {{ dr_pct_class(r.pct) }}">{{ '%.1f'|format(r.pct) }}%</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted">لا توجد بيانات</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not dr.today.has_approver %}
+    <div class="card-footer small" style="background:#fffbeb;color:#92400e">
+      ⚠️ لا توجد اعتمادات مراحل (approved_by) لبيانات اليوم — تسجيلها يُظهر اسم متخذ القرار هنا
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Auto summary -->
+  <div class="card mb-3" style="background:#fffbeb;border-color:#fbbf24">
+    <div class="card-body py-2">
+      <div class="small fw-bold mb-1" style="color:#92400e">📝 الملخص التنفيذي (تلقائي)</div>
+      <div id="dailySummaryText" class="small" style="color:#78350f;line-height:1.9">{{ dr.summary }}</div>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  {% if dr.alerts %}
+  <div class="card mb-3" style="background:#fef2f2;border-color:#fecaca">
+    <div class="card-body py-2">
+      <div class="small fw-bold mb-1" style="color:#991b1b">🚨 تنبيهات اليوم</div>
+      {% for a in dr.alerts %}
+      <div class="small" style="color:#7f1d1d;padding:2px 0;border-bottom:1px solid #fee2e2">{{ a }}</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Signatures -->
+  <div class="row g-4 mt-3">
+    {% for s in dr.signatures %}
+    <div class="col-4"><div class="dr-signature">{{ s }}</div></div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+<script>
+  function copyDailySummary() {
+      const el = document.getElementById('dailySummaryText');
+      if (!el) { alert('لا يوجد ملخص — ولّد التقرير أولاً'); return; }
+      navigator.clipboard.writeText(el.textContent)
+          .then(() => alert('✅ تم نسخ الملخص'))
+          .catch(() => alert(el.textContent));
+  }
+</script>
+
+<!-- KPI row — same 5 KPIs as the Excel dashboard -->
+<div class="row g-3 mb-3">
+  <div class="col">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small">إجمالي الإنتاج</div>
+        <div class="fs-3 fw-bold" style="color: #2563eb">
+          {{ data.kpis.produced }}
+        </div>
+        <div class="text-muted small">ماسورة (ACC+REJ)</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small">Yield العائد</div>
+        <div class="fs-3 fw-bold" style="color: #059669">
+          {{ data.kpis.yield_pct ~ '%' if data.kpis.yield_pct is not none else
+          '—' }}
+        </div>
+        <div class="text-muted small">وزن فعلي / ISO</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small">معدل الرفض</div>
+        <div class="fs-3 fw-bold" style="color: #e11d48">
+          {{ data.kpis.reject_pct ~ '%' if data.kpis.reject_pct is not none else
+          '—' }}
+        </div>
+        <div class="text-muted small">
+          {{ data.kpis.rejects }} / {{ data.kpis.decided }} قرار
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small">الوزن الفعلي</div>
+        <div class="fs-3 fw-bold" style="color: #4f46e5">
+          {{ data.kpis.actual_mt }}
+        </div>
+        <div class="text-muted small">MT · Actual Weight</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small">Saving / هدر</div>
+        <div
+          class="fs-3 fw-bold"
+          style="color: {{ '#059669' if data.kpis.saving_mt >= 0 else '#e11d48' }}"
+        >
+          {{ data.kpis.saving_mt }}
+        </div>
+        <div class="text-muted small">MT · ISO − Actual</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🏭 Production -->
+<h5 class="border-bottom pb-1 mb-3" style="color: #2563eb">🏭 الإنتاج</h5>
+<div class="row g-3 mb-4">
+  {% for key, title in [('month', 'شهري'), ('shift', 'بالوردية'), ('machine',
+  'بالماكينة'), ('dn', 'بالقطر DN'), ('mold', 'بالقالب')] %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div
+        class="card-header d-flex justify-content-between align-items-center py-2"
+      >
+        <span class="small fw-bold">{{ title }}</span>
+        <div class="btn-group btn-group-sm" data-toggle-group="{{ key }}">
+          <button class="btn btn-primary" data-mode="count">عدد</button>
+          <button class="btn btn-outline-primary" data-mode="weight">
+            وزن
+          </button>
+          <button class="btn btn-outline-primary" data-mode="length">
+            طول
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <canvas id="chart_{{ key }}" height="140"></canvas>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header py-2">
+        <span class="small fw-bold">📈 الاتجاه اليومي</span>
+      </div>
+      <div class="card-body">
+        <canvas id="chart_daily" height="140"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⚠️ Rejection reasons + stages -->
+<h5 class="border-bottom pb-1 mb-3" style="color: #e11d48">
+  ⚠️ أسباب الرفض والمراحل
+</h5>
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header py-2">
+        <span class="small fw-bold">أسباب الرفض (Top 10)</span>
+      </div>
+      <div class="card-body">
+        <canvas id="chart_reasons" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header py-2">
+        <span class="small fw-bold">📊 الرفض بالمرحلة — عدد</span>
+      </div>
+      <div class="card-body">
+        <canvas id="chart_stage_rej" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header py-2">
+        <span class="small fw-bold">🍩 توزيع الرفض بالمرحلة</span>
+      </div>
+      <div class="card-body">
+        <canvas id="chart_stage_pie" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🔄 Stage funnel -->
+<h5 class="border-bottom pb-1 mb-3" style="color: #0d9488">
+  🔄 تدفق جودة المراحل (Funnel)
+</h5>
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    {% for r in data.stage.funnel %}
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <div class="text-end small" style="width: 120px">{{ r.stage }}</div>
+      <div class="flex-grow-1">
+        <div class="progress" style="height: 18px">
+          <div
+            class="progress-bar {{ 'bg-secondary' if r.count == 0 else 'bg-success' }}"
+            style="width: {{ (r.count / data.stage.funnel | map(attribute='count') | max * 100) | round(1) if r.count else 0 }}%"
+          >
+            {{ r.count }}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- 💰 Saving matrix -->
+<h5 class="border-bottom pb-1 mb-3" style="color: #d97706">
+  💰 Saving بالقطر DN والـ Pipe Class
+</h5>
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-0 table-responsive">
+    <table class="table table-sm table-bordered mb-0 text-center">
+      <thead>
+        <tr>
+          <th class="text-start">DN \ Class</th>
+          {% for c in data.saving.classes %}
+          <th>{{ c }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for dn in data.saving.dns %}
+        <tr>
+          <th class="text-start">DN{{ dn }}</th>
+          {% for c in data.saving.classes %} {% set cell =
+          data.saving.cells.get((dn, c)) %} {% if cell is none or cell.count ==
+          0 %}
+          <td class="text-muted" style="background: #f8f9fa">·</td>
+          {% else %}
+          <td class="{{ 'table-danger' if cell.saving < 0 }}">
+            <strong>{{ cell.saving }}</strong> kg
+            <div class="text-muted" style="font-size: 0.72em">
+              {{ cell.planned }} → {{ cell.actual }}
+            </div>
+          </td>
+          {% endif %} {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer small">
+    <a href="{{ url_for('reports.saving_matrix') }}"
+      >المصفوفة الكاملة مع الإجماليات ←</a
+    >
+    {% if data.saving.excluded_no_weight %}
+    <span class="text-muted"
+      >({{ data.saving.excluded_no_weight }} ماسورة بدون وزن معياري
+      مستبعدة)</span
+    >
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  const PAYLOAD = {{ data.payload | tojson }};
+  const COLORS = ['#2563eb','#059669','#e11d48','#d97706','#4f46e5','#0891b2','#7c3aed','#0d9488','#64748b','#dc2626'];
+
+  function barChart(id, labels, values, color) {
+      return new Chart(document.getElementById(id), {
+          type: 'bar',
+          data: { labels, datasets: [{ data: values, backgroundColor: color || '#2563eb' }] },
+          options: { responsive: true, plugins: { legend: { display: false } },
+                     scales: { x: { ticks: { maxTicksLimit: 12 } } } }
+      });
+  }
+
+  // عدد/وزن toggle for every production chart
+  const prodCharts = {};
+  ['month', 'shift', 'machine', 'dn', 'mold'].forEach(key => {
+      const rows = PAYLOAD.groups[key];
+      const labels = rows.map(r => r.key);
+      prodCharts[key] = barChart('chart_' + key, labels, rows.map(r => r.count));
+      document.querySelectorAll(`[data-toggle-group="${key}"] button`).forEach(btn => {
+          btn.addEventListener('click', () => {
+              document.querySelectorAll(`[data-toggle-group="${key}"] button`).forEach(b => {
+                  b.classList.remove('btn-primary'); b.classList.add('btn-outline-primary');
+              });
+              btn.classList.remove('btn-outline-primary'); btn.classList.add('btn-primary');
+              const mode = btn.dataset.mode;
+              const ch = prodCharts[key];
+              ch.data.datasets[0].data = rows.map(r => r[mode]);
+              ch.update();
+          });
+      });
+  });
+
+  // Daily trend
+  (function () {
+      const rows = PAYLOAD.trends.daily;
+      new Chart(document.getElementById('chart_daily'), {
+          type: 'line',
+          data: { labels: rows.map(r => r.key),
+                  datasets: [{ label: 'عدد', data: rows.map(r => r.count),
+                               borderColor: '#2563eb', backgroundColor: '#2563eb33', fill: true, pointRadius: 2 }] },
+          options: { responsive: true, plugins: { legend: { display: false } },
+                     scales: { x: { ticks: { maxTicksLimit: 10 } } } }
+      });
+  })();
+
+  // Reasons top10
+  barChart('chart_reasons',
+      PAYLOAD.reasons.map(r => r.reason),
+      PAYLOAD.reasons.map(r => r.count), '#e11d48');
+
+  // Stage rejects bar + pie
+  (function () {
+      const rows = PAYLOAD.stage.reject_by_stage;
+      barChart('chart_stage_rej', rows.map(r => r.stage), rows.map(r => r.rejects), '#d97706');
+      new Chart(document.getElementById('chart_stage_pie'), {
+          type: 'doughnut',
+          data: { labels: rows.map(r => r.stage),
+                  datasets: [{ data: rows.map(r => r.rejects), backgroundColor: COLORS }] },
+          options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } } }
+      });
+  })();
+</script>
+{% endblock %}

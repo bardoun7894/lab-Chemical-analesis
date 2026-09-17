@@ -1,0 +1,108 @@
+{# The andon board's body. Polled on its own so the wall screen never reloads
+   — a reload would flash white and lose the scroll on a 55" monitor. #}
+{% set is_ar = current_locale == 'ar' %}
+
+{% if d.overdue %}
+<div class="andon-alarm">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    {{ d.overdue | length }}
+    {{ 'ماسورة متوقفة أكثر من' if is_ar else 'pipe(s) stopped over' }}
+    {{ alert_hours }}{{ 'س' if is_ar else 'h' }}
+    —
+    {% for r in d.overdue[:6] %}<span class="andon-alarm-code">{{ r.code }}</span>{% endfor %}
+    {% if d.overdue | length > 6 %}…{% endif %}
+</div>
+{% endif %}
+
+<div class="andon-grid">
+
+    {# ---- today ------------------------------------------------------- #}
+    <section class="andon-card andon-today">
+        <h2>{{ 'اليوم' if is_ar else 'Today' }}</h2>
+        <div class="andon-kpis">
+            <div class="andon-kpi">
+                <span class="andon-num">{{ d.today.produced }}</span>
+                <span class="andon-lbl">{{ 'منتج' if is_ar else 'produced' }}</span>
+            </div>
+            <div class="andon-kpi state-pass">
+                <span class="andon-num">{{ d.today['pass'] }}</span>
+                <span class="andon-lbl">{{ 'مقبول' if is_ar else 'accepted' }}</span>
+            </div>
+            <div class="andon-kpi state-fail">
+                <span class="andon-num">{{ d.today.fail + d.today.blocked }}</span>
+                <span class="andon-lbl">{{ 'مرفوض' if is_ar else 'rejected' }}</span>
+            </div>
+            <div class="andon-kpi state-hold">
+                <span class="andon-num">{{ d.today.hold }}</span>
+                <span class="andon-lbl">{{ 'محجوز' if is_ar else 'held' }}</span>
+            </div>
+            <div class="andon-kpi andon-yield">
+                <span class="andon-num">
+                    {% if d.today.yield_pct is not none %}{{ d.today.yield_pct }}%
+                    {% else %}—{% endif %}
+                </span>
+                <span class="andon-lbl">{{ 'الإنتاجية' if is_ar else 'yield' }}</span>
+            </div>
+        </div>
+    </section>
+
+    {# ---- work waiting at each stage ---------------------------------- #}
+    <section class="andon-card andon-wip">
+        <h2>
+            {{ 'الشغل عند كل مرحلة' if is_ar else 'Work at each stage' }}
+            <small>{{ d.open_count }} {{ 'مفتوح' if is_ar else 'open' }}</small>
+        </h2>
+        {% set peak = d.wip | map(attribute='count') | max %}
+        <div class="andon-bars">
+            {% for row in d.wip %}
+            <div class="andon-bar-row">
+                <span class="andon-bar-name">{{ row.stage }}</span>
+                <span class="andon-bar-track">
+                    <span class="andon-bar-fill"
+                          style="width: {{ (row.count / peak * 100) | round(1) if peak else 0 }}%"></span>
+                </span>
+                <span class="andon-bar-num">{{ row.count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    {# ---- what is stopped, and for how long --------------------------- #}
+    <section class="andon-card andon-stopped">
+        <h2>
+            {{ 'متوقف' if is_ar else 'Stopped' }}
+            <small>{{ d.stopped | length }}</small>
+        </h2>
+        {% if not d.stopped %}
+        <p class="andon-clear">
+            <i class="bi bi-check-circle-fill"></i>
+            {{ 'لا يوجد شيء متوقف' if is_ar else 'Nothing stopped' }}
+        </p>
+        {% endif %}
+        <div class="andon-stopped-list">
+            {% for r in d.stopped[:20] %}
+            <div class="andon-stop state-{{ r.state }}{{ ' overdue' if r.overdue }}">
+                <span class="andon-stop-code">{{ r.code }}</span>
+                <span class="andon-stop-why">
+                    {{ r.decision or r.state }}
+                    <small>{{ r.source }}</small>
+                </span>
+                <span class="andon-stop-age">
+                    {% if r.age_hours is not none %}
+                    {{ r.age_hours | round(0) | int }}{{ 'س' if is_ar else 'h' }}
+                    {% else %}
+                    <span class="andon-unknown">{{ 'غير معروف' if is_ar else 'unknown' }}</span>
+                    {% endif %}
+                </span>
+            </div>
+            {% endfor %}
+            {% if d.stopped | length > 20 %}
+            <div class="andon-more">
+                +{{ d.stopped | length - 20 }} {{ 'أخرى' if is_ar else 'more' }}
+            </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<div class="andon-stamp">{{ d.generated_at.strftime('%H:%M:%S') }} UTC</div>

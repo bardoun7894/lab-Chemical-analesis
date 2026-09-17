@@ -1,0 +1,115 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block filters %}
+<div class="col-md-2">
+    <label class="form-label small">From date</label>
+    <input type="date" name="date_from" class="form-control form-control-sm"
+           value="{{ data.filters.date_from or '' }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">To date</label>
+    <input type="date" name="date_to" class="form-control form-control-sm"
+           value="{{ data.filters.date_to or '' }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">DN</label>
+    <select name="diameter" class="form-select form-select-sm">
+        <option value="">All</option>
+        {% for dn in [80, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200] %}
+        <option value="{{ dn }}" {{ 'selected' if data.filters.diameter == dn }}>DN{{ dn }}</option>
+        {% endfor %}
+    </select>
+</div>
+<div class="col-md-2">
+    <label class="form-label small">Order</label>
+    <select name="production_order_id" class="form-select form-select-sm">
+        <option value="">All</option>
+        {% for o in orders %}
+        <option value="{{ o.id }}" {{ 'selected' if data.filters.production_order_id == o.id }}>
+            {{ o.order_number }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+<div class="col-md-1">
+    <label class="form-label small">Shift</label>
+    <select name="shift" class="form-select form-select-sm">
+        <option value="">All</option>
+        {% for s in [1, 2, 3] %}
+        <option value="{{ s }}" {{ 'selected' if data.filters.shift == s }}>{{ s }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endblock %}
+
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="row g-3">
+    {% for panel in data.panels %}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between">
+                <h6 class="mb-0">{{ panel.label }}</h6>
+                <span class="text-muted small">
+                    {{ panel.points | length }} points
+                    {% if panel.truncated %}(truncated from {{ panel.total }}){% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                {% if panel.points %}
+                <canvas id="trend_{{ panel.key }}" height="120"></canvas>
+                {% else %}
+                <div class="text-muted small py-4 text-center">
+                    <i class="bi bi-inbox"></i> No data for this range — other panels are unaffected.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+{% for panel in data.panels if panel.points %}
+(function () {
+    const points = {{ panel.points | tojson }};
+    const labels = points.map(p => p.date);
+    const values = points.map(p => p.value);
+    const urls = points.map(p => p.source_url);
+    new Chart(document.getElementById('trend_{{ panel.key }}'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: {{ panel.label | tojson }},
+                data: values,
+                borderColor: '#0d6efd',
+                backgroundColor: '#0d6efd',
+                borderWidth: 1.5,
+                pointRadius: 3,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            onClick: (evt, elements) => {
+                if (elements.length) {
+                    const url = urls[elements[0].index];
+                    if (url) window.open(url, '_blank');
+                }
+            },
+            scales: { x: { ticks: { maxTicksLimit: 10 } } }
+        }
+    });
+})();
+{% endfor %}
+</script>
+<p class="text-muted small mt-2">
+    <i class="bi bi-hand-index"></i> Click a point to open its source record
+    (mechanical test or chemical analysis). "Microstructure % (&gt;70)" trends the
+    recorded microstructure field — it is not labelled ferrite until Dr Alaa
+    confirms the field mapping. The Shift filter applies to mechanical panels
+    only (chemical analyses carry no shift).
+</p>
+{% endblock %}

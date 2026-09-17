@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% set is_ar = current_locale == 'ar' %}
+
+{% block title %}{{ 'لوحة الصالة' if is_ar else 'Andon Board' }}{% endblock %}
+
+{% block content %}
+<div class="andon-board" id="andonBoard"
+     data-panel-url="{{ url_for('reports.andon_panel', hours=alert_hours) }}">
+
+    <div class="andon-head">
+        <h1>
+            <i class="bi bi-broadcast-pin"></i>
+            {{ 'لوحة الصالة' if is_ar else 'Andon Board' }}
+        </h1>
+        <div class="andon-head-tools d-print-hide">
+            <form method="get" class="d-inline-flex align-items-center gap-2">
+                <label class="andon-hours-lbl" for="andonHours">
+                    {{ 'تنبيه بعد' if is_ar else 'Alert after' }}
+                </label>
+                <input type="number" min="1" max="240" name="hours" id="andonHours"
+                       class="andon-hours" value="{{ alert_hours }}"
+                       onchange="this.form.submit()">
+                <span>{{ 'ساعة' if is_ar else 'h' }}</span>
+            </form>
+            <button type="button" class="andon-btn" id="andonFullscreen">
+                <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="andonPanel">
+        {% include 'reports/_andon_panel.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* The board lives on a wall monitor: swap the body in place every 30s rather
+   than reloading, so the screen never flashes and nobody has to log in again
+   after a network blip. */
+(function () {
+    var board = document.getElementById('andonBoard');
+    var panel = document.getElementById('andonPanel');
+    if (!board || !panel) { return; }
+
+    function tick() {
+        fetch(board.dataset.panelUrl, { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.text() : null; })
+            .then(function (html) {
+                if (html) {
+                    panel.innerHTML = html;
+                    board.classList.remove('stale');
+                }
+            })
+            .catch(function () {
+                // a blip on the plant network — mark it and try again
+                board.classList.add('stale');
+            });
+    }
+    setInterval(tick, 30000);
+
+    var fs = document.getElementById('andonFullscreen');
+    if (fs) {
+        fs.onclick = function () {
+            if (document.fullscreenElement) { document.exitFullscreen(); }
+            else if (board.requestFullscreen) { board.requestFullscreen(); }
+        };
+    }
+})();
+</script>
+{% endblock %}

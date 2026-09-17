@@ -1,0 +1,220 @@
+{# Shared skeleton for the printed GCP certificate forms.
+
+   Both forms carry the same letterhead, the same reference block and the same
+   material-details table; they differ only in what is printed below it and in
+   who signs. One A4 portrait page each.
+
+   Children fill: ref_rows (extra reference lines), intro (the paragraph some
+   forms open with), sheet_body (everything under the material table) and
+   signatures. #}
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8">
+    <title>{{ cert.title_en }} — {{ cert.certificate_no }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+            margin: 0; padding: 10mm 8mm;
+            color: #000; font-size: 12px;
+        }
+        .toolbar { margin-bottom: 12px; text-align: center; }
+        .btn {
+            font: inherit; padding: 6px 14px; margin-inline-end: 8px; cursor: pointer;
+            border: 1px solid #888; border-radius: 4px; background: #fff;
+            text-decoration: none; color: inherit;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        td, th { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; }
+
+        /* ---- Letterhead: logo | company | form title | revisions | badge ---- */
+        .head td { text-align: center; }
+        .head .rev { text-align: left; font-size: 11px; white-space: nowrap; }
+        .head .title { font-size: 15px; font-weight: 700; line-height: 1.5; }
+        .head .company { font-size: 12px; line-height: 1.6; }
+        .head .company .ar { font-weight: 700; }
+        .head img { max-height: 62px; max-width: 100%; }
+        .head .logo, .head .badge { width: 130px; }
+
+        .doc-title {
+            text-align: center; font-size: 20px; font-weight: 700;
+            padding: 12px 0 8px; letter-spacing: .5px;
+        }
+        .doc-title .ar { display: block; font-size: 17px; padding-top: 2px; }
+
+        .print-warning {
+            border: 1px solid #8a6d00; background: #fff7cc;
+            padding: 5px 7px; font-weight: 700; text-align: center;
+        }
+
+        /* One unbroken content frame starts directly below the letterhead. */
+        .certificate-frame {
+            border: 1px solid #000;
+            min-height: 238mm;
+            padding: 0 3px 4px;
+            break-inside: avoid;
+        }
+
+        /* ---- Reference block: label cell then the value line ---- */
+        .refs { margin-bottom: 4px; }
+        .refs th {
+            width: 175px; text-align: left; font-weight: 600;
+            background: #f2f2f2; white-space: nowrap;
+        }
+        .refs td { height: 24px; }
+        .refs .gap td, .refs .gap th { border: 0; height: 6px; padding: 0; }
+
+        .intro { border: 0; padding: 10px 2px; line-height: 1.6; text-align: justify; }
+
+        .material-note { font-weight: 600; padding: 5px; }
+        .grid th { background: #f2f2f2; text-align: center; font-weight: 600; }
+        .grid td { text-align: center; height: 26px; }
+        .grid .notes-col, .grid .desc { text-align: left; }
+
+        .section-title {
+            background: #f2f2f2; font-weight: 700; padding: 5px;
+            text-align: center;
+        }
+
+        .sign { margin-top: 24px; border: 0; }
+        .sign td { border: 0; text-align: center; padding: 4px; }
+        .sign .role { font-weight: 700; }
+        .sign .line {
+            border-bottom: 1px dotted #000; display: block;
+            height: 26px; margin: 0 12px;
+        }
+
+        @media print {
+            .toolbar { display: none !important; }
+            body { padding: 8mm; }
+            .certificate-frame {
+                min-height: 238mm;
+                -webkit-box-decoration-break: clone;
+                box-decoration-break: clone;
+            }
+            .print-warning { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        }
+        @page { size: A4 portrait; margin: 8mm; }
+
+        {% block extra_styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="btn" onclick="window.print()">Print</button>
+        <a class="btn" href="{{ url_for('certificates.edit', id=cert.id) }}">Edit</a>
+        <button class="btn" onclick="window.close()">Close</button>
+    </div>
+
+    <table class="head">
+        <tr>
+            <td class="logo" rowspan="3">
+                <img src="{{ url_for('static', filename='images/gcp_logo.jpg') }}" alt="GCP">
+            </td>
+            <td class="company"><span class="ar">شركة جى سى بى لمواسير الزهر المرن</span></td>
+            <td class="title" rowspan="3">{{ cert.title_en }}<br>{{ cert.form_code }}</td>
+            <td class="rev">تاريخ التعـديل&nbsp;: ----/--/--</td>
+            <td class="badge" rowspan="3">
+                <img src="{{ url_for('static', filename='images/bv_iso9001.png') }}" alt="ISO 9001:2015">
+            </td>
+        </tr>
+        <tr>
+            <td class="company">نظام إدارة الجودة</td>
+            <td class="rev">إصدار/مراجعة&nbsp;: 3 – 0</td>
+        </tr>
+        <tr>
+            <td class="company">ISO 9001:2015</td>
+            <td class="rev">تاريخ الإصدار&nbsp;: {% block issue_stamp %}20/11/2025{% endblock %}</td>
+        </tr>
+    </table>
+
+    <div class="certificate-frame">
+    {% if application_fallback_warning %}
+    <div class="print-warning">{{ application_fallback_warning }}</div>
+    {% endif %}
+    <div class="doc-title">
+        {{ cert.title_en }}
+        <span class="ar">{{ cert.title_ar }}</span>
+    </div>
+
+    {% block intro %}{% endblock %}
+
+    <table class="refs">
+        {% block ref_rows %}{% endblock %}
+        <tr class="gap"><th></th><td></td></tr>
+        <tr>
+            <th>Customer Name</th>
+            <td>{{ customer or '' }}</td>
+        </tr>
+        <tr>
+            <th>Order No.</th>
+            <td>{{ cert.customer_order_no or '' }}</td>
+        </tr>
+        <tr>
+            <th>Project Name</th>
+            <td>{{ cert.project_name or '' }}</td>
+        </tr>
+    </table>
+
+    {# ---- Material details: one line per DN / class group, length summed.
+            With a single row the confirmed total IS the row's length; with
+            several, each row keeps its own sum and the total closes the table. #}
+    <table class="grid">
+        <tr>
+            <td class="material-note" colspan="5">
+                Material Details&nbsp;: Ductile Iron Pipes as per details given below
+            </td>
+        </tr>
+        <tr>
+            <th style="width:20%">Size: DN (mm)</th>
+            <th style="width:14%">Class</th>
+            <th style="width:20%">Total Length (m)</th>
+            <th style="width:14%">QTY</th>
+            <th style="width:32%">Notes</th>
+        </tr>
+        {% for row in rows %}
+        <tr>
+            <td>{{ ('DN' ~ row.dn) if row.dn else '' }}</td>
+            <td>{{ row.pipe_class or '' }}</td>
+            <td>{% if rows|length == 1 %}{{ total_length }}{% else %}{{ row.length if row.length is not none else '' }}{% endif %}</td>
+            <td>{{ row.quantity }}</td>
+            <td class="notes-col">{% if loop.first %}{{ cert.notes or '' }}{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td></td><td></td><td></td><td></td><td class="notes-col">{{ cert.notes or '' }}</td></tr>
+        {% endfor %}
+        {% if rows|length > 1 %}
+        <tr>
+            <td colspan="2"><strong>Total</strong></td>
+            <td><strong>{{ total_length }}</strong></td>
+            <td><strong>{{ total_qty }}</strong></td>
+            <td></td>
+        </tr>
+        {% endif %}
+    </table>
+
+    {% block sheet_body %}{% endblock %}
+
+    <table class="sign">
+        <tr>
+            <td class="role" style="width:50%">Quality Assurance Manager / مدير ضمان الجودة</td>
+            <td class="role" style="width:50%">Quality Director / مدير الجودة</td>
+        </tr>
+        <tr>
+            <td><span class="line"></span></td>
+            <td><span class="line"></span></td>
+        </tr>
+    </table>
+    </div>
+
+    <script>
+        // Straight to the print dialog, the way the sticker and zinc sheets
+        // behave. ?noauto=1 opens it for a look without printing.
+        if (!new URLSearchParams(location.search).has('noauto')) {
+            window.addEventListener('load', function () { window.print(); });
+        }
+    </script>
+</body>
+</html>

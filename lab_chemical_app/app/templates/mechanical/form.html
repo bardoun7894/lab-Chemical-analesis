@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% from 'components/_reason_picker.html' import reason_picker with context %}
 
 {% block title %}{{ 'Edit' if test else 'New' }} Mechanical Test{% endblock %}
 
@@ -24,7 +25,7 @@
         </div>
     </div>
 
-    <form method="POST" id="mechanicalForm">
+    <form method="POST" id="mechanicalForm" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="row">
@@ -41,21 +42,66 @@
                         <!-- Pipe Code at top with search -->
                         <div class="mb-3">
                             <label class="form-label">{{ 'كود الأنبوب' if current_locale == 'ar' else 'Pipe Code' }} *</label>
+                            <!-- Free-text search -->
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                                 <input type="text" class="form-control" id="pipeSearchInput"
                                        placeholder="{{ 'ابحث عن كود الأنبوب...' if current_locale == 'ar' else 'Search pipe code...' }}"
                                        autocomplete="off">
                             </div>
-                            <select name="pipe_id" class="form-select mt-2" id="pipeSelect" required size="5" style="height: auto;">
+                            <!-- Extra filters row (server-side filtering) -->
+                            <div class="row g-1 mt-1" id="pipeFiltersRow">
+                                <div class="col-6">
+                                    <select class="form-select form-select-sm" id="pipeDiameterFilter">
+                                        <option value="">{{ 'كل القطر' if current_locale == 'ar' else 'All DN' }}</option>
+                                        {% for dn in [80, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200] %}
+                                        <option value="{{ dn }}">DN{{ dn }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control form-control-sm" id="pipeLadleFilter"
+                                           placeholder="{{ 'رقم اللادل' if current_locale == 'ar' else 'Ladle ID...' }}"
+                                           autocomplete="off">
+                                </div>
+                                <div class="col-6 mt-1">
+                                    <select class="form-select form-select-sm" id="pipeOrderFilter">
+                                        <option value="">{{ 'كل أوامر الإنتاج' if current_locale == 'ar' else 'All Orders' }}</option>
+                                        {% for o in orders or [] %}
+                                        <option value="{{ o.id }}">{{ o.order_number }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-6 mt-1">
+                                    <input type="date" class="form-control form-control-sm" id="pipeDateFilter"
+                                           title="{{ 'تاريخ الإنتاج' if current_locale == 'ar' else 'Production date' }}">
+                                </div>
+                                <div class="col-6 mt-1">
+                                    <input type="date" class="form-control form-control-sm" id="pipeAnnealingFilter"
+                                           title="{{ 'تاريخ المعالجة الحرارية' if current_locale == 'ar' else 'Annealing date' }}"
+                                           placeholder="{{ 'تاريخ المعالجة الحرارية' if current_locale == 'ar' else 'Annealing date' }}">
+                                </div>
+                            </div>
+                            <!-- Match count badge -->
+                            <div class="mt-1">
+                                <small id="pipeMatchCount" class="text-muted"></small>
+                            </div>
+                            <select name="pipe_id" class="form-select mt-1" id="pipeSelect" required size="5" style="height: auto;">
                                 <option value="">-- {{ 'اختر كود الأنبوب' if current_locale == 'ar' else 'Select Pipe Code' }} --</option>
                                 {% for pipe in pipes %}
+                                {% set _role = (pipe.mechanical_test_role or '')|upper %}
+                                {% set _star = '⭐ ' if _role in ['FIRST', 'LAST', 'ALL'] else '' %}
+                                {% set _tag = ' (First)' if _role == 'FIRST' else ' (Last)' if _role == 'LAST' else ' (100%)' if _role == 'ALL' else '' %}
+                                {% set _blocked = pipe.lab_decision == 'BLOCKED' or pipe.final_decision_value == 'REJECT' %}
                                 <option value="{{ pipe.id }}"
                                     {{ 'selected' if test and test.pipe_id == pipe.id }}
+                                    {{ 'disabled' if _blocked }}
+                                    data-blocked="{{ '1' if _blocked else '' }}"
+                                    data-role="{{ _role }}"
                                     data-ladle="{{ pipe.ladle_id }}"
                                     data-diameter="{{ pipe.diameter }}"
-                                    data-pipecode="{{ pipe.pipe_code or (pipe.no_code ~ '-' ~ (pipe.arrange_pipe or 1) ~ '-' ~ (pipe.ladle_id or '')) }}">
-                                    {{ pipe.pipe_code or (pipe.no_code ~ '-' ~ (pipe.arrange_pipe or 1) ~ '-' ~ (pipe.ladle_id or '')) }}
+                                    data-pipecode="{{ pipe.pipe_code or (pipe.no_code ~ '-' ~ (pipe.ladle_id or '') ~ '-' ~ (pipe.arrange_pipe or 1)) }}">
+                                    {{ '🚫 ' if _blocked }}{{ _star }}{{ pipe.pipe_code or (pipe.no_code ~ '-' ~ (pipe.ladle_id or '') ~ '-' ~ (pipe.arrange_pipe or 1)) }}{{ _tag }}{{ ' (مرفوض)' if _blocked else '' }}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -70,10 +116,9 @@
                             <label class="form-label">{{ 'القطر' if current_locale == 'ar' else 'Diameter (DN)' }}</label>
                             <select name="diameter" class="form-select" id="diameterSelect">
                                 <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
-                                <option value="300" {{ 'selected' if test and test.diameter == 300 }}>DN300</option>
-                                <option value="400" {{ 'selected' if test and test.diameter == 400 }}>DN400</option>
-                                <option value="500" {{ 'selected' if test and test.diameter == 500 }}>DN500</option>
-                                <option value="600" {{ 'selected' if test and test.diameter == 600 }}>DN600</option>
+                                {% for dn in [80, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200] %}
+                                <option value="{{ dn }}" {{ 'selected' if test and test.diameter == dn }}>DN{{ dn }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="mb-3">
@@ -147,6 +192,7 @@
                                     <i class="bi bi-robot"></i> AI
                                 </span>
                             </label>
+                            {{ reason_picker('reasonField') }}
                             <textarea name="reason" class="form-control" rows="2" id="reasonField">{{ test.reason if test else '' }}</textarea>
                         </div>
 
@@ -165,6 +211,25 @@
 
             <!-- Middle Column - Sample Measurements -->
             <div class="col-lg-4">
+                <!-- OCR Upload -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-primary text-white py-2">
+                        <h6 class="mb-0"><i class="bi bi-camera"></i> {{ 'OCR: رفع شهادة الاختبار' if current_locale == 'ar' else 'OCR: Upload Test Certificate' }}</h6>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="input-group input-group-sm">
+                            <input type="file" id="mechOcrInput" class="form-control form-control-sm" accept="image/*" capture="environment">
+                            <button type="button" class="btn btn-primary btn-sm" id="mechOcrBtn" disabled>
+                                <i class="bi bi-cpu"></i> {{ 'استخراج' if current_locale == 'ar' else 'Extract' }}
+                            </button>
+                        </div>
+                        <div id="mechOcrStatus" class="mt-1" style="display:none;">
+                            <div class="spinner-border spinner-border-sm text-primary" id="mechOcrSpinner" style="display:none;"></div>
+                            <small id="mechOcrMsg" class="text-muted"></small>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-info text-white">
                         <h5 class="mb-0">
@@ -250,7 +315,7 @@
                         <div class="mt-2 p-2 bg-success-subtle rounded">
                             <small class="text-success fw-bold">{{ 'نتائج الاختبار:' if current_locale == 'ar' else 'Test Results:' }}</small>
                             <div class="row g-2 mt-1">
-                                <div class="col-6">
+                                <div class="col-4">
                                     <label class="form-label small mb-0 d-flex justify-content-between">
                                         <span>σ (KgF/mm²)</span>
                                         <span class="result-badge badge" id="tensileBadge" style="display: none;"></span>
@@ -260,7 +325,16 @@
                                            data-min="42.5" readonly value="{{ test.tensile_strength if test else '' }}">
                                     <small class="text-muted" style="font-size: 0.65rem;">F/A (≥42.50)</small>
                                 </div>
-                                <div class="col-6">
+                                <div class="col-4">
+                                    <label class="form-label small mb-0">
+                                        <span>σ (MPa)</span>
+                                    </label>
+                                    <input type="number" name="tensile_mpa" id="tensileMpaField"
+                                           class="form-control form-control-sm bg-success-subtle fw-bold" step="0.01"
+                                           readonly value="{{ test.tensile_mpa if test else '' }}">
+                                    <small class="text-muted" style="font-size: 0.65rem;">KgF/mm² × 9.8 (≥420)</small>
+                                </div>
+                                <div class="col-4">
                                     <label class="form-label small mb-0 d-flex justify-content-between">
                                         <span>E (%)</span>
                                         <span class="result-badge badge" id="elongationBadge" style="display: none;"></span>
@@ -356,6 +430,58 @@
             </div>
         </div>
 
+        <!-- Microstructure Images -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-images"></i>
+                    {{ 'صور البنية المجهرية' if current_locale == 'ar' else 'Microstructure Images' }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            {{ 'الحالة المصقولة' if current_locale == 'ar' else 'As Polished' }}
+                        </label>
+                        {% if test and test.image_as_polished %}
+                        <div class="mb-2">
+                            <img src="{{ url_for('static', filename=test.image_as_polished) }}"
+                                 class="img-thumbnail" style="max-height: 200px;">
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" name="remove_image_as_polished" id="removePol">
+                                <label class="form-check-label small" for="removePol">
+                                    {{ 'حذف الصورة الحالية' if current_locale == 'ar' else 'Remove current image' }}
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="image_as_polished" class="form-control" accept="image/*">
+                        <small class="text-muted">PNG, JPG — max 10MB</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            {{ 'الحالة المحفورة / المنمشة' if current_locale == 'ar' else 'Etched' }}
+                        </label>
+                        {% if test and test.image_etched %}
+                        <div class="mb-2">
+                            <img src="{{ url_for('static', filename=test.image_etched) }}"
+                                 class="img-thumbnail" style="max-height: 200px;">
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" name="remove_image_etched" id="removeEtch">
+                                <label class="form-check-label small" for="removeEtch">
+                                    {{ 'حذف الصورة الحالية' if current_locale == 'ar' else 'Remove current image' }}
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="image_etched" class="form-control" accept="image/*">
+                        <small class="text-muted">PNG, JPG — max 10MB</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Submit Buttons -->
         <div class="d-flex gap-2 justify-content-end mb-4">
             <a href="{{ url_for('mechanical.list') }}" class="btn btn-outline-secondary">
@@ -374,6 +500,77 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ========================================================================
+    // MECHANICAL OCR EXTRACTION
+    // ========================================================================
+    const mechOcrInput = document.getElementById('mechOcrInput');
+    const mechOcrBtn = document.getElementById('mechOcrBtn');
+    const mechOcrSpinner = document.getElementById('mechOcrSpinner');
+    const mechOcrMsg = document.getElementById('mechOcrMsg');
+    const mechOcrStatus = document.getElementById('mechOcrStatus');
+
+    if (mechOcrInput) {
+        mechOcrInput.addEventListener('change', function() { mechOcrBtn.disabled = !this.files.length; });
+    }
+
+    if (mechOcrBtn) {
+        mechOcrBtn.addEventListener('click', function() {
+            const file = mechOcrInput.files[0];
+            if (!file) return;
+            mechOcrStatus.style.display = 'block';
+            mechOcrSpinner.style.display = 'inline-block';
+            mechOcrMsg.textContent = 'Extracting values from image...';
+            mechOcrBtn.disabled = true;
+
+            const fd = new FormData();
+            fd.append('image', file);
+
+            fetch(window.APP_ROOT + '/mechanical/api/ocr-extract', {
+                method: 'POST', body: fd,
+                headers: {'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value}
+            })
+            .then(r => r.json())
+            .then(data => {
+                mechOcrSpinner.style.display = 'none';
+                if (data.success) {
+                    const v = data.values;
+                    const fieldMap = {
+                        sample_thickness: 'sample_thickness', d1: 'd1', d2: 'd2', d3: 'd3',
+                        force_kgf: 'force_kgf', final_length: 'final_length',
+                        nodularity_percent: 'nodularity_percent', hardness: 'hardness',
+                        carbides: 'carbides', nodule_count: 'nodule_count',
+                    };
+                    let filled = 0;
+                    for (const [key, name] of Object.entries(fieldMap)) {
+                        if (v[key] !== null && v[key] !== undefined) {
+                            const inp = document.querySelector(`input[name="${name}"]`) || document.getElementById(name + 'Field') || document.getElementById(name + 'Input');
+                            if (inp) {
+                                inp.value = v[key];
+                                inp.style.backgroundColor = '#d4edda';
+                                setTimeout(() => { inp.style.backgroundColor = ''; }, 3000);
+                                filled++;
+                            }
+                        }
+                    }
+                    mechOcrMsg.textContent = `${filled} values filled. Verify & save.`;
+                    mechOcrMsg.className = 'text-success';
+                    // Trigger recalculation
+                    if (typeof calculateAll === 'function') calculateAll();
+                } else {
+                    mechOcrMsg.textContent = data.error || 'Extraction failed';
+                    mechOcrMsg.className = 'text-danger';
+                }
+                mechOcrBtn.disabled = false;
+            })
+            .catch(err => {
+                mechOcrSpinner.style.display = 'none';
+                mechOcrMsg.textContent = 'Error: ' + err.message;
+                mechOcrMsg.className = 'text-danger';
+                mechOcrBtn.disabled = false;
+            });
+        });
+    }
+
     // ========================================================================
     // AUTO-CALCULATIONS (from JSON equations)
     // ========================================================================
@@ -434,13 +631,16 @@ document.addEventListener('DOMContentLoaded', function() {
             areaField.value = '';
         }
 
-        // 4. σ = F / A (Tensile Strength)
+        // 4. σ = F / A (Tensile Strength) + MPa = KgF/mm² × 9.8
+        const tensileMpaField = document.getElementById('tensileMpaField');
         if (force > 0 && area > 0) {
             const tensileStrength = force / area;
             tensileField.value = tensileStrength.toFixed(2);
+            if (tensileMpaField) tensileMpaField.value = (tensileStrength * 9.8).toFixed(2);
             validateInput(tensileField);
         } else {
             tensileField.value = '';
+            if (tensileMpaField) tensileMpaField.value = '';
         }
 
         // 5. E = ((Lf - Lo) / Lo) × 100 (Elongation %)
@@ -463,12 +663,21 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('change', calculateAll);
     });
 
-    // Run initial calculation on page load
-    calculateAll();
+    // NOTE: the initial calculateAll() runs AFTER the AI state + element refs
+    // below, because calculateAll() -> updateAiStatus() reads lastAiCallTime,
+    // aiStatusText, aiRefreshBtn, etc. Calling it before those `let`/`const`
+    // declarations threw a temporal-dead-zone ReferenceError that aborted the
+    // whole script (so the AI button never wired up) — surfaced on the edit
+    // page where prefilled values make calculateAll() reach updateAiStatus.
 
     // ========================================================================
     // VALIDATION & UI
     // ========================================================================
+
+    // AI cooldown state
+    let lastAiCallTime = 0;
+    let cooldownInterval = null;
+    const AI_COOLDOWN = 5000;
 
     // Elements
     const testInputs = document.querySelectorAll('.test-input');
@@ -486,10 +695,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const aiReasonBadge = document.getElementById('aiReasonBadge');
     const aiCommentsBadge = document.getElementById('aiCommentsBadge');
 
-    // State
-    let lastAiCallTime = 0;
-    let cooldownInterval = null;
-    const AI_COOLDOWN = 5000;
+    // Run initial calculation on page load — now that every var updateAiStatus()
+    // reads (AI state + element refs above) is initialized.
+    calculateAll();
 
     // Validate inputs and show badges
     testInputs.forEach(input => {
@@ -584,15 +792,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // ========================================================================
+    // Task 3: AI error-surfacing helper
+    // ========================================================================
+    function showAiError(msg) {
+        console.error('[AI] Error:', msg);
+        var spinner = document.getElementById('aiLoadingSpinner');
+        var errAlert = document.getElementById('aiErrorAlert');
+        var errMsg = document.getElementById('aiErrorMessage');
+        var statusTxt = document.getElementById('aiStatusText');
+        if (spinner) spinner.style.display = 'none';
+        if (errAlert) errAlert.style.display = 'block';
+        if (errMsg) errMsg.textContent = msg;
+        if (statusTxt) { statusTxt.textContent = '{{ "خطأ" if current_locale == "ar" else "Error" }}'; statusTxt.className = 'text-danger small'; }
+    }
+
     // AI Analysis
     function triggerAiAnalysis() {
-        if (!checkAiReadiness()) return;
+        if (!checkAiReadiness()) {
+            console.warn('[AI] Not ready: tensile_strength or elongation is empty — fill those fields first');
+            return;
+        }
 
         const now = Date.now();
         if ((now - lastAiCallTime) < AI_COOLDOWN) {
+            console.warn('[AI] In cooldown, ' + Math.ceil((AI_COOLDOWN - (now - lastAiCallTime)) / 1000) + 's remaining');
             startCooldownTimer();
             return;
         }
+
+        // Guard required DOM elements
+        if (!aiLoadingSpinner) { console.error('[AI] Expected element #aiLoadingSpinner not found'); }
+        if (!aiErrorAlert)    { console.error('[AI] Expected element #aiErrorAlert not found'); }
+        if (!aiErrorMessage)  { console.error('[AI] Expected element #aiErrorMessage not found'); }
+        if (!aiStatusText)    { console.error('[AI] Expected element #aiStatusText not found'); }
+        if (!reasonField)     { console.error('[AI] Expected element #reasonField not found'); }
+        if (!commentsField)   { console.error('[AI] Expected element #commentsField not found'); }
 
         lastAiCallTime = now;
         startCooldownTimer();
@@ -609,16 +844,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Show loading
-        aiLoadingSpinner.style.display = 'block';
-        aiErrorAlert.style.display = 'none';
-        aiStatusText.textContent = '{{ "جاري التحليل..." if current_locale == 'ar' else "Analyzing..." }}';
-        aiRefreshBtn.classList.remove('btn-pulse');
+        if (aiLoadingSpinner) aiLoadingSpinner.style.display = 'block';
+        if (aiErrorAlert) aiErrorAlert.style.display = 'none';
+        if (aiStatusText) {
+            aiStatusText.textContent = '{{ "جاري التحليل..." if current_locale == "ar" else "Analyzing..." }}';
+        }
+        if (aiRefreshBtn) aiRefreshBtn.classList.remove('btn-pulse');
 
         // Clear fields
-        reasonField.value = '';
-        commentsField.value = '';
-        aiReasonBadge.style.display = 'inline-block';
-        aiCommentsBadge.style.display = 'inline-block';
+        if (reasonField) reasonField.value = '';
+        if (commentsField) commentsField.value = '';
+        if (aiReasonBadge) aiReasonBadge.style.display = 'inline-block';
+        if (aiCommentsBadge) aiCommentsBadge.style.display = 'inline-block';
 
         // Call streaming API
         fetch('{{ url_for("mechanical.api_ai_analysis_stream") }}', {
@@ -630,6 +867,12 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify(testValues)
         })
         .then(response => {
+            // Surface non-2xx responses before reading body
+            if (!response.ok) {
+                return response.text().then(function(body) {
+                    throw new Error('HTTP ' + response.status + ' ' + response.statusText + ': ' + body.slice(0, 200));
+                });
+            }
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -637,9 +880,10 @@ document.addEventListener('DOMContentLoaded', function() {
             function readStream() {
                 reader.read().then(({ done, value }) => {
                     if (done) {
-                        aiLoadingSpinner.style.display = 'none';
+                        if (aiLoadingSpinner) aiLoadingSpinner.style.display = 'none';
                         return;
                     }
+
 
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split('\n');
@@ -651,48 +895,50 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const data = JSON.parse(line.slice(6));
 
                                 if (data.error) {
-                                    aiLoadingSpinner.style.display = 'none';
-                                    aiErrorAlert.style.display = 'block';
-                                    aiErrorMessage.textContent = data.error;
+                                    showAiError(data.error);
                                     return;
                                 }
 
                                 if (data.done && data.result) {
-                                    aiLoadingSpinner.style.display = 'none';
-                                    aiErrorAlert.style.display = 'none';
+                                    if (aiLoadingSpinner) aiLoadingSpinner.style.display = 'none';
+                                    if (aiErrorAlert) aiErrorAlert.style.display = 'none';
 
                                     // Set decision
-                                    if (data.result.decision) {
+                                    if (data.result.decision && decisionSelect) {
                                         decisionSelect.value = data.result.decision;
-                                        aiModeBadge.style.display = 'inline-block';
+                                        if (aiModeBadge) aiModeBadge.style.display = 'inline-block';
                                     }
 
                                     // Type out reason and comments
-                                    typeText(reasonField, data.result.reason || '', 20);
+                                    if (reasonField) typeText(reasonField, data.result.reason || '', 20);
                                     const reasonDelay = (data.result.reason || '').length * 20 + 100;
                                     setTimeout(() => {
-                                        typeText(commentsField, data.result.comments || '', 20);
+                                        if (commentsField) typeText(commentsField, data.result.comments || '', 20);
                                     }, reasonDelay);
 
                                     // Update status
                                     const totalDelay = reasonDelay + (data.result.comments || '').length * 20 + 200;
                                     setTimeout(() => {
-                                        aiStatusText.textContent = '{{ "تم التحليل ✓" if current_locale == 'ar' else "Analysis complete ✓" }}';
-                                        aiStatusText.className = 'text-success small';
+                                        if (aiStatusText) {
+                                            aiStatusText.textContent = '{{ "تم التحليل ✓" if current_locale == "ar" else "Analysis complete ✓" }}';
+                                            aiStatusText.className = 'text-success small';
+                                        }
                                     }, totalDelay);
                                 }
-                            } catch (e) {}
+                            } catch (e) {
+                                console.error('[AI] Failed to parse stream line:', e, '| line was:', line);
+                            }
                         }
                     }
                     readStream();
+                }).catch(function(streamErr) {
+                    showAiError('[AI] Stream read error: ' + streamErr.message);
                 });
             }
             readStream();
         })
         .catch(error => {
-            aiLoadingSpinner.style.display = 'none';
-            aiErrorAlert.style.display = 'block';
-            aiErrorMessage.textContent = error.message;
+            showAiError(error.message || String(error));
         });
     }
 
@@ -714,8 +960,18 @@ document.addEventListener('DOMContentLoaded', function() {
         type();
     }
 
-    // Event listeners
-    aiRefreshBtn.addEventListener('click', triggerAiAnalysis);
+    // Event listeners — wrap click handler in try/catch to surface setup errors
+    if (aiRefreshBtn) {
+        aiRefreshBtn.addEventListener('click', function() {
+            try {
+                triggerAiAnalysis();
+            } catch (e) {
+                showAiError('[AI] Uncaught exception on click: ' + e.message);
+            }
+        });
+    } else {
+        console.error('[AI] Expected element #aiRefreshBtn not found — AI button will not work');
+    }
 
     // Initial status
     updateAiStatus();
@@ -883,85 +1139,164 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Pipe Code Search functionality
+    // ========================================================================
+    // PIPE CODE SEARCH + FILTERS (Task 1 + Task 2)
+    // ========================================================================
     const pipeSearchInput = document.getElementById('pipeSearchInput');
     const pipeSelect = document.getElementById('pipeSelect');
-    let allOptions = [];
+    const pipeDiameterFilter = document.getElementById('pipeDiameterFilter');
+    const pipeLadleFilter = document.getElementById('pipeLadleFilter');
+    const pipeMatchCount = document.getElementById('pipeMatchCount');
+    const pipeOrderFilter = document.getElementById('pipeOrderFilter');
+    const pipeDateFilter = document.getElementById('pipeDateFilter');
+    const pipeAnnealingFilter = document.getElementById('pipeAnnealingFilter');
+    const PIPE_SEARCH_URL = '{{ url_for("mechanical.api_pipes_search") }}';
 
     if (pipeSelect && pipeSearchInput) {
-        // Store all options for filtering
-        for (let i = 0; i < pipeSelect.options.length; i++) {
-            allOptions.push({
-                value: pipeSelect.options[i].value,
-                text: pipeSelect.options[i].text,
-                html: pipeSelect.options[i].outerHTML
-            });
-        }
+        // Server-side filtering: the picker queries the FULL pipes table instead of
+        // filtering only the ~50 server-rendered options. This is the root fix for
+        // real pipes being buried behind newer demo pipes — a pipe that was never
+        // rendered can now be found. The initial server-rendered options stay until
+        // the first filter interaction (so edit-mode preselection + on-load auto-fill
+        // keep working).
+        let pipeSearchReqToken = 0;   // stale-response guard
+        let pipeSearchTimer = null;   // debounce handle
+        let pipeAutoSelecting = false; // true while auto-select dispatches change —
+                                       // the change handler must NOT overwrite the
+                                       // search box text for programmatic selections
+                                       // (only for real user picks), otherwise the
+                                       // user's half-typed query gets clobbered
+                                       // after every keystroke.
 
-        // Real-time search/filter functionality
-        function filterPipeOptions() {
-            const searchTerm = pipeSearchInput.value.toLowerCase().trim();
-
-            // Clear current options
+        function renderPipeResults(pipes, hasAnyFilter) {
             pipeSelect.innerHTML = '';
+            // Keep the placeholder empty option so "no selection" stays possible.
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = '-- {{ "اختر كود الأنبوب" if current_locale == "ar" else "Select Pipe Code" }} --';
+            pipeSelect.appendChild(placeholder);
 
             let firstMatch = null;
-            let matchCount = 0;
-
-            // Filter and add matching options
-            allOptions.forEach(function(opt) {
-                if (opt.text.toLowerCase().includes(searchTerm) || opt.value === '') {
-                    const option = document.createElement('option');
-                    option.value = opt.value;
-                    option.innerHTML = opt.text;
-                    // Copy data attributes
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = opt.html;
-                    const origOption = tempDiv.firstChild;
-                    if (origOption.dataset) {
-                        option.dataset.ladle = origOption.dataset.ladle || '';
-                        option.dataset.diameter = origOption.dataset.diameter || '';
-                        option.dataset.pipecode = origOption.dataset.pipecode || '';
-                    }
-                    pipeSelect.appendChild(option);
-
-                    // Track first real match (not empty option)
-                    if (opt.value !== '') {
-                        matchCount++;
-                        if (!firstMatch && searchTerm.length > 0) {
-                            firstMatch = option;
-                        }
-                    }
-                }
+            pipes.forEach(function(p) {
+                const option = document.createElement('option');
+                option.value = String(p.id);
+                // Mark the ladle's designated mechanical sample(s) with a star so
+                // the tester knows which pipe(s) to record per the ladle decision:
+                // FIRST/LAST (فحص أولى وأخيرة / أخيرة فقط) or ALL (فحص 100%).
+                const role = (p.role || '').toUpperCase();
+                const roleTag = role === 'FIRST' ? ' (First)'
+                    : role === 'LAST' ? ' (Last)'
+                    : role === 'ALL' ? ' (100%)' : '';
+                const star = (role === 'FIRST' || role === 'LAST' || role === 'ALL') ? '⭐ ' : '';
+                const baseText = p.annealing ? (p.code + ' · ' + p.annealing) : p.code;
+                const blocked = !!p.blocked;
+                option.textContent = (blocked ? '🚫 ' : '') + star + baseText + roleTag + (blocked ? ' (مرفوض)' : '');
+                option.disabled = blocked;
+                option.dataset.role = role;
+                option.dataset.ladle = p.ladle || '';
+                option.dataset.diameter = (p.diameter === null || p.diameter === undefined) ? '' : String(p.diameter);
+                option.dataset.annealing = p.annealing || '';
+                option.dataset.pipecode = p.code;
+                if (blocked) option.dataset.blocked = '1';
+                pipeSelect.appendChild(option);
+                if (!firstMatch && !blocked) firstMatch = option;
             });
 
-            // Update search input styling based on results
-            if (searchTerm.length > 0) {
-                if (matchCount > 0) {
-                    pipeSearchInput.classList.remove('is-invalid');
-                    pipeSearchInput.classList.add('is-valid');
-                } else {
-                    pipeSearchInput.classList.remove('is-valid');
-                    pipeSearchInput.classList.add('is-invalid');
-                }
+            const matchCount = pipes.length;
+
+            // Search input styling
+            if (hasAnyFilter) {
+                pipeSearchInput.classList.toggle('is-valid', matchCount > 0);
+                pipeSearchInput.classList.toggle('is-invalid', matchCount === 0);
             } else {
                 pipeSearchInput.classList.remove('is-valid', 'is-invalid');
             }
 
-            // Auto-select first match if search term exists
-            if (firstMatch && searchTerm.length > 0) {
+            // Match count badge
+            if (pipeMatchCount) {
+                pipeMatchCount.textContent = hasAnyFilter
+                    ? matchCount + ' {{ "تطابق" if current_locale == "ar" else "matches" }}'
+                    : '';
+            }
+
+            // Auto-select first match when a filter is active (ladle/diameter
+            // auto-fill still runs), but flag it so the change handler leaves
+            // the user's typed search text alone.
+            if (firstMatch && hasAnyFilter) {
                 firstMatch.selected = true;
-                // Trigger auto-fill
+                pipeAutoSelecting = true;
                 pipeSelect.dispatchEvent(new Event('change'));
+                pipeAutoSelecting = false;
             }
         }
 
-        // Immediate filtering on any input (including alphabetic)
+        // Fetch matching pipes from the server (debounced + stale-guarded).
+        function fetchPipeOptions() {
+            const searchTerm = pipeSearchInput.value.trim();
+            const diameterFilter = pipeDiameterFilter ? pipeDiameterFilter.value : '';
+            const ladleFilter = pipeLadleFilter ? pipeLadleFilter.value.trim() : '';
+            const orderFilter = pipeOrderFilter ? pipeOrderFilter.value : '';
+            const dateFilter = pipeDateFilter ? pipeDateFilter.value : '';
+            const annealingFilter = pipeAnnealingFilter ? pipeAnnealingFilter.value : '';
+            const hasAnyFilter = !!(searchTerm || diameterFilter || ladleFilter || orderFilter || dateFilter || annealingFilter);
+
+            const params = new URLSearchParams();
+            if (searchTerm) params.set('q', searchTerm);
+            if (diameterFilter) params.set('dn', diameterFilter);
+            if (ladleFilter) params.set('ladle', ladleFilter);
+            if (orderFilter) params.set('order', orderFilter);
+            if (dateFilter) params.set('date', dateFilter);
+            if (annealingFilter) params.set('annealing', annealingFilter);
+
+            const myToken = ++pipeSearchReqToken;
+            if (pipeMatchCount) {
+                pipeMatchCount.textContent = '{{ "...جارٍ البحث" if current_locale == "ar" else "Searching…" }}';
+            }
+
+            fetch(PIPE_SEARCH_URL + '?' + params.toString(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (myToken !== pipeSearchReqToken) return; // a newer request won
+                renderPipeResults((data && data.pipes) || [], hasAnyFilter);
+            })
+            .catch(function(err) {
+                if (myToken !== pipeSearchReqToken) return;
+                console.error('[PipePicker] search failed', err);
+                if (pipeMatchCount) {
+                    pipeMatchCount.textContent = '{{ "تعذّر البحث" if current_locale == "ar" else "Search failed" }}';
+                }
+            });
+        }
+
+        // Debounced entrypoint bound to the inputs. 400ms gives slower typists
+        // room — at 250ms mid-word pauses still fired a search per character.
+        function filterPipeOptions() {
+            if (pipeSearchTimer) clearTimeout(pipeSearchTimer);
+            pipeSearchTimer = setTimeout(fetchPipeOptions, 400);
+        }
+
+        // Bind all filter inputs
         pipeSearchInput.addEventListener('input', filterPipeOptions);
         pipeSearchInput.addEventListener('keyup', filterPipeOptions);
-        pipeSearchInput.addEventListener('paste', function() {
-            setTimeout(filterPipeOptions, 0);
-        });
+        pipeSearchInput.addEventListener('paste', function() { setTimeout(filterPipeOptions, 0); });
+        if (pipeDiameterFilter) {
+            pipeDiameterFilter.addEventListener('change', filterPipeOptions);
+        }
+        if (pipeOrderFilter) {
+            pipeOrderFilter.addEventListener('change', filterPipeOptions);
+        }
+        if (pipeDateFilter) {
+            pipeDateFilter.addEventListener('change', filterPipeOptions);
+        }
+        if (pipeAnnealingFilter) {
+            pipeAnnealingFilter.addEventListener('change', filterPipeOptions);
+        }
+        if (pipeLadleFilter) {
+            pipeLadleFilter.addEventListener('input', filterPipeOptions);
+            pipeLadleFilter.addEventListener('keyup', filterPipeOptions);
+        }
 
         // Keyboard navigation in search
         pipeSearchInput.addEventListener('keydown', function(e) {
@@ -987,34 +1322,85 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Auto-fill data when pipe code is selected
+        // ----------------------------------------------------------------
+        // Task 2: Robust auto-fill for diameter and ladle when pipe selected
+        // ----------------------------------------------------------------
+
+        /**
+         * Normalize a diameter data-attr value to a plain integer string.
+         * Handles "300", "300.0", or edge cases — returns null if not parseable.
+         */
+        function normalizeDiameter(val) {
+            if (!val && val !== 0) return null;
+            var n = parseInt(val, 10);
+            return isNaN(n) ? null : String(n);
+        }
+
+        /**
+         * Ensure diameterSelect has an option with the given value.
+         * If missing (e.g. non-standard DN from data), add it dynamically.
+         */
+        function ensureDiameterOption(sel, val) {
+            if (!sel || !val) return;
+            var exists = false;
+            for (var i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value === val) { exists = true; break; }
+            }
+            if (!exists) {
+                var newOpt = document.createElement('option');
+                newOpt.value = val;
+                newOpt.textContent = 'DN' + val;
+                sel.appendChild(newOpt);
+            }
+        }
+
         pipeSelect.addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            if (selectedOption && selectedOption.value) {
-                const ladleId = selectedOption.dataset.ladle;
-                const diameter = selectedOption.dataset.diameter;
-                const pipeCode = selectedOption.dataset.pipecode;
+            if (!this.options || this.selectedIndex < 0) return;
+            var selectedOption = this.options[this.selectedIndex];
+            if (!selectedOption) return;
+
+            if (selectedOption.value) {
+                var ladleId = selectedOption.dataset.ladle || '';
+                var diameter = normalizeDiameter(selectedOption.dataset.diameter);
+                var pipeCode = selectedOption.dataset.pipecode || '';
 
                 // Auto-fill ladle ID
-                const ladleInput = document.getElementById('ladleIdInput');
-                if (ladleInput && ladleId) {
+                var ladleInput = document.getElementById('ladleIdInput');
+                if (ladleInput) {
                     ladleInput.value = ladleId;
+                } else {
+                    console.error('[PipePicker] Expected element #ladleIdInput not found');
                 }
 
-                // Auto-fill diameter
-                const diameterSelect = document.getElementById('diameterSelect');
-                if (diameterSelect && diameter) {
-                    diameterSelect.value = diameter;
+                // Auto-fill diameter — add option dynamically if DN not in the list
+                var diamSel = document.getElementById('diameterSelect');
+                if (diamSel) {
+                    if (diameter) {
+                        ensureDiameterOption(diamSel, diameter);
+                        diamSel.value = diameter;
+                    }
+                } else {
+                    console.error('[PipePicker] Expected element #diameterSelect not found');
                 }
 
                 // Set pipe_code hidden field
-                const pipeCodeHidden = document.getElementById('pipeCodeHidden');
-                if (pipeCodeHidden && pipeCode) {
+                var pipeCodeHidden = document.getElementById('pipeCodeHidden');
+                if (pipeCodeHidden) {
                     pipeCodeHidden.value = pipeCode;
                 }
 
-                // Update search input to show selected value
-                pipeSearchInput.value = selectedOption.text;
+                // Update search input to show selected value — only when the
+                // user actually picked the option (click / ArrowDown / Enter).
+                // Auto-select during search must not touch the typed query.
+                if (!pipeAutoSelecting) {
+                    pipeSearchInput.value = selectedOption.text;
+                }
+            } else {
+                // Empty option selected — clear auto-filled fields
+                var ladleInput2 = document.getElementById('ladleIdInput');
+                if (ladleInput2) ladleInput2.value = '';
+                var pipeCodeHidden2 = document.getElementById('pipeCodeHidden');
+                if (pipeCodeHidden2) pipeCodeHidden2.value = '';
             }
         });
 

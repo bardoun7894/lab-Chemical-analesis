@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'الشهادات' if current_locale == 'ar' else 'Certificates' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-patch-check"></i>
+            {{ 'الشهادات' if current_locale == 'ar' else 'Certificates' }}
+        </h2>
+        <div class="btn-group">
+            {% for key, spec in cert_types.items() %}
+            <a href="{{ url_for('certificates.new', type=key) }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i>
+                {{ spec.title_ar if current_locale == 'ar' else spec.title_en }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <ul class="nav nav-pills mb-3">
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if not active_type }}" href="{{ url_for('certificates.index') }}">
+                {{ 'الكل' if current_locale == 'ar' else 'All' }}
+            </a>
+        </li>
+        {% for key, spec in cert_types.items() %}
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if active_type == key }}"
+               href="{{ url_for('certificates.index', type=key) }}">
+                {{ spec.title_ar if current_locale == 'ar' else spec.title_en }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            {% if certificates %}
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ 'رقم الشهادة' if current_locale == 'ar' else 'Certificate No.' }}</th>
+                        <th>{{ 'النوع' if current_locale == 'ar' else 'Form' }}</th>
+                        <th>{{ 'أمر الإنتاج' if current_locale == 'ar' else 'Order' }}</th>
+                        <th>{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</th>
+                        <th>{{ 'المشروع' if current_locale == 'ar' else 'Project' }}</th>
+                        <th>{{ 'الكمية' if current_locale == 'ar' else 'QTY' }}</th>
+                        <th>{{ 'التاريخ' if current_locale == 'ar' else 'Issued' }}</th>
+                        <th class="text-end col-actions"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cert in certificates %}
+                    <tr>
+                        <td class="fw-semibold">{{ cert.certificate_no }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'info' if cert.is_warranty else 'secondary' }}">
+                                {{ cert.form_code }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('production_orders.view', id=cert.production_order_id) }}">
+                                {{ cert.production_order.order_number if cert.production_order else '—' }}
+                            </a>
+                        </td>
+                        <td>{{ cert.production_order.customer_name if cert.production_order else '—' }}</td>
+                        <td>{{ cert.project_name or '—' }}</td>
+                        <td>{{ cert.quantity }}</td>
+                        <td>{{ cert.issue_date.strftime('%Y-%m-%d') if cert.issue_date else '—' }}</td>
+                        <td class="text-end col-actions">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('certificates.print_view', id=cert.id) }}"
+                                   class="btn btn-outline-success" target="_blank" title="Print">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                                <a href="{{ url_for('certificates.edit', id=cert.id) }}"
+                                   class="btn btn-outline-warning" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('certificates.delete', id=cert.id) }}"
+                                      onsubmit="return confirm('{{ cert.certificate_no }} — delete?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="p-5 text-center text-muted">
+                {{ 'لا توجد شهادات بعد' if current_locale == 'ar' else 'No certificates yet' }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

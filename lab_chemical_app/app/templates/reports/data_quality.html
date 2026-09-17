@@ -1,0 +1,86 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block filters %}
+<div class="col-12 text-muted small">
+    Fill rates are computed over the whole database — no filters apply.
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center"><div class="card-body">
+            <div class="text-muted small">Overall completeness score</div>
+            <div class="display-5 fw-bold {{ 'text-success' if data.score >= 80 else ('text-warning' if data.score >= 50 else 'text-danger') }}">
+                {{ data.score }}%
+            </div>
+            <div class="text-muted small">{{ data.pipe_total }} pipes · {{ data.stage_total }} stage entries</div>
+        </div></div>
+    </div>
+    <div class="col-md-9">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header"><h6 class="mb-0">Biggest gaps and what they block</h6></div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for g in data.gaps[:5] %}
+                        <tr>
+                            <td>{{ g.label }}</td>
+                            <td class="text-end">{{ g.pct }}%</td>
+                            <td class="text-muted small">blocks: {{ g.blocks }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td class="text-success text-center py-3">No gaps — every tracked field is fully filled.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header"><h6 class="mb-0">Field fill rates</h6></div>
+            <div class="card-body">
+                {% for f in data.fields %}
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small">
+                        <span>{{ f.label }}</span>
+                        <span class="text-muted">{{ f.filled }}/{{ f.total }} ({{ f.pct }}%)</span>
+                    </div>
+                    <div class="progress" style="height: 8px">
+                        <div class="progress-bar {{ 'bg-success' if f.pct >= 80 else ('bg-warning' if f.pct >= 50 else 'bg-danger') }}"
+                             style="width: {{ f.pct }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header"><h6 class="mb-0">Per-stage date/time coverage</h6></div>
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-sm table-striped mb-0">
+                    <thead><tr><th>Stage</th><th class="text-end">Rows</th>
+                        <th class="text-end">Date %</th><th class="text-end">Time %</th></tr></thead>
+                    <tbody>
+                        {% for s in data.per_stage %}
+                        <tr class="{{ 'table-danger' if s.time_pct < 20 }}">
+                            <td>{{ s.stage }}</td>
+                            <td class="text-end">{{ s.total }}</td>
+                            <td class="text-end">{{ s.date_pct }}%</td>
+                            <td class="text-end">{{ s.time_pct }}%</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-muted text-center py-3">No stage entries yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

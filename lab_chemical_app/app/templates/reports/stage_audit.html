@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Stage Audit Trail{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-journal-text"></i> Stage Audit Trail</h2>
+        <div class="d-flex gap-2 align-items-center">
+            {% from 'components/table_tools.html' import table_tools %}
+            {{ table_tools('stage_audit',
+                           export_url=url_for('reports.stage_audit_export'),
+                           columns=picker_columns) }}
+            <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="bi bi-funnel"></i> Filters</h6>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label small">Pipe code</label>
+                    <input type="text" name="pipe" class="form-control form-control-sm"
+                           value="{{ filters.get('pipe', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Stage</label>
+                    <select name="stage" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        {% for s in stages %}
+                        <option value="{{ s }}" {{ 'selected' if filters.get('stage') == s }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Changed by</label>
+                    <select name="user_id" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}" {{ 'selected' if filters.get('user_id', type=int) == u.id }}>
+                            {{ u.full_name or u.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">From date</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm"
+                           value="{{ filters.get('date_from', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">To date</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm"
+                           value="{{ filters.get('date_to', '') }}">
+                </div>
+                <div class="col-12 d-flex justify-content-end">
+                    <button class="btn btn-primary btn-sm"><i class="bi bi-search"></i> Apply</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-hover mb-0"
+                       data-table-tools="stage_audit" data-row-select>
+                    <thead>
+                        <tr>
+                            <th data-col="changed_at">Changed at</th>
+                            <th data-col="pipe">Pipe</th>
+                            <th data-col="stage">Stage</th>
+                            <th data-col="action">Action</th>
+                            <th data-col="decision">Decision</th>
+                            <th data-col="reason">Reason</th>
+                            <th data-col="user">Changed by</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in rows %}
+                        <tr data-row-id="{{ h.id }}">
+                            <td data-col="changed_at">{{ h.changed_at.strftime('%Y-%m-%d %H:%M') if h.changed_at }}</td>
+                            <td data-col="pipe">
+                                {% if h.pipe %}
+                                <a href="{{ url_for('stages.view', id=h.pipe_id) }}">
+                                    {{ h.pipe.pipe_code or h.pipe.no_code }}
+                                </a>
+                                {% else %}{{ h.pipe_id }}{% endif %}
+                            </td>
+                            <td data-col="stage">{{ h.stage_name }}</td>
+                            <td data-col="action"><span class="badge bg-secondary">{{ h.action }}</span></td>
+                            <td data-col="decision">{{ h.decision or '' }}</td>
+                            <td data-col="reason">{{ h.reason or '' }}</td>
+                            <td data-col="user">{{ (h.changed_by.full_name or h.changed_by.username) if h.changed_by else '' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="text-muted text-center py-4">
+                            No stage changes recorded for this filter set.
+                        </td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer text-muted small">
+            {{ rows | length }} rows (newest first, capped at 1000).
+        </div>
+    </div>
+</div>
+{% endblock %}

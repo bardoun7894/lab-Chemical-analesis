@@ -63,6 +63,10 @@
                             <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
                             <td><code>{{ analysis.ladle_id }}</code></td>
                         </tr>
+                        <tr>
+                            <th>{{ 'الوزن (كجم)' if current_locale == 'ar' else 'Weight (kg)' }}</th>
+                            <td>{{ analysis.weight if analysis.weight is not none else '-' }}</td>
+                        </tr>
                     </table>
                 </div>
             </div>
@@ -183,11 +187,11 @@
                                 ] %}
 
                                 {% for code, name, value, min_val, max_val in elements %}
-                                {% set out_of_spec = (value and ((min_val and value < min_val) or (max_val and value > max_val))) %}
+                                {% set out_of_spec = (value is not none and ((min_val is not none and value < min_val) or (max_val is not none and value > max_val))) %}
                                 <tr class="{{ 'table-danger' if out_of_spec }}">
                                     <td><strong>{{ code }}</strong> ({{ name }})</td>
                                     <td class="{{ 'fw-bold text-danger' if out_of_spec }}">
-                                        {{ '%.4f'|format(value) if value else '-' }}
+                                        {{ '%.4f'|format(value) if value is not none else '-' }}
                                     </td>
                                     <td>{{ min_val if min_val else '-' }}</td>
                                     <td>{{ max_val if max_val else '-' }}</td>
@@ -196,7 +200,7 @@
                                         <span class="badge bg-secondary">N/A</span>
                                         {% elif out_of_spec %}
                                         <span class="badge bg-danger">
-                                            <i class="bi bi-x-circle"></i> Out of Spec
+                                            <i class="bi bi-x-circle"></i> Out of Tolerance
                                         </span>
                                         {% else %}
                                         <span class="badge bg-success">
@@ -254,5 +258,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Attachments -->
+    {% include 'components/attachments.html' %}
+
+    <!-- Change History -->
+    {% include 'components/audit_log.html' %}
 </div>
 {% endblock %}

@@ -1,0 +1,152 @@
+{% extends 'reports/_analytics_base.html' %}
+{% set is_ar = current_locale == 'ar' %}
+
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card border-warning h-100">
+            <div class="card-body">
+                <h6 class="text-muted small mb-1">{{ 'مراحل أُعيد العمل بها' if is_ar else 'Reworked stage records' }}</h6>
+                <h2 class="mb-0 text-warning">{{ data.summary.total_rework }}</h2>
+                <div class="small text-muted">
+                    {{ 'من' if is_ar else 'of' }} {{ data.summary.total_stage_records }}
+                    {{ 'قرار مسجل' if is_ar else 'recorded decisions' }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger h-100">
+            <div class="card-body">
+                <h6 class="text-muted small mb-1">{{ 'نسبة إعادة العمل' if is_ar else 'Rework rate' }}</h6>
+                <h2 class="mb-0 text-danger">{{ data.summary.rework_rate }}%</h2>
+                <div class="small text-muted">
+                    {% if data.summary.worst_stage %}
+                        {{ 'الأعلى:' if is_ar else 'Worst:' }} {{ data.summary.worst_stage }}
+                    {% else %}
+                        &nbsp;
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info h-100">
+            <div class="card-body">
+                <h6 class="text-muted small mb-1">{{ 'قيد إعادة العمل الآن' if is_ar else 'Open rework now' }}</h6>
+                <h2 class="mb-0 text-info">{{ data.summary.open_rework }}</h2>
+                <div class="small text-muted">{{ 'مراحل لم تُغلق بعد' if is_ar else 'stages not yet re-decided' }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-primary h-100">
+            <div class="card-body">
+                <h6 class="text-muted small mb-1">{{ 'ماسورات متأثرة' if is_ar else 'Pipes affected' }}</h6>
+                <h2 class="mb-0">{{ data.summary.pipes_reworked }}</h2>
+                <div class="small text-muted">{{ 'ماسورة واحدة على الأقل أُعيد العمل بها' if is_ar else 'reworked at least once' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header py-2">
+        <span class="small fw-bold">{{ 'إعادة العمل حسب المرحلة' if is_ar else 'Rework by stage' }}</span>
+    </div>
+    <div class="card-body"><canvas id="reworkChart" height="90"></canvas></div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>{{ 'المرحلة' if is_ar else 'Stage' }}</th>
+                    <th class="text-end">{{ 'قرارات مسجلة' if is_ar else 'Decisions' }}</th>
+                    <th class="text-end">{{ 'إعادة عمل' if is_ar else 'Rework' }}</th>
+                    <th class="text-end">{{ 'مفتوحة' if is_ar else 'Open' }}</th>
+                    <th class="text-end">{{ 'ماسورات' if is_ar else 'Pipes' }}</th>
+                    <th class="text-end">{{ 'النسبة' if is_ar else 'Rate' }}</th>
+                    {% for k in data.kinds %}
+                    <th class="text-end small text-muted">{{ data.kinds_ar[k] if is_ar else k }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.rows %}
+                <tr class="{{ 'text-muted' if not r.total and not r.rework }}">
+                    <td><strong>{{ r.stage }}</strong></td>
+                    <td class="text-end">{{ r.total }}</td>
+                    <td class="text-end fw-bold {{ 'text-warning' if r.rework }}">{{ r.rework }}</td>
+                    <td class="text-end {{ 'text-danger' if r.open }}">{{ r.open }}</td>
+                    <td class="text-end">{{ r.pipes }}</td>
+                    <td class="text-end">
+                        {% if r.total %}
+                        <span class="badge bg-{{ 'success' if r.rate < 5 else ('warning' if r.rate < 15 else 'danger') }}">
+                            {{ r.rate }}%
+                        </span>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    {% for k in data.kinds %}
+                    <td class="text-end small">{{ r[k] or '' }}</td>
+                    {% endfor %}
+                </tr>
+                {% else %}
+                <tr><td colspan="11" class="text-center text-muted py-4">{{ 'لا توجد بيانات' if is_ar else 'No data' }}</td></tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-light fw-bold">
+                <tr>
+                    <td>{{ 'الإجمالي' if is_ar else 'Total' }}</td>
+                    <td class="text-end">{{ data.summary.total_stage_records }}</td>
+                    <td class="text-end text-warning">{{ data.summary.total_rework }}</td>
+                    <td class="text-end">{{ data.summary.open_rework }}</td>
+                    <td class="text-end">{{ data.summary.pipes_reworked }}</td>
+                    <td class="text-end">{{ data.summary.rework_rate }}%</td>
+                    {% for k in data.kinds %}
+                    <td class="text-end small">{{ data.rows | sum(attribute=k) }}</td>
+                    {% endfor %}
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<p class="small text-muted mt-2 mb-0">
+    {{ 'يُحتسب السجل كإعادة عمل إذا حمل قرار إعادة عمل في أي وقت — حتى لو تم قبوله لاحقًا (المصدر: سجل تدقيق المراحل). القرارات المحسوبة: إعادة عمل، إعادة اختبار، إعادة عينة، إعادة معالجة حرارية، فحص البنية المجهرية. الحجز وحده ليس إعادة عمل.'
+       if is_ar else
+       'A stage record counts as rework if it carried a rework decision at any point — even if it was later accepted (source: the stage audit trail). Counted decisions: Rework, Retest, Resample, Reheat treatment, Micro-structure. A plain Hold is not rework.' }}
+</p>
+
+<script>
+(function () {
+    const rows = {{ data.rows | tojson }};
+    const shown = rows.filter(r => r.total || r.rework);
+    new Chart(document.getElementById('reworkChart'), {
+        type: 'bar',
+        data: {
+            labels: shown.map(r => r.stage),
+            datasets: [
+                { label: 'Rework', data: shown.map(r => r.rework), backgroundColor: '#d97706', yAxisID: 'y' },
+                { label: 'Open', data: shown.map(r => r.open), backgroundColor: '#dc2626', yAxisID: 'y' },
+                { type: 'line', label: 'Rate %', data: shown.map(r => r.rate),
+                  borderColor: '#2563eb', backgroundColor: '#2563eb', yAxisID: 'y1', tension: 0.3 }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false },
+                      title: { display: true, text: '%' } }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,130 @@
+{# Shared delivery-comparison tables. Expects:
+     data.by_customer / data.by_engineer / data.by_order / data.totals
+     ar  (bool, current_locale == 'ar')
+   Used by reports/delivery_comparison.html and stages/deliveries.html panel. #}
+
+<!-- Totals strip -->
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary"><div class="card-body text-center py-2">
+            <h6 class="text-white-50 mb-0">{{ 'أنابيب مُسلَّمة' if ar else 'Pipes Delivered' }}</h6>
+            <h3 class="mb-0">{{ data.totals.pipes }}</h3>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-secondary"><div class="card-body text-center py-2">
+            <h6 class="text-white-50 mb-0">{{ 'العملاء' if ar else 'Customers' }}</h6>
+            <h3 class="mb-0">{{ data.totals.customers }}</h3>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-info"><div class="card-body text-center py-2">
+            <h6 class="text-white-50 mb-0">{{ 'أوامر البيع' if ar else 'Sales Orders' }}</h6>
+            <h3 class="mb-0">{{ data.totals.orders }}</h3>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- By customer -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-people"></i>
+                    {{ 'حسب العميل' if ar else 'By Customer' }} ({{ data.by_customer|length }})</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light"><tr>
+                        <th>{{ 'العميل' if ar else 'Customer' }}</th>
+                        <th class="text-center">{{ 'أنابيب' if ar else 'Pipes' }}</th>
+                        <th class="text-center">{{ 'أوامر' if ar else 'Orders' }}</th>
+                        <th class="text-center">{{ 'باقات' if ar else 'Bundles' }}</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for r in data.by_customer %}
+                        <tr>
+                            <td><strong>{{ r.customer }}</strong></td>
+                            <td class="text-center"><span class="badge bg-primary">{{ r.pipes }}</span></td>
+                            <td class="text-center">{{ r.orders }}</td>
+                            <td class="text-center">{{ r.bundles }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">
+                            {{ 'لا توجد تسليمات' if ar else 'No deliveries' }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- By engineer -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-person-badge"></i>
+                    {{ 'حسب المهندس' if ar else 'By Engineer' }} ({{ data.by_engineer|length }})</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light"><tr>
+                        <th>{{ 'المهندس' if ar else 'Engineer' }}</th>
+                        <th class="text-center">{{ 'أنابيب' if ar else 'Pipes' }}</th>
+                        <th class="text-center">{{ 'عملاء' if ar else 'Customers' }}</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for r in data.by_engineer %}
+                        <tr>
+                            <td>
+                                <strong>{{ r.engineer }}</strong>
+                                {% if r.engineer == 'غير محدد' %}
+                                <span class="badge bg-secondary">{{ 'غير مُسجَّل' if ar else 'unassigned' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center"><span class="badge bg-primary">{{ r.pipes }}</span></td>
+                            <td class="text-center">{{ r.customers }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center text-muted py-3">
+                            {{ 'لا توجد تسليمات' if ar else 'No deliveries' }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- By sales order -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-receipt"></i>
+                    {{ 'حسب أمر البيع' if ar else 'By Sales Order' }} ({{ data.by_order|length }})</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light"><tr>
+                        <th>{{ 'أمر البيع' if ar else 'Order' }}</th>
+                        <th>{{ 'العميل' if ar else 'Customer' }}</th>
+                        <th class="text-center">{{ 'أنابيب' if ar else 'Pipes' }}</th>
+                        <th class="text-center">{{ 'باقات' if ar else 'Bundles' }}</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for r in data.by_order %}
+                        <tr>
+                            <td><strong>{{ r.sales_order }}</strong></td>
+                            <td class="small">{{ r.customer or '-' }}</td>
+                            <td class="text-center"><span class="badge bg-primary">{{ r.pipes }}</span></td>
+                            <td class="text-center">{{ r.bundles }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">
+                            {{ 'لا توجد تسليمات' if ar else 'No deliveries' }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

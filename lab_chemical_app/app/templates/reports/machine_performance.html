@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+
+{% block title %}Machine Performance Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-4">
+                {% if current_locale == 'ar' %}
+                    تقرير أداء الآلات
+                {% else %}
+                    Machine Performance Report
+                {% endif %}
+            </h1>
+        </div>
+    </div>
+
+    <!-- Date Range Filters -->
+    <div class="row mb-4">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="date_from" class="form-label">
+                                {% if current_locale == 'ar' %}
+                                    تاريخ البداية
+                                {% else %}
+                                    Start Date
+                                {% endif %}
+                            </label>
+                            <input type="date" class="form-control" id="date_from" name="date_from"
+                                   value="{{ date_from }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="date_to" class="form-label">
+                                {% if current_locale == 'ar' %}
+                                    تاريخ النهاية
+                                {% else %}
+                                    End Date
+                                {% endif %}
+                            </label>
+                            <input type="date" class="form-control" id="date_to" name="date_to"
+                                   value="{{ date_to }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                {% if current_locale == 'ar' %}
+                                    تصفية
+                                {% else %}
+                                    Filter
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        {% if current_locale == 'ar' %}
+                            جدول أداء الآلات
+                        {% else %}
+                            Machine Performance Table
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>
+                                        {% if current_locale == 'ar' %}
+                                            كود الآلة
+                                        {% else %}
+                                            Machine Code
+                                        {% endif %}
+                                    </th>
+                                    <th>
+                                        {% if current_locale == 'ar' %}
+                                            اسم الآلة
+                                        {% else %}
+                                            Machine Name
+                                        {% endif %}
+                                    </th>
+                                    <th>
+                                        {% if current_locale == 'ar' %}
+                                            المرحلة
+                                        {% else %}
+                                            Stage
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            الإجمالي
+                                        {% else %}
+                                            Total
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            مقبول
+                                        {% else %}
+                                            Accepted
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            مرفوض
+                                        {% else %}
+                                            Rejected
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            العيوب
+                                        {% else %}
+                                            Defects
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            نسبة القبول %
+                                        {% else %}
+                                            Accept %
+                                        {% endif %}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for machine in machines %}
+                                <tr>
+                                    <td><strong>{{ machine.code }}</strong></td>
+                                    <td>{{ machine.name }}</td>
+                                    <td>{{ machine.stage }}</td>
+                                    <td class="text-center">{{ machine.total }}</td>
+                                    <td class="text-center"><span class="badge bg-success">{{ machine.accepted }}</span></td>
+                                    <td class="text-center"><span class="badge bg-danger">{{ machine.rejected }}</span></td>
+                                    <td class="text-center">{{ machine.defects }}</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info">{{ "%.2f"|format(machine.accept_pct) }}%</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        {% if current_locale == 'ar' %}
+                            معدل القبول حسب الآلة
+                        {% else %}
+                            Acceptance Rate by Machine
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="machinePerformanceChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const machinesData = {{ machines | tojson }};
+
+        const machineNames = machinesData.map(m => m.code + ' - ' + m.name);
+        const acceptPctData = machinesData.map(m => m.accept_pct);
+        const acceptedData = machinesData.map(m => m.accepted);
+        const rejectedData = machinesData.map(m => m.rejected);
+
+        const ctx = document.getElementById('machinePerformanceChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: machineNames,
+                datasets: [
+                    {
+                        label: '{% if current_locale == "ar" %}مقبول{% else %}Accepted{% endif %}',
+                        data: acceptedData,
+                        backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: '{% if current_locale == "ar" %}مرفوض{% else %}Rejected{% endif %}',
+                        data: rejectedData,
+                        backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                        borderColor: 'rgba(220, 53, 69, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        stacked: false,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

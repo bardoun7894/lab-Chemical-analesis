@@ -13,6 +13,15 @@ from .mechanical import MechanicalTest
 from .stage_defect_type import StageDefectType
 from .stage_decision_type import StageDecisionType
 from .stage_history import PipeStageHistory
+from .product import ProductParameter, Product, Customer, Mold
+from .audit import AuditLog
+from .nonconformance_action import NonConformanceAction
+from .permission import Permission, RolePermission
+from .attachment import Attachment
+from .bundle import Bundle
+from .chat import ChatSession, ChatMessage
+from .kpi_alert import KpiAlert, KpiAlertRun
+from .certificate import Certificate
 
 __all__ = [
     'User',
@@ -30,5 +39,18 @@ __all__ = [
     'MechanicalTest',
     'StageDefectType',
     'StageDecisionType',
-    'PipeStageHistory'
+    'PipeStageHistory',
+    'ProductParameter',
+    'Product',
+    'Customer',
+    'Mold',
+    'AuditLog',
+    'NonConformanceAction',
+    'Permission',
+    'RolePermission',
+    'Attachment',
+    'Bundle',
+    'KpiAlert',
+    'KpiAlertRun',
+    'Certificate',
 ]

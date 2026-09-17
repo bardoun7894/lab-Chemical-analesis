@@ -1,0 +1,55 @@
+description: "Investigation pipeline: explore → analyze → report findings"
+maxTransitions: 5
+
+phases:
+  - id: explore
+    thinking: medium
+    tools:
+      - read
+      - bash
+      - grep
+      - find
+      - ls
+      - module_report
+      - read_symbol
+      - web_search
+      - web_fetch
+      - lsp_navigation
+    output:
+      type: text
+      description: "Raw findings: files inspected, symbols, references, external context."
+    prompt: |
+      Investigation question:
+      {{input}}
+
+      Explore the codebase to gather evidence:
+      1. Use module_report for file outlines (cheap, token-efficient)
+      2. Use read_symbol for specific function/class bodies
+      3. Use lsp_navigation (references, definition, hover) for call graphs
+      4. grep/find for cross-cutting patterns
+      5. web_search for external docs/prior art if relevant
+      Record what you found with file:line references.
+
+  - id: analyze
+    thinking: high
+    tools:
+      - read
+      - bash
+      - grep
+      - find
+      - ls
+    output:
+      type: text
+      description: "Synthesized analysis answering the investigation question."
+    prompt: |
+      Investigation question:
+      {{input}}
+
+      Exploration findings:
+      {{phase.explore.output}}
+
+      Synthesize the findings into a clear answer:
+      - Direct answer to the question first
+      - Evidence with file:line citations
+      - Caveats and unknowns
+      - Recommended next steps if any

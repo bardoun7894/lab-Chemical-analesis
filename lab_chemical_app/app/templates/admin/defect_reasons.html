@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'إدارة أسباب العيوب' if current_locale == 'ar' else 'Manage Defect Reasons' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-exclamation-diamond"></i>
+            {{ 'أسباب العيوب' if current_locale == 'ar' else 'Defect Reasons' }}
+        </h2>
+        <div>
+            {% if can('admin', 'defect_reasons_add') %}<a href="{{ url_for('admin.add_defect_reason') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i>
+                {{ 'إضافة سبب عيب' if current_locale == 'ar' else 'Add Defect Reason' }}
+            </a>{% endif %}
+            <a href="{{ url_for('admin.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Defect Reasons Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <!-- Stage filter -->
+            <form method="GET" class="row g-2 mb-3">
+                <div class="col-auto">
+                    <select name="stage" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">{{ 'كل المراحل' if current_locale == 'ar' else 'All Stages' }}</option>
+                        {% for stage in stages %}
+                        <option value="{{ stage }}" {{ 'selected' if selected_stage == stage }}>{{ stage }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+            <div class="table-responsive">
+                <table data-enhance data-page-size="20" class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ 'المرحلة' if current_locale == 'ar' else 'Stage' }}</th>
+                            <th>{{ 'الاسم (إنجليزي)' if current_locale == 'ar' else 'Name (English)' }}</th>
+                            <th>{{ 'الاسم (عربي)' if current_locale == 'ar' else 'Name (Arabic)' }}</th>
+                            <th>{{ 'الترتيب' if current_locale == 'ar' else 'Sort Order' }}</th>
+                            <th>{{ 'الحالة' if current_locale == 'ar' else 'Status' }}</th>
+                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dr in defect_reasons %}
+                        <tr>
+                            <td><span class="badge bg-info text-dark">{{ dr.stage_name or ('الكل' if current_locale == 'ar' else 'All') }}</span></td>
+                            <td>{{ dr.name_en }}</td>
+                            <td>{{ dr.name_ar }}</td>
+                            <td>{{ dr.sort_order }}</td>
+                            <td>
+                                {% if dr.is_active %}
+                                <span class="badge bg-success">{{ 'نشط' if current_locale == 'ar' else 'Active' }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ 'غير نشط' if current_locale == 'ar' else 'Inactive' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if can('admin', 'defect_reasons_edit') %}<a href="{{ url_for('admin.edit_defect_reason', id=dr.id) }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>{% endif %}
+                                    {% if can('admin', 'defect_reasons_delete') %}<form method="POST" action="{{ url_for('admin.delete_defect_reason', id=dr.id) }}"
+                                          onsubmit="return confirm('{{ 'هل أنت متأكد من الحذف؟' if current_locale == 'ar' else 'Are you sure you want to delete?' }}');" style="display: inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>{% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if not defect_reasons %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-3">{{ 'لا توجد أسباب عيوب' if current_locale == 'ar' else 'No defect reasons found' }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

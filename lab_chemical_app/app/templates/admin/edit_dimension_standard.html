@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}DN{{ dn }} Standard{% endblock %}
+{% block content %}
+{% set is_ar = current_locale == 'ar' %}
+<div class="container">
+  <h2><i class="bi bi-rulers"></i> DN{{ dn }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('admin.settings') }}">{{ 'الإعدادات' if is_ar else 'Settings' }}</a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('admin.dimension_standards') }}">{{ 'الاستاندرد الأبعادي' if is_ar else 'Dimension Standards' }}</a>
+      </li>
+      <li class="breadcrumb-item active">DN{{ dn }}</li>
+    </ol>
+  </nav>
+  <div class="text-muted small mb-3">{{ source }}</div>
+
+  <div class="alert alert-info small">
+    <i class="bi bi-info-circle"></i>
+    {{ 'الخانة الفاضية معناها إن الاستاندرد مش محدد القيمة دي — مش صفر. الحدود = الاسمي − السماح السالب … الاسمي + السماح الموجب.'
+       if is_ar else
+       'A blank cell means the standard does not define that value — not zero. Limits are nominal − tol− … nominal + tol+.' }}
+  </div>
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th style="min-width: 140px;">{{ 'الرمز' if is_ar else 'Symbol' }}</th>
+              <th class="text-center" style="min-width: 120px;">{{ 'الاسمي' if is_ar else 'Nominal' }}</th>
+              <th class="text-center" style="min-width: 110px;">{{ 'سماح +' if is_ar else 'Tol +' }}</th>
+              <th class="text-center" style="min-width: 110px;">{{ 'سماح −' if is_ar else 'Tol −' }}</th>
+              <th class="text-center" style="min-width: 170px;">{{ 'الحدود المحسوبة' if is_ar else 'Resulting limits' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in symbols %}
+            {% set e = entries.get(s.key, {}) %}
+            <tr>
+              <td>
+                <strong>{{ s.key }}</strong>
+                <div class="text-muted small">{{ s.label_ar if is_ar else s.label }}</div>
+              </td>
+              <td>
+                <input type="number" step="0.01" name="nominal_{{ s.key }}"
+                       class="form-control form-control-sm text-center"
+                       value="{{ e.nominal if e.nominal is not none else '' }}">
+              </td>
+              <td>
+                <input type="number" step="0.01" min="0" name="tol_plus_{{ s.key }}"
+                       class="form-control form-control-sm text-center"
+                       value="{{ e.tol_plus if e.tol_plus is not none else '' }}">
+              </td>
+              <td>
+                <input type="number" step="0.01" min="0" name="tol_minus_{{ s.key }}"
+                       class="form-control form-control-sm text-center"
+                       value="{{ e.tol_minus if e.tol_minus is not none else '' }}">
+              </td>
+              <td class="text-center small">
+                {% if e.lsl is not none or e.usl is not none %}
+                {{ e.lsl if e.lsl is not none else '–' }} … {{ e.usl if e.usl is not none else '–' }}
+                {% elif e.nominal is not none %}
+                <span class="text-warning">{{ 'بدون سماح' if is_ar else 'no tolerance' }}</span>
+                {% else %}
+                <span class="text-muted">–</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end mb-4">
+      <a href="{{ url_for('admin.dimension_standards') }}" class="btn btn-outline-secondary">
+        {{ 'إلغاء' if is_ar else 'Cancel' }}
+      </a>
+      <button class="btn btn-primary">
+        <i class="bi bi-save"></i> {{ 'حفظ' if is_ar else 'Save' }}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

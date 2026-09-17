@@ -3,127 +3,161 @@
 {% block title %}{{ 'Edit' if user else 'Create' }} User{% endblock %}
 
 {% block content %}
-<div class="container">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col">
-            <h2>
-                <i class="bi bi-person-{{ 'gear' if user else 'plus' }}"></i>
-                {% if user %}
-                {{ 'تعديل المستخدم' if current_locale == 'ar' else 'Edit User' }}: {{ user.username }}
-                {% else %}
-                {{ 'إضافة مستخدم جديد' if current_locale == 'ar' else 'Create New User' }}
-                {% endif %}
-            </h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('admin.users') }}">Users</a></li>
-                    <li class="breadcrumb-item active">{{ 'Edit' if user else 'Create' }}</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
+{# Account creation lives here, not on a public /register route: this is a
+   closed plant system and every account is issued by an administrator. The
+   field styling is shared with the sign-in screen so the two read as one flow. #}
+<div class="row justify-content-center">
+    <div class="col-lg-7 col-xl-6">
 
-    <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <form method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.users') }}">{{ 'المستخدمين' if current_locale == 'ar' else 'Users' }}</a></li>
+                <li class="breadcrumb-item active">{{ ('تعديل' if current_locale == 'ar' else 'Edit') if user else ('جديد' if current_locale == 'ar' else 'New') }}</li>
+            </ol>
+        </nav>
 
-                        <div class="mb-3">
-                            <label class="form-label">{{ 'اسم المستخدم' if current_locale == 'ar' else 'Username' }} *</label>
-                            <input type="text" name="username" class="form-control" required
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4 p-lg-5">
+
+                <div class="auth-card-head d-flex align-items-center gap-3">
+                    <span class="sidebar-user-avatar" style="width:44px;height:44px;border-radius:12px;font-size:15px;">
+                        {% if user %}{{ (user.full_name or user.username)[:2] | upper }}{% else %}<i class="bi bi-person-plus"></i>{% endif %}
+                    </span>
+                    <div>
+                        <h2 class="mb-1">
+                            {% if user %}{{ 'تعديل المستخدم' if current_locale == 'ar' else 'Edit user' }}
+                            {% else %}{{ 'إنشاء حساب' if current_locale == 'ar' else 'Create an account' }}{% endif %}
+                        </h2>
+                        <p>
+                            {% if user %}{{ user.username }}
+                            {% else %}{{ 'يُصدر الحساب لعضو في الفريق ويُمنح دورًا' if current_locale == 'ar' else 'Issue an account to a team member and give it a role' }}{% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="auth-field">
+                        <label for="uf-username">{{ 'اسم المستخدم' if current_locale == 'ar' else 'Username' }} *</label>
+                        <div class="auth-input">
+                            <i class="bi bi-at"></i>
+                            <input type="text" id="uf-username" name="username" required
+                                   autocomplete="off" spellcheck="false"
                                    value="{{ user.username if user else '' }}"
                                    {{ 'readonly' if user }}>
-                            {% if not user %}
-                            <small class="text-muted">Cannot be changed after creation</small>
-                            {% endif %}
                         </div>
-
                         {% if not user %}
-                        <div class="mb-3">
-                            <label class="form-label">{{ 'كلمة المرور' if current_locale == 'ar' else 'Password' }} *</label>
-                            <input type="password" name="password" class="form-control" required minlength="6">
-                            <small class="text-muted">Minimum 6 characters</small>
-                        </div>
-                        {% else %}
-                        <div class="mb-3">
-                            <label class="form-label">{{ 'كلمة مرور جديدة' if current_locale == 'ar' else 'New Password' }}</label>
-                            <input type="password" name="new_password" class="form-control" minlength="6">
-                            <small class="text-muted">Leave blank to keep current password</small>
-                        </div>
+                        <small class="text-muted d-block mt-1">{{ 'لا يمكن تغييره بعد الإنشاء' if current_locale == 'ar' else 'Cannot be changed after creation' }}</small>
                         {% endif %}
+                    </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ 'الاسم الكامل (EN)' if current_locale == 'ar' else 'Full Name (EN)' }}</label>
-                                    <input type="text" name="full_name" class="form-control"
-                                           value="{{ user.full_name if user else '' }}">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ 'الاسم الكامل (AR)' if current_locale == 'ar' else 'Full Name (AR)' }}</label>
-                                    <input type="text" name="full_name_ar" class="form-control" dir="rtl"
-                                           value="{{ user.full_name_ar if user else '' }}">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">{{ 'الدور' if current_locale == 'ar' else 'Role' }} *</label>
-                            <select name="role" class="form-select" required>
-                                {% for role in roles %}
-                                <option value="{{ role.value }}"
-                                    {{ 'selected' if user and user.role == role.value }}>
-                                    {{ role.label }} / {{ role.label_ar }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                            <small class="text-muted">
-                                Admin: Full access | Supervisor: All data + reports | Operator: Data entry | Viewer: Read only
-                            </small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">{{ 'القسم' if current_locale == 'ar' else 'Department' }}</label>
-                            <select name="department" class="form-select">
-                                <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
-                                <option value="Lab" {{ 'selected' if user and user.department == 'Lab' }}>Lab / المختبر</option>
-                                <option value="Production" {{ 'selected' if user and user.department == 'Production' }}>Production / الإنتاج</option>
-                                <option value="QC" {{ 'selected' if user and user.department == 'QC' }}>QC / الجودة</option>
-                                <option value="IT" {{ 'selected' if user and user.department == 'IT' }}>IT / تقنية المعلومات</option>
-                            </select>
-                        </div>
-
-                        {% if user %}
-                        <div class="form-check mb-3">
-                            <input type="checkbox" name="is_active" class="form-check-input" id="isActive"
-                                {{ 'checked' if user.is_active }}>
-                            <label class="form-check-label" for="isActive">
-                                {{ 'نشط' if current_locale == 'ar' else 'Active' }}
-                            </label>
-                        </div>
-                        {% endif %}
-
-                        <hr>
-
-                        <div class="d-flex gap-2 justify-content-end">
-                            <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-circle"></i>
-                                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle"></i>
-                                {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
+                    <div class="auth-field">
+                        <label for="uf-password">
+                            {% if user %}{{ 'كلمة مرور جديدة' if current_locale == 'ar' else 'New password' }}
+                            {% else %}{{ 'كلمة المرور' if current_locale == 'ar' else 'Password' }} *{% endif %}
+                        </label>
+                        <div class="auth-input">
+                            <i class="bi bi-lock"></i>
+                            <input type="password" id="uf-password"
+                                   name="{{ 'new_password' if user else 'password' }}"
+                                   minlength="6" autocomplete="new-password"
+                                   {{ 'required' if not user }} placeholder="••••••••">
+                            <button type="button" class="auth-reveal" data-reveal="uf-password"
+                                    aria-label="{{ 'إظهار كلمة المرور' if current_locale == 'ar' else 'Show password' }}">
+                                <i class="bi bi-eye"></i>
                             </button>
                         </div>
-                    </form>
-                </div>
+                        <small class="text-muted d-block mt-1">
+                            {% if user %}{{ 'اتركه فارغًا للإبقاء على كلمة المرور الحالية' if current_locale == 'ar' else 'Leave blank to keep the current password' }}
+                            {% else %}{{ '٦ أحرف على الأقل' if current_locale == 'ar' else 'Minimum 6 characters' }}{% endif %}
+                        </small>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="auth-field mb-0">
+                                <label for="uf-name">{{ 'الاسم الكامل (EN)' if current_locale == 'ar' else 'Full name (EN)' }}</label>
+                                <div class="auth-input">
+                                    <i class="bi bi-person"></i>
+                                    <input type="text" id="uf-name" name="full_name" value="{{ user.full_name if user else '' }}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="auth-field mb-0">
+                                <label for="uf-name-ar">{{ 'الاسم الكامل (AR)' if current_locale == 'ar' else 'Full name (AR)' }}</label>
+                                <div class="auth-input">
+                                    <i class="bi bi-person"></i>
+                                    <input type="text" id="uf-name-ar" name="full_name_ar" dir="rtl" value="{{ user.full_name_ar if user else '' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="auth-field">
+                        <label for="uf-role">{{ 'الدور' if current_locale == 'ar' else 'Role' }} *</label>
+                        <select name="role" id="uf-role" class="form-select" required>
+                            {% for role in roles %}
+                            <option value="{{ role.value }}" {{ 'selected' if user and user.role == role.value }}>
+                                {{ role.label }} / {{ role.label_ar }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted d-block mt-1">
+                            {{ 'الدور يحدد الصلاحيات الافتراضية — تُضبط بدقة من شاشة الصلاحيات' if current_locale == 'ar'
+                               else 'The role sets the default permissions — tune them on the Permissions screen' }}
+                        </small>
+                    </div>
+
+                    <div class="auth-field">
+                        <label for="uf-dept">{{ 'القسم' if current_locale == 'ar' else 'Department' }}</label>
+                        <select name="department" id="uf-dept" class="form-select">
+                            <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
+                            <option value="Lab" {{ 'selected' if user and user.department == 'Lab' }}>Lab / المختبر</option>
+                            <option value="Production" {{ 'selected' if user and user.department == 'Production' }}>Production / الإنتاج</option>
+                            <option value="QC" {{ 'selected' if user and user.department == 'QC' }}>QC / الجودة</option>
+                            <option value="IT" {{ 'selected' if user and user.department == 'IT' }}>IT / تقنية المعلومات</option>
+                        </select>
+                    </div>
+
+                    {% if user %}
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_active" class="form-check-input" id="isActive" {{ 'checked' if user.is_active }}>
+                        <label class="form-check-label" for="isActive">
+                            {{ 'نشط' if current_locale == 'ar' else 'Active' }}
+                        </label>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2 justify-content-end mt-4">
+                        <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">
+                            {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+                        </a>
+                        <button type="submit" class="auth-submit" style="width:auto;padding-inline:24px;">
+                            <i class="bi bi-check-lg"></i>
+                            {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    /* Same reveal behaviour as the sign-in screen. */
+    document.querySelectorAll('.auth-reveal').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var input = document.getElementById(btn.dataset.reveal);
+            if (!input) return;
+            var shown = input.type === 'text';
+            input.type = shown ? 'password' : 'text';
+            btn.querySelector('i').className = shown ? 'bi bi-eye' : 'bi bi-eye-slash';
+            input.focus();
+        });
+    });
+</script>
 {% endblock %}

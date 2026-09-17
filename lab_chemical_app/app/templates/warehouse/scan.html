@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ 'استلام المخزن' if is_ar else 'Warehouse receiving' }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1100px;">
+    <div class="text-center my-4">
+        <i class="bi bi-upc-scan text-primary" style="font-size: 3rem;" aria-hidden="true"></i>
+        <h3 class="mt-2 mb-1">{{ 'استلام المخزن' if is_ar else 'Warehouse receiving' }}</h3>
+        <p class="text-muted mb-0">
+            {{ 'اختر أوامر الإنتاج أو امسح المواسير، ثم أدخل بيانات التسليم مرة واحدة.'
+               if is_ar else 'Choose production orders or scan pipes, then enter the delivery details once.' }}
+        </p>
+    </div>
+
+    {% set selection_id = 'warehousePipeSelection' %}
+    {% set selection_is_ar = is_ar %}
+    {% set selection_lookup_url = url_for('warehouse.lookup') %}
+    {% set selection_lookup_fallback_action = url_for('warehouse.scan') %}
+    {% set selection_lookup_method = 'post' %}
+    {% set selection_lookup_name = 'barcode' %}
+    {% set selection_order_action = url_for('warehouse.scan') %}
+    {% set selection_target_form = 'batchForm' %}
+    {% set selection_storage_key = 'warehouseBasket' %}
+    {% set selection_reconcile_url = url_for('warehouse.selection') %}
+    {% include 'shared/_pipe_selection.html' %}
+
+    {% if not_found %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        {{ 'مفيش ماسورة بالباركود أو الكود ده' if is_ar else 'No pipe matches this barcode or code' }}
+        <strong>{{ scanned }}</strong>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('warehouse.save_batch') }}" id="batchForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                {{ 'بيانات التسليم — تُطبَّق على كل المواسير المختارة'
+                   if is_ar else 'Delivery details — applied to every selected pipe' }}
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="deliveryDate">{{ 'تاريخ التسليم' if is_ar else 'Delivery date' }}</label>
+                        <input type="date" class="form-control" id="deliveryDate" name="delivery_date">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="salesOrder">{{ 'أمر البيع' if is_ar else 'Sales order' }}</label>
+                        <input type="text" class="form-control" id="salesOrder" name="sales_order" autocomplete="off">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="deliveryCustomer">{{ 'العميل' if is_ar else 'Customer' }}</label>
+                        <input type="text" class="form-control" id="deliveryCustomer" name="delivery_customer" autocomplete="off">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="deliveryReceipt">{{ 'رقم الإيصال' if is_ar else 'Receipt #' }}</label>
+                        <input type="text" class="form-control" id="deliveryReceipt" name="delivery_receipt" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-white d-flex justify-content-end">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="bi bi-check-circle" aria-hidden="true"></i>
+                    {{ 'حفظ التسليم' if is_ar else 'Save delivery' }}
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <p class="text-muted small mt-3 text-center">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        {{ 'المواسير المرفوضة أو المحجوزة أو المعلقة أو المسلمة سابقاً تظهر مع السبب ولا تُضاف.'
+           if is_ar else 'Rejected, held, pending, and previously delivered pipes stay visible with the reason and cannot be added.' }}
+    </p>
+</div>
+{% endblock %}

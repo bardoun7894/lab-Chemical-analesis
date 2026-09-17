@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'معاينة الملصق' if current_locale == 'ar' else 'Sticker Preview' }}: {{ pipe.no_code }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-qr-code"></i>
+                {{ 'معاينة الملصق' if current_locale == 'ar' else 'Sticker Preview' }}
+            </h2>
+            <p class="text-muted mb-0">
+                Pipe: <code>{{ pipe.pipe_code or pipe.no_code }}</code> — DN{{ pipe.diameter }} {{ pipe.pipe_class }}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('stages.view', id=pipe.id) }}" class="btn btn-outline-info">
+                <i class="bi bi-eye"></i> {{ 'التفاصيل' if current_locale == 'ar' else 'Pipe Details' }}
+            </a>
+            <a href="{{ url_for('stickers.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> {{ 'خيارات' if current_locale == 'ar' else 'Options' }}</h5>
+                </div>
+                <div class="card-body">
+                    {# Internal is the default — the floor prints far more labels
+                       than ship; the customer print is the explicit choice. #}
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'الطباعة' if current_locale == 'ar' else 'Print for' }}</label>
+                        <select class="form-select" id="modeSelect">
+                            <option value="internal" {{ 'selected' if internal }}>
+                                {{ 'داخلي — مع المرحلة' if current_locale == 'ar' else 'Internal — with stage' }}
+                            </option>
+                            <option value="external" {{ 'selected' if not internal }}>
+                                {{ 'خارجي — القرار فقط' if current_locale == 'ar' else 'External — decision only' }}
+                            </option>
+                        </select>
+                        {% if internal %}
+                        <div class="form-text">
+                            {% if position %}
+                            {{ 'واقفة عند:' if current_locale == 'ar' else 'Standing at:' }}
+                            <strong>{{ position }}</strong>
+                            {% else %}
+                            {{ 'عدّت كل المراحل — مفيش صف مرحلة'
+                               if current_locale == 'ar' else 'Passed every stage — no Stage row printed' }}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'الحجم' if current_locale == 'ar' else 'Size' }}</label>
+                        <select class="form-select" id="sizeSelect">
+                            {% for key, dims in sizes.items() %}
+                            <option value="{{ key }}" {{ 'selected' if size == key }}>
+                                {{ key|capitalize }} — {{ dims[0] }}×{{ dims[1] }}mm
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <hr>
+
+                    <h6 class="text-muted small text-uppercase mb-2">{{ 'بيانات الأنبوب' if current_locale == 'ar' else 'Pipe Data' }}</h6>
+                    <dl class="row small mb-0">
+                        <dt class="col-5">Pipe Code:</dt><dd class="col-7"><code>{{ pipe.pipe_code or pipe.no_code }}</code></dd>
+                        <dt class="col-5">No. Code:</dt><dd class="col-7">{{ pipe.no_code }}</dd>
+                        <dt class="col-5">Ladle ID:</dt><dd class="col-7">{{ pipe.ladle_id or '-' }}</dd>
+                        <dt class="col-5">DN:</dt><dd class="col-7">{{ pipe.diameter }}</dd>
+                        <dt class="col-5">Class:</dt><dd class="col-7">{{ pipe.pipe_class or '-' }}</dd>
+                        <dt class="col-5">Date:</dt><dd class="col-7">{{ pipe.production_date }}</dd>
+                        <dt class="col-5">Final Decision:</dt>
+                        <dd class="col-7">
+                            {% set fd = pipe.final_decision_value or 'PENDING' %}
+                            {% set color = 'success' if fd == 'ACCEPT' else ('danger' if fd == 'REJECT' else ('warning' if fd == 'HOLD' else 'secondary')) %}
+                            <span class="badge bg-{{ color }}">{{ fd }}</span>
+                        </dd>
+                        {% if pipe.production_order %}
+                        <dt class="col-5">Order:</dt><dd class="col-7">{{ pipe.production_order.order_number }}</dd>
+                        <dt class="col-5">Customer:</dt><dd class="col-7">{{ pipe.production_order.customer_name }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            {% include 'stickers/_verdict_legend.html' %}
+
+            <div class="d-grid gap-2 mb-4">
+                <a href="#" id="downloadBtn" class="btn btn-success">
+                    <i class="bi bi-download"></i> {{ 'تنزيل' if current_locale == 'ar' else 'Download' }}
+                </a>
+                <button class="btn btn-primary" onclick="window.print()">
+                    <i class="bi bi-printer"></i> {{ 'طباعة' if current_locale == 'ar' else 'Print' }}
+                </button>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-image"></i> {{ 'معاينة' if current_locale == 'ar' else 'Preview' }}</h5>
+                </div>
+                <div class="card-body text-center bg-light">
+                    <img id="stickerImage"
+                         src="{{ url_for('stickers.generate_sticker', pipe_id=pipe.id, size=size) }}"
+                         class="img-fluid shadow"
+                         style="width: 100%; max-width: 600px; height: auto; background: white;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const sizeSelect = document.getElementById('sizeSelect');
+const modeSelect = document.getElementById('modeSelect');
+const stickerImage = document.getElementById('stickerImage');
+const downloadBtn = document.getElementById('downloadBtn');
+const pipeId = {{ pipe.id }};
+function refresh() {
+    const size = sizeSelect.value;
+    const mode = modeSelect.value;
+    const ts = Date.now();
+    stickerImage.src = `${window.APP_ROOT}/stickers/generate/${pipeId}?size=${size}&mode=${mode}&ts=${ts}`;
+    downloadBtn.href = `${window.APP_ROOT}/stickers/download/${pipeId}?size=${size}&mode=${mode}`;
+}
+sizeSelect.addEventListener('change', refresh);
+// The Standing-at line under the picker is server-rendered, so switching mode
+// reloads rather than just re-fetching the image.
+modeSelect.addEventListener('change', function () {
+    window.location.search = `?size=${sizeSelect.value}&mode=${modeSelect.value}`;
+});
+refresh();
+</script>
+{% endblock %}

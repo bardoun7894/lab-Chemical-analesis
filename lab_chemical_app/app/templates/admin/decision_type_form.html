@@ -40,15 +40,15 @@
 
                         <div class="mb-3">
                             <label class="form-label">{{ 'اسم القرار (إنجليزي)' if current_locale == 'ar' else 'Decision Name (English)' }} *</label>
-                            <input type="text" name="defect_name_en" class="form-control" required
-                                   value="{{ decision_type.defect_name_en if decision_type else '' }}"
+                            <input type="text" name="decision_name_en" class="form-control" required
+                                   value="{{ decision_type.decision_name_en if decision_type else '' }}"
                                    placeholder="e.g., Accept">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">{{ 'اسم القرار (عربي)' if current_locale == 'ar' else 'Decision Name (Arabic)' }} *</label>
-                            <input type="text" name="defect_name_ar" class="form-control" required
-                                   value="{{ decision_type.defect_name_ar if decision_type else '' }}"
+                            <input type="text" name="decision_name_ar" class="form-control" required
+                                   value="{{ decision_type.decision_name_ar if decision_type else '' }}"
                                    placeholder="مثلاً: قبول">
                         </div>
 
@@ -66,6 +66,8 @@
                                 {{ 'نشط' if current_locale == 'ar' else 'Active' }}
                             </label>
                         </div>
+
+                        {% include 'components/_audit_reason.html' %}
 
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary btn-lg">
@@ -91,7 +93,7 @@
                 </div>
                 <div class="card-body">
                     <p class="small">
-                        {{ 'أنواع القرارات تُستخدم في نموذج مراحل الإنتاج لتحديد القرارات المحددة لكل مرحلة.' if current_locale == 'ar' else 'Defect types are used in the production stages form to specify decisions for each stage.' }}
+                        {{ 'أنواع القرارات تُستخدم في نموذج مراحل الإنتاج لتحديد القرارات المحددة لكل مرحلة.' if current_locale == 'ar' else 'Decision types are used in the production stages form to specify decisions for each stage.' }}
                     </p>
                     <ul class="small">
                         <li>{{ 'كل مرحلة يمكن أن يكون لها أنواع عيوب خاصة بها' if current_locale == 'ar' else 'Each stage can have its own decision types' }}</li>

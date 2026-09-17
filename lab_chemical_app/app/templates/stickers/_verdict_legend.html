@@ -1,0 +1,31 @@
+{# Bilingual verdict legend for print screens: the floor could not tell
+   PENDING from HOLD apart on the label alone. #}
+<div class="alert alert-light border small mb-3">
+    <strong>{{ 'دليل القرار' if current_locale == 'ar' else 'Verdict legend' }}:</strong>
+    <ul class="mb-0 ps-3">
+        <li>
+            <span class="badge bg-success">PASS</span>
+            {{ 'نجحت: قبول المعمل وكل المراحل حتى التشطيب'
+               if current_locale == 'ar' else
+               'lab accepted and every stage through Finish accepted' }}
+        </li>
+        <li>
+            <span class="badge bg-secondary">PENDING</span>
+            {{ 'قيد الانتظار: مرحلة لم تسجل قرارها بعد أو نتيجة المعمل لم تصدر'
+               if current_locale == 'ar' else
+               'a stage has not recorded its decision yet, or the lab result is still waiting' }}
+        </li>
+        <li>
+            <span class="badge bg-warning text-dark">NOT PASS (HOLD)</span>
+            {{ 'محجوزة: مرحلة سجلت حجز أو إعادة تشغيل'
+               if current_locale == 'ar' else
+               'a stage recorded Hold or Rework' }}
+        </li>
+        <li>
+            <span class="badge bg-danger">NOT PASS</span>
+            {{ 'مرفوضة: رفض في أي مرحلة أو رفض المعمل'
+               if current_locale == 'ar' else
+               'a Reject anywhere, or lab reject/blocked' }}
+        </li>
+    </ul>
+</div>

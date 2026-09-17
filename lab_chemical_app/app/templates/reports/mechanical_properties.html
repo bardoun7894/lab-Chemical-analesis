@@ -1,0 +1,430 @@
+{% extends 'base.html' %}
+
+{% block title %}Mechanical Properties Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-4">
+                {% if current_locale == 'ar' %}
+                    تقرير الخصائص الميكانيكية
+                {% else %}
+                    Mechanical Properties Report
+                {% endif %}
+            </h1>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="date_from" class="form-label">
+                                {% if current_locale == 'ar' %}
+                                    تاريخ البداية
+                                {% else %}
+                                    Start Date
+                                {% endif %}
+                            </label>
+                            <input type="date" class="form-control" id="date_from" name="date_from"
+                                   value="{{ date_from }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="date_to" class="form-label">
+                                {% if current_locale == 'ar' %}
+                                    تاريخ النهاية
+                                {% else %}
+                                    End Date
+                                {% endif %}
+                            </label>
+                            <input type="date" class="form-control" id="date_to" name="date_to"
+                                   value="{{ date_to }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="dn" class="form-label">
+                                {% if current_locale == 'ar' %}
+                                    القطر
+                                {% else %}
+                                    DN (Diameter)
+                                {% endif %}
+                            </label>
+                            <input type="text" class="form-control" id="dn" name="dn"
+                                   value="{{ filters.dn }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="decision" class="form-label">
+                                {% if current_locale == 'ar' %}
+                                    القرار
+                                {% else %}
+                                    Decision
+                                {% endif %}
+                            </label>
+                            <select class="form-select" id="decision" name="decision">
+                                <option value="">{% if current_locale == 'ar' %}الكل{% else %}All{% endif %}</option>
+                                <option value="ACCEPT" {% if filters.decision == 'ACCEPT' %}selected{% endif %}>
+                                    {% if current_locale == 'ar' %}مقبول{% else %}Accepted{% endif %}
+                                </option>
+                                <option value="REJECT" {% if filters.decision == 'REJECT' %}selected{% endif %}>
+                                    {% if current_locale == 'ar' %}مرفوض{% else %}Rejected{% endif %}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                {% if current_locale == 'ar' %}
+                                    تصفية
+                                {% else %}
+                                    Filter
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-left-primary">
+                <div class="card-body">
+                    <h6 class="text-muted">
+                        {% if current_locale == 'ar' %}
+                            إجمالي الاختبارات
+                        {% else %}
+                            Total Tests
+                        {% endif %}
+                    </h6>
+                    <h3 class="text-primary">{{ summary.total }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-success">
+                <div class="card-body">
+                    <h6 class="text-muted">
+                        {% if current_locale == 'ar' %}
+                            مقبول
+                        {% else %}
+                            Accepted
+                        {% endif %}
+                    </h6>
+                    <h3 class="text-success">{{ summary.accepted }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-danger">
+                <div class="card-body">
+                    <h6 class="text-muted">
+                        {% if current_locale == 'ar' %}
+                            مرفوض
+                        {% else %}
+                            Rejected
+                        {% endif %}
+                    </h6>
+                    <h3 class="text-danger">{{ summary.rejected }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-info">
+                <div class="card-body">
+                    <h6 class="text-muted">
+                        {% if current_locale == 'ar' %}
+                            معدل القبول
+                        {% else %}
+                            Acceptance Rate
+                        {% endif %}
+                    </h6>
+                    <h3 class="text-info">{{ "%.2f"|format(summary.rate) }}%</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        {% if current_locale == 'ar' %}
+                            إحصائيات الخصائص
+                        {% else %}
+                            Properties Statistics
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>
+                                        {% if current_locale == 'ar' %}
+                                            الخاصية
+                                        {% else %}
+                                            Property
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            العدد
+                                        {% else %}
+                                            Count
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            المتوسط
+                                        {% else %}
+                                            Average
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            الأدنى
+                                        {% else %}
+                                            Min
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            الأقصى
+                                        {% else %}
+                                            Max
+                                        {% endif %}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for property_name, property_stats in stats.items() %}
+                                <tr>
+                                    <td><strong>
+                                        {% if property_name == 'tensile_strength' %}
+                                            {% if current_locale == 'ar' %}مقاومة الشد{% else %}Tensile Strength{% endif %}
+                                        {% elif property_name == 'elongation' %}
+                                            {% if current_locale == 'ar' %}الاستطالة{% else %}Elongation{% endif %}
+                                        {% elif property_name == 'nodularity_percent' %}
+                                            {% if current_locale == 'ar' %}نسبة العقدية{% else %}Nodularity %{% endif %}
+                                        {% elif property_name == 'hardness' %}
+                                            {% if current_locale == 'ar' %}الصلادة{% else %}Hardness{% endif %}
+                                        {% endif %}
+                                    </strong></td>
+                                    <td class="text-center">{{ property_stats.count }}</td>
+                                    <td class="text-center">{{ "%.2f"|format(property_stats.avg) }}</td>
+                                    <td class="text-center">{{ "%.2f"|format(property_stats.min) }}</td>
+                                    <td class="text-center">{{ "%.2f"|format(property_stats.max) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        {% if current_locale == 'ar' %}
+                            مقاومة الشد مقابل الاستطالة
+                        {% else %}
+                            Tensile Strength vs Elongation
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="mechanicalScatterChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        {% if current_locale == 'ar' %}
+                            تفاصيل الاختبارات
+                        {% else %}
+                            Test Details
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>
+                                        {% if current_locale == 'ar' %}
+                                            تاريخ الاختبار
+                                        {% else %}
+                                            Test Date
+                                        {% endif %}
+                                    </th>
+                                    <th>
+                                        {% if current_locale == 'ar' %}
+                                            كود الأنبوب
+                                        {% else %}
+                                            Pipe Code
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            القطر
+                                        {% else %}
+                                            Diameter
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            مقاومة الشد
+                                        {% else %}
+                                            Tensile (MPa)
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            الاستطالة %
+                                        {% else %}
+                                            Elongation %
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            العقدية %
+                                        {% else %}
+                                            Nodularity %
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            الصلادة
+                                        {% else %}
+                                            Hardness
+                                        {% endif %}
+                                    </th>
+                                    <th class="text-center">
+                                        {% if current_locale == 'ar' %}
+                                            القرار
+                                        {% else %}
+                                            Decision
+                                        {% endif %}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for test in tests %}
+                                <tr>
+                                    <td>{{ test.test_date }}</td>
+                                    <td><strong>{{ test.pipe_code }}</strong></td>
+                                    <td class="text-center">{{ test.diameter }}</td>
+                                    <td class="text-center">{{ "%.2f"|format(test.tensile_strength or 0) }}</td>
+                                    <td class="text-center">{{ "%.2f"|format(test.elongation or 0) }}</td>
+                                    <td class="text-center">{{ "%.2f"|format(test.nodularity_percent or 0) }}</td>
+                                    <td class="text-center">{{ "%.2f"|format(test.hardness or 0) }}</td>
+                                    <td class="text-center">
+                                        {% if test.decision == 'ACCEPT' %}
+                                            <span class="badge bg-success">
+                                                {% if current_locale == 'ar' %}مقبول{% else %}Accepted{% endif %}
+                                            </span>
+                                        {% elif test.decision == 'REJECT' %}
+                                            <span class="badge bg-danger">
+                                                {% if current_locale == 'ar' %}مرفوض{% else %}Rejected{% endif %}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ test.decision or '-' }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const testsData = {{ chart_data | tojson }};
+
+        const tensileData = testsData
+            .filter(t => t.elongation != null && t.tensile_strength != null)
+            .map(t => ({
+                x: parseFloat(t.elongation),
+                y: parseFloat(t.tensile_strength),
+                decision: t.decision
+            }));
+
+        const acceptedData = tensileData.filter(d => d.decision === 'ACCEPT');
+        const rejectedData = tensileData.filter(d => d.decision === 'REJECT');
+
+        const ctx = document.getElementById('mechanicalScatterChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        label: '{% if current_locale == "ar" %}مقبول{% else %}Accepted{% endif %}',
+                        data: acceptedData,
+                        backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        borderWidth: 1,
+                        pointRadius: 5
+                    },
+                    {
+                        label: '{% if current_locale == "ar" %}مرفوض{% else %}Rejected{% endif %}',
+                        data: rejectedData,
+                        backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                        borderColor: 'rgba(220, 53, 69, 1)',
+                        borderWidth: 1,
+                        pointRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: '{% if current_locale == "ar" %}الاستطالة %{% else %}Elongation %{% endif %}'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: '{% if current_locale == "ar" %}مقاومة الشد (MPa){% else %}Tensile Strength (MPa){% endif %}'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

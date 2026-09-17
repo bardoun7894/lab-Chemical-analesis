@@ -42,7 +42,7 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table data-enhance data-page-size="20" class="table table-hover">
                     <thead class="table-light">
                         <tr>
                             <th>{{ 'المرحلة' if current_locale == 'ar' else 'Stage' }}</th>
@@ -67,16 +67,16 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('admin.edit_machine', id=machine.id) }}" class="btn btn-outline-primary">
+                                    {% if can('admin', 'machines_edit') %}<a href="{{ url_for('admin.edit_machine', id=machine.id) }}" class="btn btn-outline-primary">
                                         <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <form method="POST" action="{{ url_for('admin.delete_machine', id=machine.id) }}"
+                                    </a>{% endif %}
+                                    {% if can('admin', 'machines_delete') %}<form method="POST" action="{{ url_for('admin.delete_machine', id=machine.id) }}"
                                           onsubmit="return confirm('{{ 'هل أنت متأكد من الحذف؟' if current_locale == 'ar' else 'Are you sure you want to delete?' }}');" style="display: inline;">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-outline-danger">
+                                        {% if can('admin', 'machines_delete') %}<button type="submit" class="btn btn-outline-danger">
                                             <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
+                                        </button>{% endif %}
+                                    </form>{% endif %}
                                 </div>
                             </td>
                         </tr>

@@ -1,0 +1,176 @@
+{% extends 'reports/_analytics_base.html' %} {% block body %}
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <div class="card border-info">
+      <div class="card-body py-2">
+        <h6 class="text-muted small mb-0">
+          {{ 'Pipes' if current_locale != 'ar' else 'الماسورات' }}
+        </h6>
+        <h4 class="mb-0">{{ data.summary.pipes }}</h4>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-success">
+      <div class="card-body py-2">
+        <h6 class="text-muted small mb-0">
+          {{ 'Measured records' if current_locale != 'ar' else 'سجلات القياس' }}
+        </h6>
+        <h4 class="mb-0 text-success">{{ data.summary.measured_rows }}</h4>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0 table-responsive">
+    <table class="table table-hover table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{{ 'Pipe' if current_locale != 'ar' else 'الماسورة' }}</th>
+          <th class="text-end">DN</th>
+          <th>{{ 'Class' if current_locale != 'ar' else 'الفئة' }}</th>
+          <th>{{ 'Date' if current_locale != 'ar' else 'التاريخ' }}</th>
+          <th>{{ 'Stage' if current_locale != 'ar' else 'المرحلة' }}</th>
+          <th>{{ 'Type' if current_locale != 'ar' else 'النوع' }}</th>
+          <th class="text-end">
+            {{ 'Value' if current_locale != 'ar' else 'القيمة' }}
+          </th>
+          <th class="text-end">
+            {{ 'Temp °C' if current_locale != 'ar' else 'حرارة °م' }}
+          </th>
+          <th class="text-end">
+            {{ 'Thk socket' if current_locale != 'ar' else 'سماكة الرأس' }}
+          </th>
+          <th class="text-end">
+            {{ 'Thk spigot' if current_locale != 'ar' else 'سماكة الذيل' }}
+          </th>
+          <th>{{ 'Thk/m' if current_locale != 'ar' else 'سماكة/م' }}</th>
+          <th>{{ 'Dims' if current_locale != 'ar' else 'الأبعاد' }}</th>
+          <th>{{ 'Ovality' if current_locale != 'ar' else 'الأوفاليتي' }}</th>
+          <th>{{ 'Visual' if current_locale != 'ar' else 'الفحص البصري' }}</th>
+          <th>{{ 'Decision' if current_locale != 'ar' else 'القرار' }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in data.rows %}
+        <tr>
+          <td><strong>{{ r.pipe_code }}</strong></td>
+          <td class="text-end">DN{{ r.dn if r.dn is not none else '' }}</td>
+          <td>{{ r.pipe_class }}</td>
+          <td>{{ r.production_date }}</td>
+          <td>{{ r.stage }}</td>
+          <td><small class="text-muted">{{ r.measurement_type }}</small></td>
+          <td class="text-end">
+            {{ r.measurement_value if r.measurement_value is not none else '' }}
+          </td>
+          <td class="text-end">
+            {{ r.temperature if r.temperature is not none else '' }}
+          </td>
+          <td class="text-end">
+            {{ r.thickness_socket if r.thickness_socket is not none else '' }}
+          </td>
+          <td class="text-end">
+            {{ r.thickness_spigot if r.thickness_spigot is not none else '' }}
+          </td>
+          <td class="small">
+            {% if r.thickness_profile %} {% for layer, lbl in [('cement',
+            'Cem'), ('coating', 'Coat')] %} {% set vals =
+            r.thickness_profile.get(layer) %} {% if vals %}
+            <div class="text-nowrap">
+              <span class="text-muted">{{ lbl }}:</span> {% for v in vals %}{{ v
+              if v is not none else '–' }}{{ ' / ' if not loop.last }}{% endfor
+              %}
+            </div>
+            {% endif %} {% endfor %} {% endif %}
+          </td>
+          <td class="small">
+            {% if r.dimension_profile %}
+            <details>
+              <summary class="text-muted" style="cursor: pointer">
+                {{ 'Show' if current_locale != 'ar' else 'عرض' }}
+              </summary>
+              {# thickness_matrix covers both the positions shape and the
+                 legacy flat row, so old and new records both render. #}
+              {% set tmatrix = thickness_matrix(r.dimension_profile) %} {% for
+              pos, vals in tmatrix.items() %} {% if vals and vals|select('ne',
+              None)|list %}
+              <div class="text-nowrap">
+                <span class="badge table-secondary text-dark">{{ pos }} m</span>
+                {% for v in vals %}{{ v if v is not none else '–' }}{{ ', ' if
+                not loop.last }}{% endfor %}
+              </div>
+              {% endif %} {% endfor %} {% for label, vals in
+              (r.dimension_profile.get('diameter', {}).get('samples',
+              {})|dictsort) %} {% if vals %}
+              <div class="text-nowrap">
+                <span class="badge table-warning text-dark">diameter {{ label
+                }}</span>
+                {% for v in vals %}{{ v if v is not none else '–' }}{{ ', ' if
+                not loop.last }}{% endfor %}
+              </div>
+              {% endif %} {% endfor %} {% set dsyms =
+              r.dimension_profile.get('symbols', {}) %} {% if dsyms %}
+              <div class="text-nowrap mt-1">
+                {% for symbol, actual in dsyms|dictsort %}
+                <span class="badge bg-light text-dark border">{{ symbol }} {{
+                  actual }}</span>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </details>
+            {% endif %}
+          </td>
+          <td class="small">
+            {% set ovp = r.ovality_profile.get('points', {}) if
+            r.ovality_profile else {} %} {% if ovp %}
+            <details>
+              <summary class="text-muted" style="cursor: pointer">
+                {{ 'Show' if current_locale != 'ar' else 'عرض' }}
+              </summary>
+              <table class="table table-sm table-bordered mb-0 text-center mt-1">
+                <tbody>
+                  {% for name, pv in ovp|dictsort %}
+                  <tr>
+                    <td class="fw-bold">{{ name }}</td>
+                    <td>X {{ pv.x if pv.x is not none else '–' }}</td>
+                    <td>Y {{ pv.y if pv.y is not none else '–' }}</td>
+                    <td class="fw-bold text-primary">
+                      {{ (pv.ovality ~ '%') if pv.ovality is not none else '–' }}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </details>
+            {% endif %}
+          </td>
+          <td class="small">
+            {% if r.visual_profile %} {% for key, label_ar, label_en in
+            [('marking', 'الترقيم', 'Marking'), ('ovality', 'البيضاوية',
+            'Ovality'), ('straightness', 'الاستقامة', 'Straightness'),
+            ('internal_finish', 'التشطيب الداخلي', 'Internal finish'),
+            ('external_finish', 'التشطيب الخارجي', 'External finish')] %}
+            <div class="text-nowrap">
+              {% if r.visual_profile.get(key) %}<i
+                class="bi bi-check-circle-fill text-success"
+              ></i
+              >{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %} {{
+              label_ar if current_locale == 'ar' else label_en }}
+            </div>
+            {% endfor %} {% endif %}
+          </td>
+          <td><small>{{ r.decision }}</small></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="15" class="text-center text-muted py-4">
+            No measurement data for selected filters
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

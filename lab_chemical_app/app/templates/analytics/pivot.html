@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}Pivot Designer{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-table"></i> Pivot Table Designer</h2>
+        <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Reports
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="bi bi-gear"></i> Pivot Configuration</h6>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small">Data Source</label>
+                    <select name="source" class="form-select form-select-sm">
+                        {% for key, cfg in sources.items() %}
+                        <option value="{{ key }}" {{ 'selected' if key == source }}>{{ cfg.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Rows</label>
+                    <select name="rows" class="form-select form-select-sm">
+                        {% for f in sources[source].row_fields.keys() %}
+                        <option value="{{ f }}" {{ 'selected' if f == row_key }}>{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Columns</label>
+                    <select name="cols" class="form-select form-select-sm">
+                        {% for f in sources[source].row_fields.keys() %}
+                        <option value="{{ f }}" {{ 'selected' if f == col_key }}>{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Value</label>
+                    <select name="value" class="form-select form-select-sm">
+                        {% for f in sources[source].value_fields.keys() %}
+                        <option value="{{ f }}" {{ 'selected' if f == value_key }}>{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Aggregation</label>
+                    <select name="agg" class="form-select form-select-sm">
+                        <option value="sum" {{ 'selected' if aggregation == 'sum' }}>Sum</option>
+                        <option value="avg" {{ 'selected' if aggregation == 'avg' }}>Avg</option>
+                        <option value="count" {{ 'selected' if aggregation == 'count' }}>Count</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-primary btn-sm w-100">Apply</button>
+                </div>
+            </form>
+            <small class="text-muted">Based on {{ record_count }} records from {{ sources[source].label }}</small>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            {% if table.row_labels %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>{{ row_key }} ↓ / {{ col_key }} →</th>
+                            {% for c in table.col_labels %}
+                            <th class="text-end">{{ c }}</th>
+                            {% endfor %}
+                            <th class="text-end table-secondary">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in table.row_labels %}
+                        <tr>
+                            <th>{{ r }}</th>
+                            {% for c in table.col_labels %}
+                            <td class="text-end">{{ table.cells[r][c] }}</td>
+                            {% endfor %}
+                            <td class="text-end table-secondary"><strong>{{ table.row_totals[r] }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr>
+                            <th>Total</th>
+                            {% for c in table.col_labels %}
+                            <th class="text-end">{{ table.col_totals[c] }}</th>
+                            {% endfor %}
+                            <th class="text-end"><strong>{{ table.grand_total }}</strong></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-4">No data to pivot</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

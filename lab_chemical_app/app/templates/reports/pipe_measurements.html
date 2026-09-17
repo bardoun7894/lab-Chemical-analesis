@@ -1,0 +1,337 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{# This report keys off one pipe, so the shared date/DN/class filter bar would
+   only be misleading — the lookup form in the body replaces it. #}
+{% block filters %}{% endblock %}
+
+{% block body %}
+{% set is_ar = current_locale == 'ar' %}
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label small text-muted mb-1">
+          {{ 'كود الماسورة' if is_ar else 'Pipe code' }}
+        </label>
+        <input type="text" name="pipe" class="form-control" value="{{ data.query }}"
+               placeholder="{{ 'اكتب أو امسح كود الماسورة' if is_ar else 'Type or scan a pipe code' }}"
+               autofocus>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100">
+          <i class="bi bi-search"></i> {{ 'عرض' if is_ar else 'Show' }}
+        </button>
+      </div>
+      {% if data.recent %}
+      <div class="col-md-5">
+        <label class="form-label small text-muted mb-1">
+          {{ 'ماسورات عليها قياسات' if is_ar else 'Pipes with measurements' }}
+        </label>
+        <select class="form-select" onchange="if(this.value) window.location.search='?pipe='+this.value">
+          <option value="">— {{ 'اختر' if is_ar else 'pick one' }} —</option>
+          {% for p in data.recent %}
+          <option value="{{ p.id }}" {{ 'selected' if data.sheet and data.sheet.pipe.id == p.id }}>
+            {{ p.pipe_code or p.no_code }} — DN{{ p.diameter }} {{ p.pipe_class or '' }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{% if data.not_found %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle"></i>
+  {{ 'مفيش ماسورة بالكود' if is_ar else 'No pipe found for' }} <strong>{{ data.query }}</strong>.
+</div>
+{% elif not data.sheet %}
+<div class="alert alert-info">
+  <i class="bi bi-info-circle"></i>
+  {{ 'اكتب كود ماسورة أو اختار واحدة من القائمة.' if is_ar
+     else 'Enter a pipe code or pick one from the list.' }}
+</div>
+{% else %}
+{% set sheet = data.sheet %}
+{% set ident = sheet.identity %}
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div>
+        <h4 class="mb-1">{{ ident.pipe_code }}</h4>
+        <div class="text-muted small">
+          <span class="me-3">DN{{ ident.dn }}</span>
+          <span class="me-3">{{ ident.pipe_class or '—' }}</span>
+          <span class="me-3">{{ 'بوتقة' if is_ar else 'Ladle' }}: {{ ident.ladle_id or '—' }}</span>
+          {% if ident.order_number %}<span class="me-3">{{ ident.order_number }}</span>{% endif %}
+          {% if ident.customer %}<span class="me-3">{{ ident.customer }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="text-end small">
+        <div>
+          <span class="text-muted">{{ 'تاريخ الإنتاج' if is_ar else 'Produced' }}:</span>
+          <strong>{{ ident.production_date or '—' }}</strong>
+        </div>
+        {% if ident.cast_date %}
+        <div>
+          <span class="text-muted">{{ 'وقت الصب' if is_ar else 'Cast' }}:</span>
+          <strong>{{ ident.cast_date }}{% if ident.cast_time %} {{ ident.cast_time }}{% endif %}</strong>
+        </div>
+        {% endif %}
+        <div class="mt-1">
+          <span class="badge bg-secondary">Lab: {{ ident.lab_decision or '—' }}</span>
+          <span class="badge bg-secondary">Final: {{ ident.final_decision or '—' }}</span>
+        </div>
+      </div>
+      <div>
+        <a href="{{ url_for('stages.view', id=sheet.pipe.id) }}"
+           class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-box-arrow-up-right"></i> {{ 'صفحة الماسورة' if is_ar else 'Pipe page' }}
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ---------------- Wall thickness ---------------- #}
+{% if sheet.thickness %}
+{% set t = sheet.thickness %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white">
+    <h6 class="mb-0"><i class="bi bi-rulers"></i>
+      {{ 'سمك الجدار — القرايات الخام' if is_ar else 'Wall thickness — raw readings' }}</h6>
+  </div>
+  <div class="card-body p-0 table-responsive">
+    <table class="table table-sm table-bordered mb-0 text-center align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="min-width: 110px;">{{ 'الموضع (م)' if is_ar else 'Position (m)' }}</th>
+          {% for pos in t.positions %}<th>{{ pos }}</th>{% endfor %}
+          <th class="table-info">{{ 'كل الماسورة' if is_ar else 'All' }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in range(t.readings_per_position) %}
+        <tr>
+          <td class="fw-bold text-start">{{ ('قراية ' ~ (r + 1)) if is_ar else ('Reading ' ~ (r + 1)) }}</td>
+          {% for pos in t.positions %}
+          {% set vals = t.matrix[pos] %}
+          <td>{{ vals[r] if vals and vals|length > r and vals[r] is not none else '–' }}</td>
+          {% endfor %}
+          <td class="table-info"></td>
+        </tr>
+        {% endfor %}
+        <tr class="table-info">
+          <td class="fw-bold text-start">{{ 'المتوسط' if is_ar else 'Average' }}</td>
+          {% for pos in t.positions %}
+          <td class="fw-bold">{{ t.by_position[pos].mean if t.by_position[pos].mean is not none else '–' }}</td>
+          {% endfor %}
+          <td class="fw-bold">{{ t.overall.mean }}</td>
+        </tr>
+        <tr>
+          <td class="fw-bold text-start">{{ 'الانحراف المعياري' if is_ar else 'Std dev' }}</td>
+          {% for pos in t.positions %}
+          <td>{{ t.by_position[pos].stdev if t.by_position[pos].stdev is not none else '–' }}</td>
+          {% endfor %}
+          <td class="fw-bold">{{ t.overall.stdev if t.overall.stdev is not none else '–' }}</td>
+        </tr>
+        <tr>
+          <td class="fw-bold text-start">{{ 'المدى' if is_ar else 'Range' }}</td>
+          {% for pos in t.positions %}
+          <td>{{ t.by_position[pos].range if t.by_position[pos].range is not none else '–' }}</td>
+          {% endfor %}
+          <td class="fw-bold">{{ t.overall.range }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer bg-white small text-muted">
+    n = {{ t.overall.n }} ·
+    {{ 'أقل' if is_ar else 'min' }} {{ t.overall.min }} ·
+    {{ 'أكبر' if is_ar else 'max' }} {{ t.overall.max }}
+  </div>
+</div>
+{% endif %}
+
+{# ---------------- Dimensions vs standard ---------------- #}
+{% if sheet.symbols %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <h6 class="mb-0"><i class="bi bi-aspect-ratio"></i>
+      {{ 'الأبعاد مقابل الاستاندرد' if is_ar else 'Dimensions vs standard' }}
+      <span class="badge bg-secondary">DN{{ sheet.symbols.dn }}</span></h6>
+    {% if not sheet.symbols.standard_verified %}
+    <span class="badge bg-warning text-dark">
+      {{ 'الاستاندرد لم يُراجع' if is_ar else 'standard not yet verified' }}
+    </span>
+    {% endif %}
+  </div>
+  <div class="card-body p-0 table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>{{ 'المرحلة' if is_ar else 'Stage' }}</th>
+          <th>{{ 'الرمز' if is_ar else 'Symbol' }}</th>
+          <th class="text-end">{{ 'المقاس' if is_ar else 'Actual' }}</th>
+          <th class="text-end">{{ 'الاستاندرد' if is_ar else 'Nominal' }}</th>
+          <th class="text-end">{{ 'الحدود' if is_ar else 'Limits' }}</th>
+          <th class="text-end">{{ 'الفرق' if is_ar else 'Deviation' }}</th>
+          <th>{{ 'الحالة' if is_ar else 'Status' }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in sheet.symbols.rows %}
+        <tr>
+          <td class="small text-muted">{{ row.stage }}</td>
+          <td><strong>{{ row.label }}</strong></td>
+          <td class="text-end">{{ row.actual }}</td>
+          <td class="text-end">{{ row.nominal if row.nominal is not none else '–' }}</td>
+          <td class="text-end small text-muted">
+            {% if row.lsl is not none or row.usl is not none %}
+            {{ row.lsl if row.lsl is not none else '–' }} … {{ row.usl if row.usl is not none else '–' }}
+            {% else %}–{% endif %}
+          </td>
+          <td class="text-end fw-bold {{ 'text-danger' if row.status == 'out' }}">
+            {{ row.deviation if row.deviation is not none else '–' }}
+          </td>
+          <td>
+            {% if row.status == 'in' %}
+            <span class="badge bg-success">{{ 'مطابق' if is_ar else 'In tol' }}</span>
+            {% elif row.status == 'out' %}
+            <span class="badge bg-danger">{{ 'خارج' if is_ar else 'Out of tol' }}</span>
+            {% else %}
+            <span class="badge bg-light text-dark border">{{ 'لا يوجد سماح' if is_ar else 'no tolerance' }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# ---------------- Diameter ---------------- #}
+{% if sheet.diameter %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white">
+    <h6 class="mb-0"><i class="bi bi-circle"></i>
+      {{ 'القطر' if is_ar else 'Diameter' }}</h6>
+  </div>
+  <div class="card-body p-0 table-responsive">
+    <table class="table table-sm table-bordered mb-0 text-center">
+      <thead class="table-light">
+        <tr>
+          <th>{{ 'العينة' if is_ar else 'Sample' }}</th>
+          {% for n in range(1, 16) %}<th>D{{ n }}</th>{% endfor %}
+          <th class="table-info">{{ 'متوسط' if is_ar else 'Avg' }}</th>
+          <th class="table-info">σ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for label, vals in sheet.diameter.samples.items() %}
+        <tr>
+          <td class="fw-bold">{{ label }}</td>
+          {% for n in range(15) %}
+          <td>{{ vals[n] if vals and vals|length > n and vals[n] is not none else '–' }}</td>
+          {% endfor %}
+          <td class="table-info fw-bold">{{ sheet.diameter.by_sample[label].mean if sheet.diameter.by_sample[label].mean is not none else '–' }}</td>
+          <td class="table-info">{{ sheet.diameter.by_sample[label].stdev if sheet.diameter.by_sample[label].stdev is not none else '–' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer bg-white small text-muted">
+    n = {{ sheet.diameter.overall.n }} ·
+    {{ 'متوسط' if is_ar else 'avg' }} {{ sheet.diameter.overall.mean }} ·
+    σ {{ sheet.diameter.overall.stdev if sheet.diameter.overall.stdev is not none else '–' }} ·
+    {{ sheet.diameter.overall.min }}–{{ sheet.diameter.overall.max }}
+  </div>
+</div>
+{% endif %}
+
+{# ---------------- Lining ---------------- #}
+{% if sheet.lining %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white">
+    <h6 class="mb-0"><i class="bi bi-layers"></i>
+      {{ 'البطانة والطلاء' if is_ar else 'Lining & coating' }}</h6>
+  </div>
+  <div class="card-body p-0 table-responsive">
+    <table class="table table-sm table-bordered mb-0 text-center">
+      <thead class="table-light">
+        <tr>
+          <th>{{ 'الطبقة' if is_ar else 'Layer' }}</th>
+          {% for n in range(1, 7) %}<th>{{ n }} m</th>{% endfor %}
+          <th class="table-info">{{ 'متوسط' if is_ar else 'Avg' }}</th>
+          <th class="table-info">σ</th>
+          <th class="table-info">{{ 'المدى' if is_ar else 'Range' }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for layer, block in sheet.lining.layers.items() %}
+        <tr>
+          <td class="fw-bold text-start">{{ layer }}</td>
+          {% for n in range(6) %}
+          <td>{{ block.readings[n] if block.readings|length > n and block.readings[n] is not none else '–' }}</td>
+          {% endfor %}
+          <td class="table-info fw-bold">{{ block.stats.mean }}</td>
+          <td class="table-info">{{ block.stats.stdev if block.stats.stdev is not none else '–' }}</td>
+          <td class="table-info">{{ block.stats.range }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# ---------------- Ovality ---------------- #}
+{% if sheet.ovality %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white">
+    <h6 class="mb-0"><i class="bi bi-circle-half"></i>
+      {{ 'الأوفاليتي' if is_ar else 'Ovality' }}</h6>
+  </div>
+  <div class="card-body p-0 table-responsive">
+    <table class="table table-sm table-bordered mb-0 text-center">
+      <thead class="table-light">
+        <tr>
+          <th>{{ 'النقطة' if is_ar else 'Point' }}</th>
+          <th>X</th><th>Y</th><th>{{ 'الأوفاليتي %' if is_ar else 'Ovality %' }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for name, pv in sheet.ovality.points|dictsort %}
+        <tr>
+          <td class="fw-bold">{{ name }}</td>
+          <td>{{ pv.x if pv.x is not none else '–' }}</td>
+          <td>{{ pv.y if pv.y is not none else '–' }}</td>
+          <td class="fw-bold">{{ pv.ovality if pv.ovality is not none else '–' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer bg-white small text-muted">
+    n = {{ sheet.ovality.overall.n }} ·
+    {{ 'متوسط' if is_ar else 'avg' }} {{ sheet.ovality.overall.mean }}% ·
+    {{ 'أكبر' if is_ar else 'max' }} {{ sheet.ovality.overall.max }}%
+  </div>
+</div>
+{% endif %}
+
+{% if not sheet.thickness and not sheet.symbols and not sheet.diameter
+      and not sheet.lining and not sheet.ovality %}
+<div class="alert alert-secondary">
+  <i class="bi bi-inbox"></i>
+  {{ 'الماسورة دي ملهاش أي قياسات مسجلة لحد دلوقتي.' if is_ar
+     else 'No measurements recorded for this pipe yet.' }}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header py-2"><span class="small fw-bold">{title}</span></div>
+    <div class="card-body"><canvas id="stageChart" height="90"></canvas></div>
+</div>
+<script>
+(function(){
+const rows = {{ data.rows | tojson }};
+    const ctx = document.getElementById('stageChart');
+    new Chart(ctx, { type: 'bar',
+        data: { labels: rows.map(r => r.stage), datasets: [{ label: 'Accept', data: rows.map(r => r.accept), backgroundColor: '#059669' },{ label: 'Reject', data: rows.map(r => r.reject), backgroundColor: '#e11d48' },{ label: 'Hold', data: rows.map(r => r.hold), backgroundColor: '#d97706' }] },
+        options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
+})();
+</script>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Stage</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">Accept</th>
+                    <th class="text-end">Reject</th>
+                    <th class="text-end">Hold</th>
+                    <th class="text-end">Defects</th>
+                    <th class="text-end">Accept %</th>
+                    <th class="text-end">Reject %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.rows %}
+                <tr>
+                    <td><strong>{{ r.stage }}</strong></td>
+                    <td class="text-end">{{ r.total }}</td>
+                    <td class="text-end text-success">{{ r.accept }}</td>
+                    <td class="text-end text-danger">{{ r.reject }}</td>
+                    <td class="text-end text-warning">{{ r.hold }}</td>
+                    <td class="text-end">{{ r.defects }}</td>
+                    <td class="text-end">{{ r.accept_pct }}%</td>
+                    <td class="text-end">{{ r.reject_pct }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

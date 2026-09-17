@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% import 'components/_application_block.html' as app_block with context %}
+
+{% block title %}{{ 'تعديل المنتج' if product else 'إضافة منتج' if current_locale == 'ar' else 'Edit Product' if product else 'Add Product' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-box-seam"></i>
+            {% if product %}
+                {{ 'تعديل المنتج' if current_locale == 'ar' else 'Edit Product' }}
+            {% else %}
+                {{ 'إضافة منتج جديد' if current_locale == 'ar' else 'Add New Product' }}
+            {% endif %}
+        </h2>
+        <a href="{{ url_for('admin.products') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.edit_product', id=product.id) if product else url_for('admin.add_product') }}" id="productForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- Parameter Dropdowns (order follows admin settings → product code ordering) -->
+                        {% for field_name, ptype, label_ar, label_en in param_fields %}
+                        <div class="mb-3">
+                            <label class="form-label">{{ label_ar if current_locale == 'ar' else label_en }}</label>
+                            <select name="{{ field_name }}" class="form-select param-select" data-type="{{ ptype }}">
+                                <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
+                                {% for p in params_by_type.get(ptype, []) %}
+                                <option value="{{ p.id }}"
+                                        data-code="{{ p.code }}"
+                                        data-desc-en="{{ p.description_en or p.name_en }}"
+                                        data-desc-ar="{{ p.description_ar or p.name_ar or '' }}"
+                                        data-app-group="{{ application_group_for_param(p) }}"
+                                        {{ 'selected' if product and product[field_name] == p.id }}>
+                                    {{ p.code }} - {{ p.name_ar if current_locale == 'ar' and p.name_ar else p.name_en }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endfor %}
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'رقم الباركود' if current_locale == 'ar' else 'Barcode Number' }}</label>
+                            <input type="text" name="barcode" class="form-control"
+                                   inputmode="numeric" pattern="[0-9]*" maxlength="32"
+                                   placeholder="2100000172400"
+                                   value="{{ product.barcode if product and product.barcode else '' }}">
+                            <div class="form-text">
+                                {{ 'أرقام فقط' if current_locale == 'ar' else 'Digits only' }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الوزن (كجم)' if current_locale == 'ar' else 'Weight (kg)' }}</label>
+                            <input type="number" step="0.01" name="weight_kg" class="form-control"
+                                   value="{{ product.weight_kg if product and product.weight_kg is not none else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الطول (م)' if current_locale == 'ar' else 'Length (m)' }}</label>
+                            <input type="number" step="0.01" name="length_m" class="form-control"
+                                   value="{{ product.length_m if product and product.length_m is not none else '' }}">
+                        </div>
+
+                        <div class="form-check mb-4">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+                                   {{ 'checked' if not product or product.is_active }}>
+                            <label class="form-check-label" for="is_active">
+                                {{ 'نشط' if current_locale == 'ar' else 'Active' }}
+                            </label>
+                        </div>
+
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-clipboard-check"></i>
+                                    {{ 'الاستخدام والمواصفة' if current_locale == 'ar' else 'Application' }}
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                {# The product owns the specification. Which standards are
+                                   offered follows the Intended Use parameter's group; a
+                                   production order copies whatever is set here. #}
+                                {{ app_block.application_block(
+                                       application_view(product.application_profile) if product else none,
+                                       application_standards, application_layers,
+                                       current_locale == 'ar',
+                                       groups=application_groups_for(product.intent_use_param) if product else none) }}
+                                {{ app_block.application_block_script() }}
+
+                                {# Sewage and water each have their own pair of standards;
+                                   AWWA applies either way. Switching Intended Use hides the
+                                   pair that no longer applies and unticks it, so a water
+                                   product cannot ship claiming EN 598. #}
+                                <script>
+                                (function () {
+                                    var sel = document.querySelector('.param-select[data-type="INTENT_USE"]');
+                                    var box = document.getElementById('appLayerTableStandards');
+                                    if (!sel || !box) { return; }
+
+                                    var field = document.getElementById('appLayerTableGroup');
+
+                                    function gate() {
+                                        var opt = sel.options[sel.selectedIndex];
+                                        var group = (opt && opt.dataset.appGroup) || '';
+                                        if (group === 'both') { group = ''; }
+
+                                        // Intended Use is the only thing that says which
+                                        // group this is, so it writes the field the save
+                                        // reads and the tabs follow.
+                                        if (field) { field.value = group; }
+                                        if (window.applicationSyncTabs) {
+                                            window.applicationSyncTabs();
+                                        }
+
+                                        var badge = box.querySelector('.badge');
+                                        if (!badge) { return; }
+                                        badge.hidden = !group;
+                                        if (group) {
+                                            badge.textContent = group === 'sewage'
+                                                ? {{ ('صرف صحي' if current_locale == 'ar' else 'Sewage')|tojson }}
+                                                : {{ ('مياه' if current_locale == 'ar' else 'Water')|tojson }};
+                                        }
+                                    }
+
+                                    sel.addEventListener('change', gate);
+                                    gate();
+                                })();
+                                </script>
+                            </div>
+                        </div>
+
+                        {% include 'components/_audit_reason.html' %}
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-lg"></i>
+                                {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
+                            </button>
+                            <a href="{{ url_for('admin.products') }}" class="btn btn-outline-secondary">
+                                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Preview Code Card -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-upc-scan"></i>
+                        {{ 'رمز المنتج' if current_locale == 'ar' else 'Product Code' }}
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <h3 id="previewCode" class="text-monospace text-primary fw-bold mb-1">---</h3>
+                    <small class="text-muted">{{ 'يتم التوليد تلقائياً' if current_locale == 'ar' else 'Auto-generated' }}</small>
+                </div>
+            </div>
+
+            <!-- Preview EN Description Card -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-card-text"></i>
+                        {{ 'الوصف الإنجليزي' if current_locale == 'ar' else 'English Description' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <textarea name="description_en" id="previewDescEn" class="form-control" rows="5" form="productForm"
+                              style="font-size: 0.9rem; line-height: 1.6;"
+                              placeholder="{{ 'يُنشأ تلقائياً من المعايير — يمكنك تعديله' if current_locale == 'ar' else 'Auto-generated from parameters — you can edit it' }}">{{ product.description_en if product and product.description_en else '' }}</textarea>
+                </div>
+            </div>
+
+            <!-- Preview AR Description Card -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-card-text"></i>
+                        {{ 'الوصف العربي' if current_locale == 'ar' else 'Arabic Description' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <textarea name="description_ar" id="previewDescAr" class="form-control" rows="5" dir="rtl" form="productForm"
+                              style="font-size: 0.9rem; line-height: 1.6;"
+                              placeholder="{{ 'يُنشأ تلقائياً من المعايير — يمكنك تعديله' if current_locale == 'ar' else 'Auto-generated from parameters — you can edit it' }}">{{ product.description_ar if product and product.description_ar else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selects = document.querySelectorAll('.param-select');
+    const previewCode = document.getElementById('previewCode');
+    const previewDescEn = document.getElementById('previewDescEn');
+    const previewDescAr = document.getElementById('previewDescAr');
+
+    function markDirty(el) {
+        // Empty textarea = not dirty: clearing the field re-enables auto-fill.
+        el.dataset.dirty = el.value.trim() ? '1' : '';
+    }
+    // Prefilled (edit form) descriptions count as user-owned — never clobbered.
+    markDirty(previewDescEn);
+    markDirty(previewDescAr);
+    previewDescEn.addEventListener('input', function() { markDirty(previewDescEn); });
+    previewDescAr.addEventListener('input', function() { markDirty(previewDescAr); });
+
+    function updatePreview() {
+        const params = {};
+        selects.forEach(function(sel) {
+            if (sel.value) {
+                params[sel.name] = sel.value;
+            }
+        });
+
+        fetch("{{ url_for('admin.api_preview_product_code') }}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+            body: JSON.stringify(params)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            previewCode.textContent = data.code || '---';
+            if (!previewDescEn.dataset.dirty) previewDescEn.value = data.description_en || '';
+            if (!previewDescAr.dataset.dirty) previewDescAr.value = data.description_ar || '';
+        })
+        .catch(function() {
+            previewCode.textContent = '---';
+        });
+    }
+
+    selects.forEach(function(sel) {
+        sel.addEventListener('change', updatePreview);
+    });
+
+    updatePreview();
+});
+</script>
+{% endblock %}

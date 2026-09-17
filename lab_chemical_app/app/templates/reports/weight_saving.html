@@ -1,0 +1,86 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+{% if data.summary.via_product_standard or data.summary.excluded_no_weight %}
+<div class="alert alert-info py-2">
+    <i class="bi bi-info-circle"></i>
+    Planned weight source: {{ data.summary.via_product_standard }} pipe(s) use the
+    <strong>product standard weight</strong> (iso_weight not recorded);
+    {{ data.summary.excluded_no_weight }} pipe(s) had neither iso_weight nor a product
+    weight and are <strong>excluded</strong> from the totals.
+</div>
+{% endif %}
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card border-primary"><div class="card-body"><h6 class="text-muted small">Total ISO Weight</h6><h4 class="mb-0">{{ data.summary.total_iso }} kg</h4></div></div></div>
+    <div class="col-md-3"><div class="card border-info"><div class="card-body"><h6 class="text-muted small">Total Actual Weight</h6><h4 class="mb-0">{{ data.summary.total_actual }} kg</h4></div></div></div>
+    <div class="col-md-3"><div class="card border-success"><div class="card-body"><h6 class="text-muted small">Total Saving</h6><h4 class="mb-0 text-success">{{ data.summary.total_saving }} kg</h4></div></div></div>
+    <div class="col-md-3"><div class="card border-success"><div class="card-body"><h6 class="text-muted small">Saving %</h6><h4 class="mb-0 text-success">{{ data.summary.total_saving_pct }}%</h4></div></div></div>
+</div>
+
+{% if data.rows %}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header">Saving by {{ data.filters.group_by|capitalize }}</div>
+    <div class="card-body">
+        <canvas id="savingChart" height="80"></canvas>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+new Chart(document.getElementById('savingChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ data.rows|map(attribute='group')|list|tojson }},
+        datasets: [
+            {label: 'ISO Weight', data: {{ data.rows|map(attribute='iso_weight')|list|tojson }}, backgroundColor: '#6c757d'},
+            {label: 'Actual Weight', data: {{ data.rows|map(attribute='actual_weight')|list|tojson }}, backgroundColor: '#0d6efd'},
+        ]
+    },
+    options: {responsive: true, plugins: {legend: {position: 'top'}}}
+});
+</script>
+{% endif %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>{{ data.filters.group_by|capitalize }}</th>
+                    <th class="text-end">Count</th>
+                    <th class="text-end">ISO Weight</th>
+                    <th class="text-end">Actual Weight</th>
+                    <th class="text-end">Saving (kg)</th>
+                    <th class="text-end">Saving %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.rows %}
+                <tr>
+                    <td><strong>{{ r.group }}</strong></td>
+                    <td class="text-end">{{ r.count }}</td>
+                    <td class="text-end">{{ r.iso_weight }}</td>
+                    <td class="text-end">{{ r.actual_weight }}</td>
+                    <td class="text-end {% if r.saving >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ r.saving }}
+                    </td>
+                    <td class="text-end">{{ r.saving_pct }}%</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No data</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if data.rows %}
+            <tfoot class="table-secondary">
+                <tr>
+                    <th>Grand Total</th><th></th>
+                    <th class="text-end">{{ data.summary.total_iso }}</th>
+                    <th class="text-end">{{ data.summary.total_actual }}</th>
+                    <th class="text-end">{{ data.summary.total_saving }}</th>
+                    <th class="text-end">{{ data.summary.total_saving_pct }}%</th>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+{% endblock %}

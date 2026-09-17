@@ -1,0 +1,14 @@
+{# Shared "Reason for change" field for edit forms.
+   Captured by the before_request hook (app/__init__.py) and stored on every
+   audit_logs row written during the request. Optional: when left blank the
+   audit service auto-generates a contextual summary instead. #}
+<div class="mb-3">
+    <label for="auditReason" class="form-label">
+        {{ 'سبب التعديل' if current_locale == 'ar' else 'Reason for change' }}
+        <small style="opacity: 0.6; font-weight: normal;">
+            {{ '(اختياري — يُنشأ تلقائياً إذا تُرك فارغاً)' if current_locale == 'ar' else '(optional — auto-generated if left blank)' }}
+        </small>
+    </label>
+    <input type="text" name="audit_reason" id="auditReason" class="form-control"
+           placeholder="{{ 'لماذا يتم تغيير هذا؟' if current_locale == 'ar' else 'Why is this being changed?' }}" maxlength="500">
+</div>

@@ -1,0 +1,418 @@
+{# Application block — the standard a run is built to plus the three
+   thicknesses it must hold (wall, cement lining, external coating), each as
+   Value ± Tolerance giving min / Nominal / Max.
+
+   Shared by the product form (where the spec is authored) and the order form
+   (where it is copied and may be edited for one customer). Same markup, same
+   input names, same derive script — a change here reaches both screens.
+
+   `groups` limits which standards columns render: pass a set of group keys
+   (e.g. {'sewage', 'other'}) to gate by the product's intended use, or none to
+   show them all. #}
+
+{% macro application_block(profile, standards, layers, is_ar, table_id='appLayerTable', groups=none) %}
+    {# Tells the POST handler the block was on screen, so a record saved from a
+       form without it is left alone rather than having every tick cleared. #}
+    <input type="hidden" name="app_block_present" value="1">
+    {% set ap = profile or {} %}
+    {% set ap_std = ap.get('standards', {}) %}
+    {% set ap_layers = ap.get('layers', {}) %}
+    {% set chosen = application_standard(ap) %}
+    {% set chosen_group = application_group(ap) %}
+
+    {# Intended Use already decided the group, so there is nothing to pick
+       here — asking again would only let the two disagree. It travels as a
+       hidden field and the tabs below are the whole interface. #}
+    {# `groups` is a set, so picking "the first" only means something when the
+       intended use narrowed it to one. An untagged use offers both, and then
+       there is no active group and every tab stays on screen. #}
+    {% set narrowed = (groups | reject('equalto', 'other') | list)
+                      if groups is not none else [] %}
+    {% set active_group = narrowed[0] if narrowed | length == 1
+                          else (chosen_group if groups is none else none) %}
+    {# which tabs are on screen: the active group's, plus AWWA which is in
+       both. With no group known yet, show everything. #}
+    {% set visible_groups = [active_group, 'other'] if active_group
+                            else ['sewage', 'water', 'other'] %}
+    <input type="hidden" name="app_group" id="{{ table_id }}Group"
+           value="{{ active_group or '' }}">
+    <div id="{{ table_id }}Standards" class="mb-2">
+        {% if active_group %}
+        <span class="badge bg-secondary">
+            {% if active_group == 'sewage' %}{{ 'صرف صحي' if is_ar else 'Sewage' }}
+            {% else %}{{ 'مياه' if is_ar else 'Water' }}{% endif %}
+        </span>
+        <span class="text-muted small">
+            {{ 'حسب الاستخدام المقصود' if is_ar else 'from Intended Use' }}
+        </span>
+        {% endif %}
+    </div>
+
+    {# Every standard keeps its own thicknesses, so a product can be specified
+       under ISO 2531 and under EN 545 at once with only one of them active.
+       One tab per standard; the radio above decides which one the order and
+       the stages actually read. #}
+    {# Every standard is rendered, whatever the current group, and the gate
+       below hides the ones that do not apply. Rendering only the current
+       group's meant that switching Intended Use in the browser could hide
+       tabs but never reveal the other group's — they were not in the page to
+       reveal, so a sewage switch left AWWA alone on screen. #}
+    {% set tab_stds = [] %}
+    {% for group, entries in standards %}
+    {% for key, label in entries %}
+    {% set _ = tab_stds.append((key, label, group)) %}
+    {% endfor %}
+    {% endfor %}
+
+    <ul class="nav nav-tabs app-spec-tabs" role="tablist">
+        {% set shown = tab_stds | selectattr('2', 'in', visible_groups) | list %}
+        {% set active_std = (shown | first)[0] if shown else none %}
+        {% for key, label, group in tab_stds %}
+        <li class="nav-item" role="presentation" data-group="{{ group }}"
+            {{ 'hidden' if group not in visible_groups }}>
+            <button class="nav-link {{ 'active' if key == active_std }}"
+                    type="button" data-bs-toggle="tab"
+                    data-std="{{ key }}" data-group="{{ group }}"
+                    data-bs-target="#{{ table_id }}_pane_{{ key }}">
+                {{ label }}
+                <span class="app-spec-dot{{ ' on' if application_spec_has(ap, key) }}"></span>
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <div class="tab-content border border-top-0 p-2 mb-0" id="{{ table_id }}Specs">
+        {% for key, label, group in tab_stds %}
+        {% set spec_rows = application_layers_for(ap, key) %}
+        <div class="tab-pane fade {{ 'show active' if key == active_std }}"
+             id="{{ table_id }}_pane_{{ key }}" role="tabpanel" data-group="{{ group }}">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-0 text-center align-middle bg-white app-layer-table"
+                       id="{{ table_id }}_{{ key }}">
+                    <thead>
+                        <tr class="table-secondary">
+                            {# the tab already names the standard — repeating
+                               it here read as AWWA three times over #}
+                            <th style="min-width: 150px;"></th>
+                            <th>{{ 'القيمة' if is_ar else 'Value' }}</th>
+                            <th>{{ '+سماح' if is_ar else '+Tol' }}</th>
+                            <th>{{ '−سماح' if is_ar else '−Tol' }}</th>
+                            <th class="border-start border-3">{{ 'الأدنى' if is_ar else 'min.' }}</th>
+                            <th>{{ 'الاسمي' if is_ar else 'Nominal' }}</th>
+                            <th>{{ 'الأقصى' if is_ar else 'Max' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lkey, label_en, label_ar in layers %}
+                        {% set row = spec_rows.get(lkey, {}) %}
+                        <tr>
+                            <td class="fw-bold text-start">{{ label_ar if is_ar else label_en }}</td>
+                            {% for field in ['value', 'tolerance_plus', 'tolerance_minus', 'min', 'nominal', 'max'] %}
+                            {% set val = row.get(field) %}
+                            <td class="{{ 'border-start border-3' if field == 'min' }}">
+                                {# hyphen-delimited: both the standard keys and
+                                   the layer keys contain underscores #}
+                                {# Min / Nominal / Max are computed from Value +/- Tol
+                                   and are not typed into. They stay inputs so they
+                                   still post with the rest of the row. #}
+                                <input type="number" step="0.01"{{ '' if field in ['tolerance_plus', 'tolerance_minus'] else ' min="0"' }}
+                                       name="app_spec-{{ key }}-{{ lkey }}-{{ field }}" data-f="{{ field }}"
+                                       class="form-control form-control-sm text-center{{ ' app-derived' if field in ['min', 'nominal', 'max'] }}"
+                                       {{ 'readonly tabindex="-1"' if field in ['min', 'nominal', 'max'] }}
+                                       value="{{ val if val is not none else '' }}">
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="small text-muted mt-2">
+        <i class="bi bi-info-circle"></i>
+        {{ 'كل السماكات بالمليمتر. اكتب القيمة و+سماح و/أو −سماح: الأدنى = القيمة − سماح السالب، الأقصى = القيمة + سماح الموجب. لو ملأت جانب واحد بس الجانب التاني يساوي القيمة.' if is_ar
+           else 'All thicknesses in mm. Type the value and +Tol / −Tol: min = value − (−Tol), max = value + (+Tol). Fill one side only and the other stays at the value.' }}
+    </div>
+{% endmacro %}
+
+
+{# The order's half of the block. The product authors a table for every
+   standard its group offers; an order is built to exactly one of them, so
+   here it is a choice and not tabs. The table is the product's figures, shown
+   read-only — the spec is decided on the product, not per order.
+
+   `specs` travels in a data attribute so switching the choice swaps the
+   figures without a round trip. #}
+{% macro application_order_block(profile, layers, is_ar, table_id='appLayerTable') %}
+    {# `profile` here is already what application_for_order worked out: the
+       product's tables, the order's choice. #}
+    <input type="hidden" name="app_block_present" value="1">
+    {% set ap = profile or {} %}
+    {% set chosen = application_standard(ap) %}
+    {% set group = ap.get('group') %}
+    {% set rows = application_layers_for(ap, chosen) %}
+    {# Same reason as the product's tabs: every option is rendered so picking a
+       different product can reveal the other group's, and the ones that do not
+       apply are hidden. #}
+    {% set visible = [group, 'other'] if group else ['sewage', 'water', 'other'] %}
+
+    <input type="hidden" name="app_group" value="{{ group or '' }}">
+    {# The order stores the product's whole set, not just the table it was
+       built to, so reopening it and switching the choice still has figures to
+       show rather than a blank grid. #}
+    <input type="hidden" name="app_specs_json" id="{{ table_id }}SpecsJson"
+           value='{{ (ap.get("specs") or {})|tojson }}'>
+
+    <div class="app-order-pick mb-3" id="{{ table_id }}Pick"
+         data-specs='{{ (ap.get("specs") or {})|tojson }}'>
+        <div class="small text-muted mb-1">
+            {# say which group this is, the same as the product does — an order
+               for a sewage product must not read as if it could be water #}
+            {% if group %}
+            <span class="badge bg-secondary" id="{{ table_id }}GroupBadge">
+                {% if group == 'sewage' %}{{ 'صرف صحي' if is_ar else 'Sewage' }}
+                {% else %}{{ 'مياه' if is_ar else 'Water' }}{% endif %}
+            </span>
+            {% else %}
+            <span class="badge bg-secondary d-none" id="{{ table_id }}GroupBadge"></span>
+            {% endif %}
+            {{ 'المواصفة التي يُنفذ عليها هذا الأمر' if is_ar
+               else 'The standard this order is built to' }}
+        </div>
+        {% for grp, entries in application_standards %}
+        {% for key, label in entries %}
+        <div class="form-check form-check-inline app-order-opt"
+             data-group="{{ grp }}" {{ 'hidden' if grp not in visible }}>
+            <input class="form-check-input app-order-std" type="radio"
+                   name="app_std" value="{{ key }}" data-group="{{ grp }}"
+                   id="{{ table_id }}_ord_{{ key }}"
+                   {{ 'checked' if chosen == key }}>
+            <label class="form-check-label" for="{{ table_id }}_ord_{{ key }}">{{ label }}</label>
+        </div>
+        {% endfor %}
+        {% endfor %}
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered mb-0 text-center align-middle bg-white"
+               id="{{ table_id }}_order">
+            <thead>
+                <tr class="table-secondary">
+                    <th style="min-width: 150px;"></th>
+                    <th>{{ 'القيمة' if is_ar else 'Value' }}</th>
+                    <th>{{ '+سماح' if is_ar else '+Tol' }}</th>
+                    <th>{{ '−سماح' if is_ar else '−Tol' }}</th>
+                    <th class="border-start border-3">{{ 'الأدنى' if is_ar else 'min.' }}</th>
+                    <th>{{ 'الاسمي' if is_ar else 'Nominal' }}</th>
+                    <th>{{ 'الأقصى' if is_ar else 'Max' }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lkey, label_en, label_ar in layers %}
+                {% set row = rows.get(lkey, {}) %}
+                <tr>
+                    <td class="fw-bold text-start">{{ label_ar if is_ar else label_en }}</td>
+                    {% for field in ['value', 'tolerance_plus', 'tolerance_minus', 'min', 'nominal', 'max'] %}
+                    {% set val = row.get(field) %}
+                    <td class="{{ 'border-start border-3' if field == 'min' }}">
+                        {# readonly, not disabled: a disabled input posts
+                           nothing, and the order still has to store the
+                           figures it was built to. #}
+                        <input type="number" step="0.01" readonly
+                               name="app_{{ lkey }}_{{ field }}"
+                               data-layer="{{ lkey }}" data-f="{{ field }}"
+                               class="form-control form-control-sm text-center bg-light"
+                               value="{{ val if val is not none else '' }}">
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="small text-muted mt-2">
+        <i class="bi bi-info-circle"></i>
+        {{ 'المواصفة تُحدَّد على المنتج. هنا تختار أي واحدة يُنفذ عليها هذا الأمر.' if is_ar
+           else 'The figures come from the product. Here you choose which standard this order is built to.' }}
+    </div>
+{% endmacro %}
+
+
+{% macro application_order_script(table_id='appLayerTable') %}
+<script>
+(function () {
+    var pick = document.getElementById({{ (table_id ~ 'Pick')|tojson }});
+    var table = document.getElementById({{ (table_id ~ '_order')|tojson }});
+    if (!pick || !table) { return; }
+
+    function specs() {
+        try { return JSON.parse(pick.dataset.specs || '{}') || {}; }
+        catch (e) { return {}; }
+    }
+
+    function show(std) {
+        var rows = specs()[std] || {};
+        table.querySelectorAll('input[data-layer]').forEach(function (inp) {
+            var row = rows[inp.dataset.layer] || {};
+            var v = row[inp.dataset.f];
+            inp.value = (v === null || v === undefined) ? '' : v;
+        });
+    }
+
+    pick.addEventListener('change', function (ev) {
+        if (ev.target.classList.contains('app-order-std')) { show(ev.target.value); }
+    });
+
+    // The product dropdown hands over a whole new set of specs.
+    window.applicationOrderLoad = function (profile) {
+        profile = profile || {};
+        var specsJson = JSON.stringify(profile.specs || {});
+        pick.dataset.specs = specsJson;
+        var store = document.getElementById({{ (table_id ~ 'SpecsJson')|tojson }});
+        if (store) { store.value = specsJson; }
+        var group = profile.group || '';
+        var hidden = document.querySelector('input[name="app_group"]');
+        if (hidden) { hidden.value = group; }
+
+        var badge = document.getElementById({{ (table_id ~ 'GroupBadge')|tojson }});
+        if (badge) {
+            badge.classList.toggle('d-none', !group);
+            if (group) {
+                badge.textContent = group === 'sewage'
+                    ? {{ ('صرف صحي' if current_locale == 'ar' else 'Sewage')|tojson }}
+                    : {{ ('مياه' if current_locale == 'ar' else 'Water')|tojson }};
+            }
+        }
+
+        var first = null;
+        pick.querySelectorAll('.app-order-std').forEach(function (r) {
+            var owner = r.dataset.group;
+            var ok = !group || owner === 'other' || owner === group;
+            r.closest('.app-order-opt').hidden = !ok;
+            if (!ok) { r.checked = false; }
+            else if (!first) { first = r; }
+        });
+        var checked = pick.querySelector('.app-order-std:checked') || first;
+        if (checked) { checked.checked = true; show(checked.value); }
+    };
+})();
+</script>
+{% endmacro %}
+
+
+{# The three limits follow from the value and the tolerance, so the operator
+   types two numbers instead of five. A limit typed by hand is left alone from
+   then on — including across a reload, where a saved limit that does not match
+   the formula is read as one somebody meant. #}
+{% macro application_block_script(table_id='appLayerTable') %}
+<script>
+{# The group comes from Intended Use, so the only thing to keep in step is
+   which tabs are visible. AWWA belongs to both groups and never hides. #}
+(function () {
+    var field = document.getElementById({{ (table_id ~ 'Group')|tojson }});
+    var tabs = document.querySelector('.app-spec-tabs');
+    var panes = document.getElementById({{ (table_id ~ 'Specs')|tojson }});
+    if (!field || !tabs || !panes) { return; }
+
+    function sync() {
+        var group = field.value;
+        var fallback = null;
+
+        tabs.querySelectorAll('.nav-link').forEach(function (btn) {
+            var owner = btn.dataset.group;
+            var show = !group || owner === 'other' || owner === group;
+            btn.closest('.nav-item').hidden = !show;
+            if (show && !fallback) { fallback = btn; }
+            if (show || !btn.classList.contains('active')) { return; }
+            btn.classList.remove('active');
+            var pane = panes.querySelector(btn.dataset.bsTarget);
+            if (pane) { pane.classList.remove('show', 'active'); }
+        });
+
+        // never leave every tab closed
+        if (tabs.querySelector('.nav-link.active') || !fallback) { return; }
+        fallback.classList.add('active');
+        var first = panes.querySelector(fallback.dataset.bsTarget);
+        if (first) { first.classList.add('show', 'active'); }
+    }
+
+    field.addEventListener('change', sync);
+    window.applicationSyncTabs = sync;
+    sync();
+})();
+
+(function () {
+    // One table per standard now, so bind them all rather than one id.
+    var tables = document.querySelectorAll(
+        '#' + {{ (table_id ~ 'Specs')|tojson }} + ' .app-layer-table');
+    if (!tables.length) { return; }
+
+    function num(el) {
+        if (!el || el.value === '') { return null; }
+        var v = parseFloat(el.value);
+        return isNaN(v) ? null : v;
+    }
+
+    function derive(row) {
+        var value = num(row.querySelector('[data-f="value"]'));
+        var tolPlus = num(row.querySelector('[data-f="tolerance_plus"]'));
+        var tolMinus = num(row.querySelector('[data-f="tolerance_minus"]'));
+        return {
+            nominal: value,
+            min: (value === null || tolMinus === null) ? (value !== null && tolPlus !== null ? value : null) : value - Math.abs(tolMinus),
+            max: (value === null || tolPlus === null) ? (value !== null && tolMinus !== null ? value : null) : value + Math.abs(tolPlus)
+        };
+    }
+
+    function show(v) {
+        return v === null ? '' : String(Math.round(v * 100) / 100);
+    }
+
+    // Min, Nominal and Max are derived, never authored, so they are simply
+    // rewritten from Value +/- Tol whenever anything in the row changes.
+    //
+    // They used to be freezable: a stored limit that disagreed with the
+    // formula was taken for a hand-typed override and never recomputed again.
+    // Nothing distinguished a real override from a limit left behind when the
+    // Value moved under it, so the rows drifted — prod showed a Max of 7.0
+    // against a Value of 5.0 with a +Tol of 5.0, and a Max of 2.0 against a
+    // Value of 1.0 with a +Tol of 25.0. The three boxes are read-only now and
+    // the override is gone with the bug.
+    function apply(row) {
+        var want = derive(row);
+        ['min', 'nominal', 'max'].forEach(function (f) {
+            var el = row.querySelector('[data-f="' + f + '"]');
+            if (el) { el.value = show(want[f]); }
+        });
+    }
+
+    function applyAll(table) {
+        Array.prototype.forEach.call(
+            table.querySelectorAll('tbody tr'), apply);
+    }
+
+    Array.prototype.forEach.call(tables, function (table) {
+        applyAll(table);
+
+        // Filling the block from elsewhere — a product's spec copied onto an
+        // order — has to recompute too, or the copied limits stand unchecked.
+        table.addEventListener('app:filled', function () { applyAll(table); });
+
+        table.addEventListener('input', function (ev) {
+            var el = ev.target;
+            if (!el.dataset || !el.dataset.f) { return; }
+            var row = el.closest('tr');
+            if (!row) { return; }
+            apply(row);
+            // light the tab's dot as soon as it holds a number
+            var pane = row.closest('.tab-pane');
+            var tab = pane && document.querySelector('[data-bs-target="#' + pane.id + '"]');
+            var dot = tab && tab.querySelector('.app-spec-dot');
+            if (dot) { dot.classList.add('on'); }
+        });
+    });
+})();
+</script>
+{% endmacro %}

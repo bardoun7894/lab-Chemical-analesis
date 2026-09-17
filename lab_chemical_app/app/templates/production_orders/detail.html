@@ -34,6 +34,20 @@
             <a href="{{ url_for('production_orders.print_stickers', id=order.id) }}" class="btn btn-success">
                 <i class="bi bi-printer"></i> {{ 'طباعة الملصقات' if current_locale == 'ar' else 'Print Stickers' }}
             </a>
+            {% if can('certificates', 'add') %}
+            <a href="{{ url_for('certificates.new', type='warranty', order_id=order.id) }}" class="btn btn-primary">
+                <i class="bi bi-patch-check"></i> {{ 'شهادة ضمان' if current_locale == 'ar' else 'Warranty Certificate' }}
+            </a>
+            <a href="{{ url_for('certificates.new', type='work_test', order_id=order.id) }}" class="btn btn-primary">
+                <i class="bi bi-clipboard-data"></i> {{ 'شهادة اختبار' if current_locale == 'ar' else 'Work Test Certificate' }}
+            </a>
+            <a href="{{ url_for('certificates.new', type='mtc', order_id=order.id) }}" class="btn btn-primary">
+                <i class="bi bi-file-earmark-text"></i> {{ 'شهادة فحص المواد' if current_locale == 'ar' else 'MTC' }}
+            </a>
+            {% endif %}
+            <button type="button" class="btn btn-outline-primary" onclick="window.print()">
+                <i class="bi bi-printer-fill"></i> {{ 'طباعة' if current_locale == 'ar' else 'Print' }}
+            </button>
             <a href="{{ url_for('production_orders.index') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-{{ 'left' if current_locale != 'ar' else 'right' }}"></i>
                 {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
@@ -66,9 +80,49 @@
                             <td>{{ order.customer_code or '-' }}</td>
                         </tr>
                         <tr>
+                            <th>{{ 'المنتج' if current_locale == 'ar' else 'Product' }}</th>
+                            <td>
+                                {% set _code = order.product.product_code if order.product else order.product_code %}
+                                {% set _desc = (order.product.description_ar if current_locale == 'ar' else order.product.description_en) if order.product else order.product_description %}
+                                {% if _code or _desc %}
+                                {% if _code %}<strong>{{ _code }}</strong>{% endif %}
+                                {% if order.product and order.product.barcode %}
+                                <br><small class="text-muted"><i class="bi bi-upc-scan"></i> {{ order.product.barcode }}</small>
+                                {% endif %}
+                                {% if _desc %}<br><small class="text-muted">{{ _desc }}</small>{% endif %}
+                                {% else %}-{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
                             <th>{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</th>
                             <td>DN{{ order.diameter }} {{ order.pipe_class or '' }}</td>
                         </tr>
+                        {% if order.product %}
+                        {% if order.product.zinc_type_param %}
+                        <tr>
+                            <th>{{ 'نوع الزنك' if current_locale == 'ar' else 'Zinc Type' }}</th>
+                            <td>{{ order.product.zinc_type_param.name_en }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.product.internal_finish_param %}
+                        <tr>
+                            <th>{{ 'التشطيب الداخلي' if current_locale == 'ar' else 'Internal Finish' }}</th>
+                            <td>{{ order.product.internal_finish_param.name_en }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.product.external_finish_param %}
+                        <tr>
+                            <th>{{ 'التشطيب الخارجي' if current_locale == 'ar' else 'External Finish' }}</th>
+                            <td>{{ order.product.external_finish_param.name_en }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.product.intent_use_param %}
+                        <tr>
+                            <th>{{ 'الاستخدام' if current_locale == 'ar' else 'Intended Use' }}</th>
+                            <td>{{ order.product.intent_use_param.name_en }}</td>
+                        </tr>
+                        {% endif %}
+                        {% endif %}
                         <tr>
                             <th>{{ 'الأولوية' if current_locale == 'ar' else 'Priority' }}</th>
                             <td>
@@ -113,6 +167,80 @@
                     </table>
                 </div>
             </div>
+
+            {% if order.application_profile %}
+            {% set ap = application_view(order.application_profile) %}
+            {% set ap_std = ap.get('standards', {}) %}
+            {% set ap_layers = ap.get('layers', {}) %}
+            {# The product owns the specification and the order starts as a copy
+               of it, so say which rows were changed for this customer. #}
+            {% set prod_ap = application_view(order.product.application_profile) if order.product else {} %}
+            {% set prod_layers = prod_ap.get('layers', {}) %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clipboard-check"></i>
+                        {{ 'الاستخدام والمواصفة' if current_locale == 'ar' else 'Application' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        {% set ns = namespace(any=false) %}
+                        {% for group, entries in application_standards %}
+                        {% for key, label in entries %}
+                        {% if ap_std.get(key) %}
+                        {% set ns.any = true %}
+                        <span class="badge bg-primary me-1">{{ label }}</span>
+                        {% endif %}
+                        {% endfor %}
+                        {% endfor %}
+                        {% if not ns.any %}
+                        <span class="text-muted small">{{ 'لم تحدد مواصفة' if current_locale == 'ar' else 'No standard ticked' }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0 text-center align-middle">
+                            <thead>
+                                <tr class="table-secondary">
+                                    <th style="min-width: 130px;"></th>
+                                    <th style="min-width: 110px;">{{ 'المصدر' if current_locale == 'ar' else 'Source' }}</th>
+                                    <th>{{ 'القيمة' if current_locale == 'ar' else 'Value' }}</th>
+                                    <th>{{ '+سماح' if current_locale == 'ar' else '+Tol' }}</th>
+                                    <th>{{ '−سماح' if current_locale == 'ar' else '−Tol' }}</th>
+                                    <th class="border-start border-3">{{ 'الأدنى' if current_locale == 'ar' else 'min.' }}</th>
+                                    <th>{{ 'الاسمي' if current_locale == 'ar' else 'Nominal' }}</th>
+                                    <th>{{ 'الأقصى' if current_locale == 'ar' else 'Max' }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for key, label_en, label_ar in application_layers %}
+                                {% set row = ap_layers.get(key, {}) %}
+                                {% set prod_row = prod_layers.get(key, {}) %}
+                                <tr>
+                                    <td class="fw-bold text-start">{{ label_ar if current_locale == 'ar' else label_en }}</td>
+                                    <td class="small">
+                                        {% if not prod_row %}
+                                        <span class="text-muted">—</span>
+                                        {% elif row == prod_row %}
+                                        <span class="badge bg-secondary">{{ 'من المنتج' if current_locale == 'ar' else 'from product' }}</span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark">{{ 'معدّل لهذا الأمر' if current_locale == 'ar' else 'changed for this order' }}</span>
+                                        {% endif %}
+                                    </td>
+                                    {% for field in ['value', 'tolerance_plus', 'tolerance_minus', 'min', 'nominal', 'max'] %}
+                                    {% set val = row.get(field) %}
+                                    <td class="{{ 'border-start border-3' if field == 'min' }}">
+                                        {% if val is not none %}{{ val }}{% else %}<span class="text-muted">—</span>{% endif %}
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             {% if order.notes or order.specifications %}
             <div class="card border-0 shadow-sm mb-4">
@@ -197,9 +325,10 @@
                                 <th>{{ 'الكود' if current_locale == 'ar' else 'Code' }}</th>
                                 <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
                                 <th>{{ 'القطر' if current_locale == 'ar' else 'DN' }}</th>
+                                <th>{{ 'النوع' if current_locale == 'ar' else 'Class' }}</th>
                                 <th>{{ 'المرحلة الحالية' if current_locale == 'ar' else 'Current Stage' }}</th>
                                 <th>{{ 'القرار النهائي' if current_locale == 'ar' else 'Final Decision' }}</th>
-                                <th>{{ 'الإجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                                <th class="col-actions">{{ 'الإجراءات' if current_locale == 'ar' else 'Actions' }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -212,6 +341,7 @@
                                 </td>
                                 <td>{{ pipe.ladle_id or '-' }}</td>
                                 <td>DN{{ pipe.diameter }}</td>
+                                <td>{{ pipe.pipe_class or '-' }}</td>
                                 <td>
                                     <span class="badge bg-info">{{ pipe.current_stage }}</span>
                                 </td>
@@ -224,7 +354,7 @@
                                         <span class="badge bg-secondary">{{ 'قيد المعالجة' if current_locale == 'ar' else 'In Progress' }}</span>
                                     {% endif %}
                                 </td>
-                                <td>
+                                <td class="col-actions">
                                     <div class="btn-group btn-group-sm">
                                         <a href="{{ url_for('stages.view', id=pipe.id) }}" class="btn btn-outline-info" title="View">
                                             <i class="bi bi-eye"></i>
@@ -237,7 +367,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-4">
+                                <td colspan="7" class="text-center text-muted py-4">
                                     <i class="bi bi-inbox display-6"></i>
                                     <p class="mt-2">{{ 'لا توجد أنابيب في هذا الأمر' if current_locale == 'ar' else 'No pipes in this order' }}</p>
                                 </td>
@@ -250,4 +380,25 @@
         </div>
     </div>
 </div>
+
+<style>
+@media print {
+    /* Hide app chrome and interactive elements — print order info + pipes */
+    .sidebar, .topbar, .btn-group, .btn, .col-actions { display: none !important; }
+    .main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+    .container-fluid { padding: 0 !important; }
+    .card { box-shadow: none !important; border: 1px solid #999 !important; break-inside: avoid; }
+    .card-header.bg-primary, .card-header.bg-info {
+        background: #eee !important; color: #000 !important;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .table { font-size: 0.85rem; }
+    .badge { border: 1px solid #333; color: #000 !important; background: #fff !important; }
+    a { text-decoration: none; color: #000; }
+    a[href]:after { content: none !important; }
+    /* Order info + progress side by side, pipes full width under them */
+    .row { display: block; }
+    .row > [class*="col-"] { width: 100% !important; max-width: 100% !important; flex: none !important; }
+}
+</style>
 {% endblock %}

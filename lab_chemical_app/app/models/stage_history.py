@@ -25,6 +25,7 @@ class PipeStageHistory(db.Model):
     notes = db.Column(db.Text)
     measurement_value = db.Column(db.Float)
     measurement_type = db.Column(db.String(50))
+    temperature = db.Column(db.Float)  # CCM casting temperature snapshot
     stage_date = db.Column(db.Date)
     stage_time = db.Column(db.Time)
 
@@ -58,6 +59,7 @@ class PipeStageHistory(db.Model):
             notes=stage.notes,
             measurement_value=stage.measurement_value,
             measurement_type=stage.measurement_type,
+            temperature=stage.temperature,
             stage_date=stage.stage_date,
             stage_time=stage.stage_time,
             action=action,

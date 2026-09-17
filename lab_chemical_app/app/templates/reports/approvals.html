@@ -1,0 +1,78 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block filters %}
+    {{ super() }}
+    <div class="col-md-2">
+        <label class="form-label small">{{ 'Approver' if current_locale != 'ar' else 'المُعتمد' }}</label>
+        <select name="approved_by" class="form-select form-select-sm">
+            <option value="">All</option>
+            {% for a in data.approvers %}
+            <option value="{{ a.id }}" {{ 'selected' if data.filters.approved_by == a.id }}>{{ a.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+{% endblock %}
+
+{% block body %}
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card border-primary">
+            <div class="card-body py-2">
+                <h6 class="text-muted small mb-0">{{ 'Total decided' if current_locale != 'ar' else 'إجمالي المُقرر' }}</h6>
+                <h4 class="mb-0">{{ data.summary.total }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body py-2">
+                <h6 class="text-muted small mb-0">{{ 'Accepted' if current_locale != 'ar' else 'المقبول' }}</h6>
+                <h4 class="mb-0 text-success">{{ data.summary.accepted }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-danger">
+            <div class="card-body py-2">
+                <h6 class="text-muted small mb-0">{{ 'Rejected' if current_locale != 'ar' else 'المرفوض' }}</h6>
+                <h4 class="mb-0 text-danger">{{ data.summary.rejected }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>{{ 'Pipe' if current_locale != 'ar' else 'الماسورة' }}</th>
+                    <th class="text-end">DN</th>
+                    <th>{{ 'Class' if current_locale != 'ar' else 'الفئة' }}</th>
+                    <th>{{ 'Date' if current_locale != 'ar' else 'التاريخ' }}</th>
+                    <th>{{ 'Final' if current_locale != 'ar' else 'النهائي' }}</th>
+                    <th>{{ 'Lab' if current_locale != 'ar' else 'المعمل' }}</th>
+                    <th>{{ 'Approved by' if current_locale != 'ar' else 'اعتمدها' }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.rows %}
+                <tr>
+                    <td><strong>{{ r.pipe_code }}</strong></td>
+                    <td class="text-end">DN{{ r.dn if r.dn is not none else '' }}</td>
+                    <td>{{ r.pipe_class }}</td>
+                    <td>{{ r.production_date }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if r.final_decision == 'ACCEPT' else ('danger' if r.final_decision == 'REJECT' else 'secondary') }}">{{ r.final_decision or '—' }}</span>
+                    </td>
+                    <td><small>{{ r.lab_decision }}</small></td>
+                    <td>{{ r.approver }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No decided pipes for selected filters</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block filters %}
+<div class="col-md-3">
+    <label class="form-label small">{{ 'من تاريخ' if current_locale == 'ar' else 'From date' }}</label>
+    <input type="date" name="date_from" class="form-control form-control-sm"
+           value="{{ data.filters.date_from or '' }}">
+</div>
+<div class="col-md-3">
+    <label class="form-label small">{{ 'إلى تاريخ' if current_locale == 'ar' else 'To date' }}</label>
+    <input type="date" name="date_to" class="form-control form-control-sm"
+           value="{{ data.filters.date_to or '' }}">
+</div>
+<div class="col-md-3">
+    <label class="form-label small">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</label>
+    <input type="text" name="customer" class="form-control form-control-sm"
+           value="{{ data.filters.customer or '' }}">
+</div>
+{% endblock %}
+
+{% block body %}
+{% set ar = current_locale == 'ar' %}
+{% include 'reports/_delivery_comparison_tables.html' %}
+{% endblock %}

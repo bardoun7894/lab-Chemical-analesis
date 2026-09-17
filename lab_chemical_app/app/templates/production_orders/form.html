@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
+{% import 'components/_application_block.html' as app_block with context %}
 
 {% block title %}
-{{ 'تعديل أمر الإنتاج' if order else 'أمر إنتاج جديد' if current_locale == 'ar' else 'Edit Production Order' if order else 'New Production Order' }}
+{{ 'تعديل أمر الإنتاج' if order and order.id else 'أمر إنتاج جديد' if current_locale == 'ar' else 'Edit Production Order' if order and order.id else 'New Production Order' }}
 {% endblock %}
 
 {% block content %}
@@ -11,7 +12,7 @@
         <div>
             <h2>
                 <i class="bi bi-clipboard-plus"></i>
-                {% if order %}
+                {% if order and order.id %}
                     {{ 'تعديل أمر الإنتاج' if current_locale == 'ar' else 'Edit Production Order' }}
                     <small class="text-muted">{{ order.order_number }}</small>
                 {% else %}
@@ -27,6 +28,34 @@
 
     <form method="POST" class="needs-validation" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- OCR Upload -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
+                <h6 class="mb-0"><i class="bi bi-camera"></i> {{ 'رفع أمر إنتاج / شراء (OCR)' if current_locale == 'ar' else 'Upload Order Document (OCR)' }}</h6>
+                <span class="badge bg-light text-primary">AI Vision</span>
+            </div>
+            <div class="card-body py-2">
+                <div class="row align-items-center g-2">
+                    <div class="col-md-6">
+                        <input type="file" id="orderOcrInput" class="form-control form-control-sm" accept="image/*">
+                        <small class="text-muted">{{ 'صور أمر الإنتاج أو البيع لاستخراج البيانات' if current_locale == 'ar' else 'Photograph the order document to extract data' }}</small>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-primary btn-sm w-100" id="orderOcrBtn" disabled>
+                            <i class="bi bi-cpu"></i> Extract
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <div id="orderOcrStatus" style="display:none;">
+                            <div class="spinner-border spinner-border-sm text-primary" id="orderOcrSpinner" style="display:none;"></div>
+                            <small id="orderOcrMsg" class="text-muted"></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <!-- Main Info -->
             <div class="col-lg-8">
@@ -49,17 +78,19 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    {{ 'اسم العميل' if current_locale == 'ar' else 'Customer Name' }}
+                                    {{ 'العميل' if current_locale == 'ar' else 'Customer' }}
                                 </label>
-                                <input type="text" name="customer_name" class="form-control"
-                                       value="{{ order.customer_name if order else '' }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">
-                                    {{ 'كود العميل' if current_locale == 'ar' else 'Customer Code' }}
-                                </label>
-                                <input type="text" name="customer_code" class="form-control"
-                                       value="{{ order.customer_code if order else '' }}">
+                                <select name="customer_id" class="form-select" id="customerSelect">
+                                    <option value="">-- {{ 'اختر العميل' if current_locale == 'ar' else 'Select Customer' }} --</option>
+                                    {% for c in customers %}
+                                    <option value="{{ c.id }}"
+                                            data-name="{{ c.name_en }}"
+                                            data-code="{{ c.code }}"
+                                            {{ 'selected' if order and order.customer_id == c.id }}>
+                                        {{ c.code }} - {{ c.name_en }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
@@ -89,58 +120,124 @@
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
+                            <div class="col-12">
+                                <label class="form-label fw-bold" for="productBarcode">
+                                    <i class="bi bi-upc-scan"></i>
+                                    {{ 'امسح باركود الصنف' if current_locale == 'ar' else 'Scan item barcode' }}
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                                    <input type="text" class="form-control" id="productBarcode"
+                                           inputmode="numeric" autocomplete="off"
+                                           placeholder="{{ 'امسح أو اكتب الباركود' if current_locale == 'ar' else 'Scan or type the barcode' }}"
+                                           data-msg-unknown="{{ 'مفيش صنف بالباركود ده' if current_locale == 'ar' else 'No product carries this barcode' }}"
+                                           data-msg-found="{{ 'تم اختيار %s' if current_locale == 'ar' else 'Selected %s' }}"
+                                           value="{{ order.product.barcode if order and order.product and order.product.barcode else '' }}">
+                                </div>
+                                <div class="form-text" id="productBarcodeHint">
+                                    {{ 'المسح يختار الصنف تلقائيًا. لو مفيش باركود اختر من القائمة تحت.' if current_locale == 'ar'
+                                       else 'Scanning selects the item below. No barcode? Pick it from the list instead.' }}
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">
+                                    {{ 'اختر المنتج' if current_locale == 'ar' else 'Select Product' }}
+                                </label>
+                                <select name="product_id" class="form-select" id="productSelect">
+                                    <option value="">-- {{ 'اختر من قائمة المنتجات' if current_locale == 'ar' else 'Select from Product Configurator' }} --</option>
+                                    {% for p in products %}
+                                    <option value="{{ p.id }}"
+                                            data-code="{{ p.product_code }}"
+                                            data-desc="{{ p.description_en or '' }}"
+                                            data-weight="{{ p.weight_kg or '' }}"
+                                            data-length="{{ p.length_m or '' }}"
+                                            data-dn="{{ p.dn_label }}"
+                                            data-class="{{ p.class_param.code if p.class_param else '' }}"
+                                            data-barcode="{{ p.barcode or '' }}"
+                                            data-zinc="{{ p.zinc_type_param.name_en if p.zinc_type_param else '' }}"
+                                            data-internal="{{ p.internal_finish_param.name_en if p.internal_finish_param else '' }}"
+                                            data-external="{{ p.external_finish_param.name_en if p.external_finish_param else '' }}"
+                                            {# The group the block must show comes from Intended Use, not
+                                               from the copy last saved on the profile. #}
+                                            data-app='{{ dict((p.application_profile or {}), group=(p.application_group() or (p.application_profile or {}).get("group")))|tojson }}'
+                                            {{ 'selected' if order and order.product_id == p.id }}>
+                                        {{ p.product_code }} - {{ (p.description_en or '')|truncate(60) }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
                                 <label class="form-label">
                                     {{ 'كود المنتج' if current_locale == 'ar' else 'Product Code' }}
                                 </label>
-                                <input type="text" name="product_code" class="form-control"
-                                       value="{{ order.product_code if order else '' }}"
-                                       placeholder="{{ 'كود المنتج' if current_locale == 'ar' else 'Product Code' }}">
+                                <input type="text" name="product_code" class="form-control" id="fieldProductCode"
+                                       value="{{ order.product_code if order else '' }}" readonly>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-3">
+                                <label class="form-label">
+                                    {{ 'الباركود' if current_locale == 'ar' else 'Barcode' }}
+                                </label>
+                                <input type="text" class="form-control" id="fieldBarcode"
+                                       value="{{ order.product.barcode if order and order.product and order.product.barcode else '' }}" readonly>
+                            </div>
+                            <div class="col-md-3">
                                 <label class="form-label">
                                     {{ 'القطر' if current_locale == 'ar' else 'Diameter' }}
                                 </label>
-                                <select name="diameter" class="form-select">
-                                    <option value="">{{ 'اختر القطر' if current_locale == 'ar' else 'Select Diameter' }}</option>
-                                    <option value="300" {{ 'selected' if order and order.diameter == 300 }}>DN300</option>
-                                    <option value="500" {{ 'selected' if order and order.diameter == 500 }}>DN500</option>
-                                    <option value="600" {{ 'selected' if order and order.diameter == 600 }}>DN600</option>
-                                </select>
+                                <input type="text" name="diameter" class="form-control" id="fieldDiameter"
+                                       value="{{ ('DN' ~ order.diameter) if order and order.diameter else '' }}" readonly>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <label class="form-label">
-                                    {{ 'صنف الأنبوب' if current_locale == 'ar' else 'Pipe Class' }}
+                                    {{ 'الصنف' if current_locale == 'ar' else 'Class' }}
                                 </label>
-                                <select name="pipe_class" class="form-select">
-                                    <option value="">{{ 'اختر الصنف' if current_locale == 'ar' else 'Select Class' }}</option>
-                                    <option value="K9" {{ 'selected' if order and order.pipe_class == 'K9' }}>K9</option>
-                                    <option value="C25" {{ 'selected' if order and order.pipe_class == 'C25' }}>C25</option>
-                                    <option value="Fittings" {{ 'selected' if order and order.pipe_class == 'Fittings' }}>Fittings</option>
-                                </select>
+                                <input type="text" name="pipe_class" class="form-control" id="fieldClass"
+                                       value="{{ order.pipe_class if order else '' }}" readonly>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
                                     {{ 'الوزن (كجم)' if current_locale == 'ar' else 'Weight (kg)' }}
                                 </label>
-                                <input type="number" step="0.01" name="product_weight" class="form-control"
-                                       value="{{ order.product_weight if order and order.product_weight else '' }}"
-                                       placeholder="{{ 'الوزن بالكيلوجرام' if current_locale == 'ar' else 'Weight in kg' }}">
+                                <input type="number" step="0.01" name="product_weight" class="form-control" id="fieldWeight"
+                                       value="{{ order.product_weight if order and order.product_weight else '' }}" readonly>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
                                     {{ 'الطول (متر)' if current_locale == 'ar' else 'Length (m)' }}
                                 </label>
-                                <input type="number" step="0.01" name="product_length" class="form-control"
-                                       value="{{ order.product_length if order and order.product_length else '' }}"
-                                       placeholder="{{ 'الطول بالمتر' if current_locale == 'ar' else 'Length in meters' }}">
+                                <input type="number" step="0.01" name="product_length" class="form-control" id="fieldLength"
+                                       value="{{ order.product_length if order and order.product_length else '' }}" readonly>
                             </div>
+                            <div class="col-md-4">
+                                <label class="form-label">
+                                    {{ 'نوع الزنك' if current_locale == 'ar' else 'Zinc Type' }}
+                                </label>
+                                <input type="text" class="form-control" id="fieldZinc"
+                                       value="{{ order.product.zinc_type_param.name_en if order and order.product and order.product.zinc_type_param else '' }}" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">
+                                    {{ 'التشطيب الداخلي' if current_locale == 'ar' else 'Internal Finish' }}
+                                </label>
+                                <input type="text" class="form-control" id="fieldInternal"
+                                       value="{{ order.product.internal_finish_param.name_en if order and order.product and order.product.internal_finish_param else '' }}" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">
+                                    {{ 'التشطيب الخارجي' if current_locale == 'ar' else 'External Finish' }}
+                                </label>
+                                <input type="text" class="form-control" id="fieldExternal"
+                                       value="{{ order.product.external_finish_param.name_en if order and order.product and order.product.external_finish_param else '' }}" readonly>
+                            </div>
+                            {# Intended Use is not shown here. It belongs to the
+                               product, and the order only needs what it decides:
+                               the Application group below. #}
                             <div class="col-12">
                                 <label class="form-label">
                                     {{ 'وصف المنتج' if current_locale == 'ar' else 'Product Description' }}
                                 </label>
-                                <textarea name="product_description" class="form-control" rows="2"
-                                          placeholder="{{ 'وصف المنتج...' if current_locale == 'ar' else 'Product description...' }}">{{ order.product_description if order else '' }}</textarea>
+                                <textarea name="product_description" class="form-control" rows="2" id="fieldDescription"
+                                          readonly>{{ order.product_description if order else '' }}</textarea>
                             </div>
                             <div class="col-12">
                                 <label class="form-label">
@@ -149,6 +246,34 @@
                                 <textarea name="specifications" class="form-control" rows="3">{{ order.specifications if order else '' }}</textarea>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clipboard-check"></i>
+                            {{ 'الاستخدام والمواصفة' if current_locale == 'ar' else 'Application' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {# The product authors a table for every standard its
+                           group offers. An order is built to exactly one of
+                           them, so this is a choice, not tabs, and the figures
+                           are the product's — read-only here. #}
+                        {# Group follows the product's Intended Use, not the
+                           copy saved on the profile, so the standards on offer
+                           match the field above. #}
+                        {{ app_block.application_order_block(
+                               application_for_order(
+                                   order.application_profile if order else none,
+                                   order.product.application_profile
+                                   if order and order.product else none,
+                                   order.product.application_group()
+                                   if order and order.product else none),
+                               application_layers,
+                               current_locale == 'ar') }}
+                        {{ app_block.application_order_script() }}
                     </div>
                 </div>
 
@@ -197,7 +322,7 @@
                             <input type="date" name="expected_end_date" class="form-control"
                                    value="{{ order.expected_end_date.strftime('%Y-%m-%d') if order and order.expected_end_date else '' }}">
                         </div>
-                        {% if order %}
+                        {% if order and order.id %}
                         <div class="mb-3">
                             <label class="form-label">
                                 {{ 'تاريخ الانتهاء الفعلي' if current_locale == 'ar' else 'Actual End Date' }}
@@ -259,10 +384,11 @@
                 </div>
 
                 <!-- Submit Button -->
+                {% include 'components/_audit_reason.html' %}
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-primary btn-lg">
                         <i class="bi bi-check-lg"></i>
-                        {{ 'حفظ التغييرات' if order else 'إنشاء الأمر' if current_locale == 'ar' else 'Save Changes' if order else 'Create Order' }}
+                        {{ 'حفظ التغييرات' if order and order.id else 'إنشاء الأمر' if current_locale == 'ar' else 'Save Changes' if order and order.id else 'Create Order' }}
                     </button>
                     <a href="{{ url_for('production_orders.index') }}" class="btn btn-outline-secondary">
                         {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
@@ -290,5 +416,176 @@
         }, false)
     })
 })()
+
+// Product selector auto-fill
+var productSelect = document.getElementById('productSelect');
+if (productSelect) {
+    productSelect.addEventListener('change', function() {
+        var opt = this.options[this.selectedIndex];
+        var fields = {
+            fieldProductCode: 'code', fieldDescription: 'desc',
+            fieldWeight: 'weight', fieldLength: 'length',
+            fieldDiameter: 'dn', fieldClass: 'class',
+            fieldBarcode: 'barcode', fieldZinc: 'zinc'
+        };
+        for (var id in fields) {
+            var el = document.getElementById(id);
+            if (el) { el.value = opt.value ? (opt.dataset[fields[id]] || '') : ''; }
+        }
+        var desc = opt.value ? (opt.dataset.desc || '') : '';
+        var intEl = document.getElementById('fieldInternal');
+        var extEl = document.getElementById('fieldExternal');
+        var intVal = '', extVal = '';
+        var iIdx = desc.search(/\bInternal\b/i);
+        var eIdx = desc.search(/\bExternal\b/i);
+        if (iIdx >= 0 && eIdx >= 0 && eIdx > iIdx) {
+            intVal = desc.substring(iIdx + 'Internal'.length, eIdx).trim();
+            extVal = desc.substring(eIdx + 'External'.length).trim();
+        } else if (iIdx >= 0) {
+            intVal = desc.substring(iIdx + 'Internal'.length).trim();
+        } else if (eIdx >= 0) {
+            extVal = desc.substring(eIdx + 'External'.length).trim();
+        }
+        intVal = intVal.replace(/^\s*finish\s*/i, '');
+        extVal = extVal.replace(/^\s*finish\s*/i, '');
+        if (intEl) intEl.value = intVal;
+        if (extEl) extEl.value = extVal;
+        fillApplication(opt);
+    });
+}
+
+// The product owns the specification; the order starts as a copy of it. Written
+// through the same inputs the operator types into, so the derive script and the
+// hand-typed-limit rule behave exactly as if the numbers had been keyed in.
+// The product carries a table for every standard in its group. Hand the whole
+// set to the order block, which narrows the choices to that group and shows
+// the figures for whichever one is picked.
+function fillApplication(opt) {
+    if (!opt || !window.applicationOrderLoad) { return; }
+    var app = {};
+    try { app = JSON.parse(opt.dataset.app || '{}') || {}; } catch (e) { return; }
+    window.applicationOrderLoad(app);
+}
+
+// Barcode scan -> product. A reader types the digits fast and usually sends
+// Enter; the idle timer covers the readers that do not, and Enter is swallowed
+// so a scan never submits a half-filled order.
+(function () {
+    var box = document.getElementById('productBarcode');
+    var select = document.getElementById('productSelect');
+    var hint = document.getElementById('productBarcodeHint');
+    if (!box || !select) { return; }
+    var idle = null;
+
+    function optionFor(code) {
+        for (var i = 0; i < select.options.length; i++) {
+            var o = select.options[i];
+            if (o.value && (o.dataset.barcode || '') === code) { return o; }
+        }
+        return null;
+    }
+
+    function say(msg, bad) {
+        if (!hint) { return; }
+        hint.textContent = msg;
+        hint.classList.toggle('text-danger', !!bad);
+        hint.classList.toggle('text-success', !bad && !!msg);
+    }
+
+    function match() {
+        var code = (box.value || '').trim();
+        if (!code) { return; }
+        var opt = optionFor(code);
+        if (!opt) {
+            say(box.dataset.msgUnknown, true);
+            return;
+        }
+        select.value = opt.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        say(box.dataset.msgFound.replace('%s', opt.dataset.code || ''), false);
+    }
+
+    box.addEventListener('input', function () {
+        clearTimeout(idle);
+        idle = setTimeout(match, 250);
+    });
+    box.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter') { return; }
+        ev.preventDefault();
+        clearTimeout(idle);
+        match();
+    });
+})();
+
+// ========================================================================
+// ORDER OCR EXTRACTION
+// ========================================================================
+(function() {
+    const ocrInput = document.getElementById('orderOcrInput');
+    const ocrBtn = document.getElementById('orderOcrBtn');
+    const ocrSpinner = document.getElementById('orderOcrSpinner');
+    const ocrMsg = document.getElementById('orderOcrMsg');
+    const ocrStatus = document.getElementById('orderOcrStatus');
+    if (!ocrInput || !ocrBtn) return;
+
+    ocrInput.addEventListener('change', function() { ocrBtn.disabled = !this.files.length; });
+
+    ocrBtn.addEventListener('click', function() {
+        const file = ocrInput.files[0];
+        if (!file) return;
+        ocrStatus.style.display = 'block';
+        ocrSpinner.style.display = 'inline-block';
+        ocrMsg.textContent = 'Extracting order data...';
+        ocrBtn.disabled = true;
+
+        const fd = new FormData();
+        fd.append('image', file);
+
+        fetch(window.APP_ROOT + '/orders/api/ocr-extract', {
+            method: 'POST', body: fd,
+            headers: {'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value}
+        })
+        .then(r => r.json())
+        .then(data => {
+            ocrSpinner.style.display = 'none';
+            if (data.success) {
+                const v = data.values;
+                const map = {
+                    order_number: 'order_number', customer_name: null,
+                    sales_number: 'sales_number', target_quantity: 'target_quantity',
+                    product_code: 'product_code', order_date: 'order_date',
+                    notes: 'notes', diameter: 'diameter', pipe_class: 'pipe_class',
+                };
+                let filled = 0;
+                for (const [key, name] of Object.entries(map)) {
+                    if (!name || v[key] === null || v[key] === undefined) continue;
+                    const el = document.querySelector(`[name="${name}"]`);
+                    if (el) {
+                        if (el.readOnly) {
+                            // Skip read-only product fields — fill via product selector
+                            continue;
+                        }
+                        el.value = v[key];
+                        el.style.backgroundColor = '#d4edda';
+                        setTimeout(() => { el.style.backgroundColor = ''; }, 3000);
+                        filled++;
+                    }
+                }
+                ocrMsg.textContent = `${filled} fields filled. Verify & save.`;
+                ocrMsg.className = 'text-success';
+            } else {
+                ocrMsg.textContent = data.error || 'Extraction failed';
+                ocrMsg.className = 'text-danger';
+            }
+            ocrBtn.disabled = false;
+        })
+        .catch(err => {
+            ocrSpinner.style.display = 'none';
+            ocrMsg.textContent = 'Error: ' + err.message;
+            ocrMsg.className = 'text-danger';
+            ocrBtn.disabled = false;
+        });
+    });
+})();
 </script>
 {% endblock %}

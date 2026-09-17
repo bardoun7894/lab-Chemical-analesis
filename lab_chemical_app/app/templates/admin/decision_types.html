@@ -42,7 +42,7 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table data-enhance data-page-size="20" class="table table-hover">
                     <thead class="table-light">
                         <tr>
                             <th>{{ 'المرحلة' if current_locale == 'ar' else 'Stage' }}</th>
@@ -54,14 +54,14 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for defect in decision_types %}
+                        {% for dt in decision_types %}
                         <tr>
-                            <td><strong>{{ defect.stage_name }}</strong></td>
-                            <td>{{ defect.defect_name_en }}</td>
-                            <td>{{ defect.defect_name_ar }}</td>
-                            <td>{{ defect.sort_order }}</td>
+                            <td><strong>{{ dt.stage_name }}</strong></td>
+                            <td>{{ dt.decision_name_en }}</td>
+                            <td>{{ dt.decision_name_ar }}</td>
+                            <td>{{ dt.sort_order }}</td>
                             <td>
-                                {% if defect.is_active %}
+                                {% if dt.is_active %}
                                 <span class="badge bg-success">{{ 'نشط' if current_locale == 'ar' else 'Active' }}</span>
                                 {% else %}
                                 <span class="badge bg-secondary">{{ 'غير نشط' if current_locale == 'ar' else 'Inactive' }}</span>
@@ -69,16 +69,16 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('admin.edit_decision_type', id=defect.id) }}" class="btn btn-outline-primary">
+                                    {% if can('admin', 'decision_types_edit') %}<a href="{{ url_for('admin.edit_decision_type', id=dt.id) }}" class="btn btn-outline-primary">
                                         <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <form method="POST" action="{{ url_for('admin.delete_decision_type', id=defect.id) }}"
+                                    </a>{% endif %}
+                                    {% if can('admin', 'decision_types_delete') %}<form method="POST" action="{{ url_for('admin.delete_decision_type', id=dt.id) }}"
                                           onsubmit="return confirm('{{ 'هل أنت متأكد من الحذف؟' if current_locale == 'ar' else 'Are you sure you want to delete?' }}');" style="display: inline;">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-outline-danger">
+                                        {% if can('admin', 'decision_types_delete') %}<button type="submit" class="btn btn-outline-danger">
                                             <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
+                                        </button>{% endif %}
+                                    </form>{% endif %}
                                 </div>
                             </td>
                         </tr>

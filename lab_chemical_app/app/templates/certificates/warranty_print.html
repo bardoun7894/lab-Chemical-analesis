@@ -1,0 +1,64 @@
+{# Warranty Certificate — form QC-01-F-28. #}
+{% extends 'certificates/_print_base.html' %}
+
+{% block extra_styles %}
+        .clause { border: 0; padding: 12px 2px 4px; line-height: 1.7; text-align: justify; }
+        .clause-ar {
+            border: 0; padding: 4px 2px 10px; line-height: 1.9;
+            direction: rtl; text-align: right; font-size: 13px;
+        }
+        .clause b, .clause-ar b { text-decoration: underline; }
+
+        .scope { margin-top: 6px; }
+        .scope .hd { border: 0; padding: 4px 2px; font-weight: 700; }
+        .scope td { border: 0; padding: 2px 2px 2px 18px; }
+        .scope .num { width: 26px; padding-left: 2px; }
+{% endblock %}
+
+{% block ref_rows %}
+        <tr>
+            <th>CERTIFICATE NO.</th>
+            <td>{{ cert.certificate_no }}</td>
+        </tr>
+        <tr>
+            <th>Issue Date</th>
+            <td>{{ cert.issue_date.strftime('%d/%m/%Y') if cert.issue_date else '' }}</td>
+        </tr>
+        <tr>
+            <th>Warranty Date</th>
+            <td>{{ cert.warranty_start_date.strftime('%d/%m/%Y') if cert.warranty_start_date else '' }}</td>
+        </tr>
+{% endblock %}
+
+{% block sheet_body %}
+    {# The description line sits under the material table on this form only. #}
+    <table class="grid">
+        <tr>
+            <th style="text-align:left; width:68%">Item Description</th>
+            <th>QTY</th>
+        </tr>
+        <tr>
+            <td class="desc">{{ description }}</td>
+            <td>{{ total_qty }}</td>
+        </tr>
+    </table>
+
+    <table>
+        <tr><td class="clause">
+            We GCP for Ductile Iron Pipes (GCP) S.A.E. hereby guarantee the following
+            products against the manufacturing defects for a period of
+            <b>{{ cert.period_label() }}</b> from the mentioned date.
+        </td></tr>
+        <tr><td class="clause-ar">
+            نضمن نحن شركة جى سى بى- ش.م.م. المنتجات التالية ضد عيوب الصناعة لمدة
+            <b>{{ cert.period_label(arabic=True) }}</b> من تاريخ بدء الضمان الموضح عاليه
+        </td></tr>
+    </table>
+
+    <table class="scope">
+        <tr><td class="hd" colspan="2">The following defects are out of warranty scope:</td></tr>
+        <tr><td class="num">1 -</td><td>Defects due to misuse of the products.</td></tr>
+        <tr><td class="num">2 -</td><td>Defects due to wrong handling &amp; storing.</td></tr>
+        <tr><td class="num">3 -</td><td>Defects due to wrong installation.</td></tr>
+    </table>
+{% endblock %}

@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{% from 'components/table_tools.html' import table_tools %}
+{% from 'components/pagination.html' import pagination %}
 
 {% block title %}Chemical Analysis List{% endblock %}
 
@@ -52,11 +54,84 @@
                     <label class="form-label">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</label>
                     <select name="decision" class="form-select">
                         <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
-                        <option value="ACCEPT" {{ 'selected' if selected_decision == 'ACCEPT' }}>Accept</option>
-                        <option value="REJECT" {{ 'selected' if selected_decision == 'REJECT' }}>Reject</option>
-                        <option value="HOLD" {{ 'selected' if selected_decision == 'HOLD' }}>Hold</option>
+                        {% for d in decisions %}
+                        <option value="{{ d.value }}" {{ 'selected' if selected_decision == d.value }}>{{ d.label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'تجميع حسب' if current_locale == 'ar' else 'Group by' }}</label>
+                    <select name="group_by" class="form-select">
+                        <option value="">{{ 'بدون' if current_locale == 'ar' else '(none)' }}</option>
+                        <option value="furnace" {{ 'selected' if group_by == 'furnace' }}>{{ 'الفرن' if current_locale == 'ar' else 'Furnace' }}</option>
+                        <option value="decision" {{ 'selected' if group_by == 'decision' }}>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</option>
+                        <option value="test_date" {{ 'selected' if group_by == 'test_date' }}>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</option>
+                    </select>
+                </div>
+
+                {% set adv_open = filters.ladle_id or filters.c_min or filters.c_max or filters.si_min or filters.si_max or filters.mg_min or filters.mg_max or filters.s_min or filters.s_max or filters.ce_min or filters.ce_max or filters.production_order_id or filters.customer or filters.sales_number or filters.dn or filters.pipe_class or filters.product_id %}
+
+                <!-- Advanced filter panel -->
+                <div class="col-12">
+                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#advancedFilter"
+                            aria-expanded="{{ 'true' if adv_open else 'false' }}">
+                        <i class="bi bi-sliders"></i>
+                        {{ 'فلتر متقدم' if current_locale == 'ar' else 'Advanced Filter' }}
+                    </button>
+                </div>
+                <div class="col-12 collapse {{ 'show' if adv_open }}" id="advancedFilter">
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</label>
+                            <input type="text" name="ladle_id" class="form-control" value="{{ filters.ladle_id or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'أمر الإنتاج' if current_locale == 'ar' else 'Production Order' }}</label>
+                            <select name="production_order_id" class="form-select">
+                                <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                                {% for po in production_orders %}
+                                <option value="{{ po.id }}" {{ 'selected' if filters.production_order_id == po.id }}>{{ po.order_number }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</label>
+                            <input type="text" name="customer" class="form-control" value="{{ filters.customer or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'أمر البيع' if current_locale == 'ar' else 'Sales Order' }}</label>
+                            <input type="text" name="sales_number" class="form-control" value="{{ filters.sales_number or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'القطر الاسمي' if current_locale == 'ar' else 'DN' }}</label>
+                            <input type="number" name="dn" class="form-control" value="{{ filters.dn or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'الفئة' if current_locale == 'ar' else 'Class' }}</label>
+                            <input type="text" name="pipe_class" class="form-control" value="{{ filters.pipe_class or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'المنتج' if current_locale == 'ar' else 'Product' }}</label>
+                            <select name="product_id" class="form-select">
+                                <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                                {% for p in products %}
+                                <option value="{{ p.id }}" {{ 'selected' if filters.product_id == p.id }}>{{ p.product_code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% for el, lbl, step in [('c','C','0.001'),('si','Si','0.001'),('mg','Mg','0.0001'),('s','S','0.0001'),('ce','CE','0.001')] %}
+                        <div class="col-md-3">
+                            <label class="form-label">{{ lbl }} {{ 'مدى' if current_locale == 'ar' else 'range' }}</label>
+                            <div class="input-group">
+                                <input type="number" step="{{ step }}" name="{{ el }}_min" class="form-control" placeholder="min" value="{{ filters[el ~ '_min'] or '' }}">
+                                <input type="number" step="{{ step }}" name="{{ el }}_max" class="form-control" placeholder="max" value="{{ filters[el ~ '_max'] or '' }}">
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="bi bi-search"></i>
@@ -75,56 +150,59 @@
 
     <!-- Results Table -->
     <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-end align-items-center">
+            {{ table_tools('chemical', export_url=url_for('chemical.export_excel'), columns=picker_columns) }}
+        </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover table-striped mb-0">
+                <table class="table table-hover table-striped mb-0" data-table-tools="chemical" data-row-select>
                     <thead class="table-dark">
                         <tr>
-                            <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
-                            <th>{{ 'الفرن' if current_locale == 'ar' else 'Furnace' }}</th>
-                            <th>{{ 'رقم المغرفة' if current_locale == 'ar' else 'Ladle#' }}</th>
-                            <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
-                            <th>C</th>
-                            <th>Si</th>
-                            <th>Mg</th>
-                            <th>S</th>
-                            <th>CE</th>
-                            <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
-                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                            <th data-col="date">{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                            <th data-col="furnace">{{ 'الفرن' if current_locale == 'ar' else 'Furnace' }}</th>
+                            <th data-col="ladle_no">{{ 'رقم المغرفة' if current_locale == 'ar' else 'Ladle#' }}</th>
+                            <th data-col="ladle_id">{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
+                            <th data-col="c">C</th>
+                            <th data-col="si">Si</th>
+                            <th data-col="mg">Mg</th>
+                            <th data-col="s">S</th>
+                            <th data-col="ce">CE</th>
+                            <th data-col="decision">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
+                            <th data-col="actions" data-col-label="{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}">{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for analysis in analyses %}
-                        <tr>
-                            <td>{{ analysis.test_date }}</td>
-                            <td>{{ analysis.furnace.furnace_code if analysis.furnace else '-' }}</td>
-                            <td>{{ analysis.ladle_no }}</td>
-                            <td><small class="text-muted">{{ analysis.ladle_id or '-' }}</small></td>
-                            <td class="{{ 'text-danger fw-bold' if analysis.carbon and (analysis.carbon < 3.0 or analysis.carbon > 3.9) }}">
+                    {% macro analysis_row(analysis) %}
+                        <tr data-row-id="{{ analysis.id }}">
+                            <td data-col="date">{{ analysis.test_date }}</td>
+                            <td data-col="furnace">{{ analysis.furnace.furnace_code if analysis.furnace else '-' }}</td>
+                            <td data-col="ladle_no">{{ analysis.ladle_no }}</td>
+                            <td data-col="ladle_id"><small class="text-muted">{{ analysis.ladle_id or '-' }}</small></td>
+                            <td data-col="c" class="{{ 'text-danger fw-bold' if analysis.carbon and (analysis.carbon < 3.0 or analysis.carbon > 3.9) }}">
                                 {{ '%.3f'|format(analysis.carbon) if analysis.carbon else '-' }}
                             </td>
-                            <td class="{{ 'text-danger fw-bold' if analysis.silicon and (analysis.silicon < 1.86 or analysis.silicon > 2.7) }}">
+                            <td data-col="si" class="{{ 'text-danger fw-bold' if analysis.silicon and (analysis.silicon < 1.86 or analysis.silicon > 2.7) }}">
                                 {{ '%.3f'|format(analysis.silicon) if analysis.silicon else '-' }}
                             </td>
-                            <td class="{{ 'text-danger fw-bold' if analysis.magnesium and (analysis.magnesium < 0.031 or analysis.magnesium > 0.07) }}">
+                            <td data-col="mg" class="{{ 'text-danger fw-bold' if analysis.magnesium and (analysis.magnesium < 0.031 or analysis.magnesium > 0.07) }}">
                                 {{ '%.4f'|format(analysis.magnesium) if analysis.magnesium else '-' }}
                             </td>
-                            <td class="{{ 'text-danger fw-bold' if analysis.sulfur and analysis.sulfur > 0.02 }}">
+                            <td data-col="s" class="{{ 'text-danger fw-bold' if analysis.sulfur and analysis.sulfur > 0.02 }}">
                                 {{ '%.4f'|format(analysis.sulfur) if analysis.sulfur else '-' }}
                             </td>
-                            <td>{{ '%.3f'|format(analysis.carbon_equivalent) if analysis.carbon_equivalent else '-' }}</td>
-                            <td>
-                                {% if analysis.decision == 'ACCEPT' %}
-                                <span class="badge bg-success">{{ analysis.decision }}</span>
-                                {% elif analysis.decision == 'REJECT' %}
-                                <span class="badge bg-danger">{{ analysis.decision }}</span>
-                                {% elif analysis.decision == 'HOLD' %}
-                                <span class="badge bg-warning text-dark">{{ analysis.decision }}</span>
+                            <td data-col="ce">{{ '%.3f'|format(analysis.carbon_equivalent) if analysis.carbon_equivalent else '-' }}</td>
+                            <td data-col="decision">
+                                {% set color = get_decision_color(analysis.decision) %}
+                                {% if analysis.decision %}
+                                    {% if color == 'orange' %}
+                                    <span class="badge" style="background-color:#fd7e14;color:#fff">{{ analysis.decision }}</span>
+                                    {% else %}
+                                    <span class="badge bg-{{ color }}">{{ analysis.decision }}</span>
+                                    {% endif %}
                                 {% else %}
-                                <span class="badge bg-secondary">{{ analysis.decision or '-' }}</span>
+                                <span class="badge bg-secondary">-</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-col="actions">
                                 <div class="btn-group btn-group-sm">
                                     <a href="{{ url_for('chemical.detail', id=analysis.id) }}" class="btn btn-outline-info" title="View">
                                         <i class="bi bi-eye"></i>
@@ -139,24 +217,51 @@
                                 </div>
                             </td>
                         </tr>
+                    {% endmacro %}
+                    <tbody>
+                        {% if grouped is not none %}
+                            {% for group_label, group_rows in grouped %}
+                            <tr class="table-secondary fw-bold">
+                                <td colspan="11">{{ group_label }} <span class="badge bg-dark">{{ group_rows|length }}</span></td>
+                            </tr>
+                            {% for analysis in group_rows %}
+                                {{ analysis_row(analysis) }}
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="11" class="text-center py-4 text-muted">
+                                    {{ 'لا توجد نتائج' if current_locale == 'ar' else 'No results found' }}
+                                </td>
+                            </tr>
+                            {% endfor %}
                         {% else %}
-                        <tr>
-                            <td colspan="11" class="text-center py-4 text-muted">
-                                {{ 'لا توجد نتائج' if current_locale == 'ar' else 'No results found' }}
-                            </td>
-                        </tr>
-                        {% endfor %}
+                            {% for analysis in analyses %}
+                                {{ analysis_row(analysis) }}
+                            {% else %}
+                            <tr>
+                                <td colspan="11" class="text-center py-4 text-muted">
+                                    {{ 'لا توجد نتائج' if current_locale == 'ar' else 'No results found' }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
         </div>
-        {% if analyses.total > 0 %}
+        {% if grouped is not none %}
+        {% if total > 0 %}
         <div class="card-footer bg-white">
             <small class="text-muted">
-                {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ analyses.total }}
+                {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ total }}
                 {{ 'تحليل' if current_locale == 'ar' else 'analyses' }}
             </small>
         </div>
+        {% endif %}
+        {% else %}
+        {{ pagination(analyses, 'chemical.list', per_page=per_page,
+                      per_page_options=per_page_options,
+                      unit_ar='تحليل', unit_en='analyses') }}
         {% endif %}
     </div>
 </div>
@@ -194,7 +299,7 @@
 <script>
 function confirmDelete(id, ladleId) {
     document.getElementById('deleteLadleId').textContent = ladleId;
-    document.getElementById('deleteForm').action = '/chemical/' + id + '/delete';
+    document.getElementById('deleteForm').action = window.APP_ROOT + '/chemical/' + id + '/delete';
     new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
 </script>

@@ -1,0 +1,43 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Ladle ID</th><th>Test Date</th><th>Furnace</th><th>Decision</th>
+                    <th class="text-end">C</th><th class="text-end">Si</th><th class="text-end">Mg</th>
+                    <th class="text-end">Pipes</th>
+                    <th class="text-end">Accept</th>
+                    <th class="text-end">Reject</th>
+                    <th class="text-end">Mech Tests</th>
+                    <th class="text-end">Pass</th>
+                    <th class="text-end">Fail</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.rows %}
+                <tr>
+                    <td><strong>{{ r.ladle_id }}</strong></td>
+                    <td>{{ r.test_date }}</td>
+                    <td>{{ r.furnace }}</td>
+                    <td><small>{{ r.decision }}</small></td>
+                    <td class="text-end">{{ r.carbon }}</td>
+                    <td class="text-end">{{ r.silicon }}</td>
+                    <td class="text-end">{{ r.magnesium }}</td>
+                    <td class="text-end">{{ r.pipe_count }}</td>
+                    <td class="text-end text-success">{{ r.accepted }}</td>
+                    <td class="text-end text-danger">{{ r.rejected }}</td>
+                    <td class="text-end">{{ r.mech_tests_count }}</td>
+                    <td class="text-end text-success">{{ r.mech_passes }}</td>
+                    <td class="text-end text-danger">{{ r.mech_fails }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="13" class="text-center text-muted py-4">No ladles</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}KPI Targets{% endblock %}
+{% block content %}
+{% set is_ar = current_locale == 'ar' %}
+
+{% macro target_row(key, label_ar, label_en, unit, direction) %}
+<tr>
+  <td class="fw-bold">{{ label_ar if is_ar else label_en }}</td>
+  <td>
+    <div class="input-group input-group-sm">
+      <input type="number" step="any" class="form-control form-control-sm"
+             name="{{ key }}" value="{{ targets.get(key, '') }}"
+             placeholder="{{ 'بدون هدف' if is_ar else 'no target' }}">
+      <span class="input-group-text">{{ unit }}</span>
+    </div>
+  </td>
+  <td class="small">
+    {% if direction == higher %}
+    <span class="badge bg-success">
+      <i class="bi bi-arrow-up"></i>
+      {{ 'الأعلى أفضل' if is_ar else 'higher is better' }}
+    </span>
+    {% else %}
+    <span class="badge bg-danger">
+      <i class="bi bi-arrow-down"></i>
+      {{ 'الأقل أفضل' if is_ar else 'lower is better' }}
+    </span>
+    {% endif %}
+  </td>
+</tr>
+{% endmacro %}
+<div class="container">
+  <h2><i class="bi bi-bullseye"></i>
+    {{ 'أهداف المؤشرات' if is_ar else 'KPI Targets' }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('admin.settings') }}">{{ 'الإعدادات' if is_ar else 'Settings' }}</a>
+      </li>
+      <li class="breadcrumb-item active">{{ 'أهداف المؤشرات' if is_ar else 'KPI Targets' }}</li>
+    </ol>
+  </nav>
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="alert alert-info small">
+          <i class="bi bi-info-circle"></i>
+          {{ 'اترك الخانة فارغة لو مفيش هدف — المؤشر ساعتها بيتعرض من غير حكم. الهدف قرار إدارة، والنظام ما بيفترضش رقم من عنده.'
+             if is_ar else
+             'Leave a field empty for no target — the tile then shows no verdict. Targets are a management decision; the system never assumes a number.' }}
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>{{ 'المؤشر' if is_ar else 'KPI' }}</th>
+                <th style="width: 180px;">{{ 'الهدف' if is_ar else 'Target' }}</th>
+                <th>{{ 'الأفضل' if is_ar else 'Better when' }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for key, label_ar, label_en, unit, direction in kpis %}
+              {{ target_row(key, label_ar, label_en, unit, direction) }}
+              {% endfor %}
+
+              {# Not plant-wide numbers: the line a single machine or stage may
+                 not cross. The alert engine tests each one against it. #}
+              <tr class="table-light">
+                <th colspan="3" class="small">
+                  <i class="bi bi-exclamation-triangle"></i>
+                  {{ 'حدود التنبيه — تتقاس على كل مكنة/مرحلة/قطر لوحده، والشهري على الشهر الجاري'
+                     if is_ar else
+                     'Alert thresholds — measured per machine / stage / mould / shift / DN, plus the month to date' }}
+                </th>
+              </tr>
+              {% for key, label_ar, label_en, unit, direction in scoped %}
+              {{ target_row(key, label_ar, label_en, unit, direction) }}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if whatsapp_available or whatsapp.get('enabled') %}
+        <hr class="my-4">
+
+        {# Who gets told. Ships off: a message on somebody's phone should never
+           be the consequence of a default nobody chose. #}
+        <h6 class="mb-3">
+          <i class="bi bi-whatsapp text-success"></i>
+          {{ 'تنبيهات واتساب' if is_ar else 'WhatsApp alerts' }}
+        </h6>
+        {# Tells the route this form carried the WhatsApp fields. Without it, a
+           save from a screen where the section is hidden would read the absent
+           checkbox as "off" and wipe a working configuration. #}
+        <input type="hidden" name="whatsapp_section" value="1">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <div class="form-check form-switch mt-4">
+              <input class="form-check-input" type="checkbox" role="switch"
+                     id="whatsapp_enabled" name="whatsapp_enabled"
+                     {{ 'checked' if whatsapp.get('enabled') }}>
+              <label class="form-check-label" for="whatsapp_enabled">
+                {{ 'مفعّل' if is_ar else 'Enabled' }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">
+              {{ 'الأرقام (افصل بينها بفاصلة)' if is_ar
+                 else 'Numbers (comma separated)' }}
+            </label>
+            <input type="text" class="form-control" name="whatsapp_recipients"
+                   value="{{ whatsapp.get('recipients', '') }}"
+                   placeholder="201001234567, 201009876543">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">{{ 'يرسل عند' if is_ar else 'Send on' }}</label>
+            <select class="form-select" name="whatsapp_min_severity">
+              <option value="critical" {{ 'selected' if whatsapp.get('min_severity', 'critical') == 'critical' }}>
+                {{ 'الحرج فقط' if is_ar else 'Critical only' }}
+              </option>
+              <option value="warn" {{ 'selected' if whatsapp.get('min_severity') == 'warn' }}>
+                {{ 'كل التنبيهات' if is_ar else 'Every alert' }}
+              </option>
+            </select>
+          </div>
+        </div>
+        {% if not whatsapp_ready %}
+        <div class="form-text mt-2">
+          <i class="bi bi-info-circle"></i>
+          {{ 'الإرسال يحتاج كمان بيانات دخول البوت في متغيرات البيئة (WHATSAPP_USER / WHATSAPP_PASS أو WHATSAPP_TOKEN) — مش بتتحفظ هنا.'
+             if is_ar else
+             'Sending also needs the bot credentials in the environment (WHATSAPP_USER / WHATSAPP_PASS, or WHATSAPP_TOKEN) — they are not stored on this page.' }}
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary mt-3">
+          <i class="bi bi-check2"></i> {{ 'حفظ' if is_ar else 'Save' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

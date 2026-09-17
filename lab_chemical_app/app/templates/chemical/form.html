@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% from 'components/_reason_picker.html' import reason_picker with context %}
 
 {% block title %}{{ 'Edit' if analysis else 'New' }} Chemical Analysis{% endblock %}
 
@@ -26,6 +27,9 @@
 
     <form method="POST" id="analysisForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if request.args.get('order_id') %}
+        <input type="hidden" name="order_id" value="{{ request.args.get('order_id') }}">
+        {% endif %}
 
         <div class="row">
             <!-- Left Column - Basic Info -->
@@ -71,6 +75,15 @@
                             <input type="text" name="ladle_id" class="form-control bg-light" readonly
                                    value="{{ analysis.ladle_id if analysis else '' }}" id="ladleIdField">
                             <small class="text-muted">{{ 'يتم حسابه تلقائياً' if current_locale == 'ar' else 'Auto-calculated' }}</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الوزن (كجم)' if current_locale == 'ar' else 'Weight (kg)' }}</label>
+                            <input type="number" name="weight" class="form-control" step="0.01" min="0"
+                                   value="{{ analysis.weight if analysis and analysis.weight is not none else '' }}">
+                            <small class="text-muted">
+                                {{ 'وزن الصبة (كجم) — اختياري' if current_locale == 'ar' else 'Melt weight of the pour — optional' }}
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -128,11 +141,13 @@
                         <!-- AI Auto-fill Status -->
                         <div class="mb-3">
                             <div class="d-flex align-items-center gap-2">
+                                {% if can('ai', 'chemical_analysis') %}
                                 <button type="button" class="btn btn-sm btn-outline-primary" id="aiRefreshBtn" title="{{ 'تحديث التحليل' if current_locale == 'ar' else 'Refresh Analysis' }}">
                                     <i class="bi bi-robot"></i>
                                     <span id="aiRefreshBtnIcon"><i class="bi bi-arrow-clockwise"></i></span>
                                     <span id="aiCooldownTimer" style="display: none; font-size: 0.8em;"></span>
                                 </button>
+                                {% endif %}
                                 <div id="aiLoadingSpinner" class="flex-grow-1" style="display: none;">
                                     <div class="spinner-border spinner-border-sm text-primary" role="status">
                                         <span class="visually-hidden">Loading...</span>
@@ -155,6 +170,7 @@
                                     <i class="bi bi-robot"></i> AI
                                 </span>
                             </label>
+                            {{ reason_picker('reasonField') }}
                             <textarea name="reason" class="form-control" rows="2" id="reasonField">{{ analysis.reason if analysis else '' }}</textarea>
                         </div>
 
@@ -184,6 +200,53 @@
 
             <!-- Right Column - Chemical Elements -->
             <div class="col-lg-8">
+                <!-- OCR Upload Card -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="bi bi-camera"></i>
+                            {{ 'رفع تقرير المعمل (OCR)' if current_locale == 'ar' else 'Upload Lab Report (OCR)' }}
+                        </h6>
+                        <span class="badge bg-light text-primary">AI Vision</span>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="row align-items-center g-2">
+                            <div class="col-md-6">
+                                <input type="file" id="ocrImageInput" class="form-control form-control-sm"
+                                       accept="image/*" capture="environment">
+                                <small class="text-muted">
+                                    {{ 'صور تقرير السبكتروميتر — يتم استخراج القيم تلقائياً' if current_locale == 'ar' else 'Photograph the spectrometer printout — values extracted automatically' }}
+                                </small>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-primary btn-sm w-100" id="ocrExtractBtn" disabled>
+                                    <i class="bi bi-cpu"></i>
+                                    {{ 'استخراج' if current_locale == 'ar' else 'Extract' }}
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <div id="ocrStatus" style="display:none;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div id="ocrSpinner" class="spinner-border spinner-border-sm text-primary" style="display:none;"></div>
+                                        <small id="ocrMessage" class="text-muted"></small>
+                                    </div>
+                                </div>
+                                <div id="ocrPreview" style="display:none;">
+                                    <img id="ocrThumb" class="rounded" style="max-height:50px; cursor:pointer;"
+                                         onclick="window.open(this.src, '_blank')">
+                                </div>
+                            </div>
+                        </div>
+                        <div id="ocrResultBanner" class="alert alert-success mt-2 mb-0 py-1" style="display:none;">
+                            <i class="bi bi-check-circle"></i>
+                            <span id="ocrResultText"></span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="ocrUndoBtn" style="display:none;">
+                                <i class="bi bi-arrow-counterclockwise"></i> {{ 'تراجع' if current_locale == 'ar' else 'Undo' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-warning">
                         <h5 class="mb-0">
@@ -358,6 +421,126 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ========================================================================
+    // OCR IMAGE EXTRACTION
+    // ========================================================================
+    const ocrInput = document.getElementById('ocrImageInput');
+    const ocrBtn = document.getElementById('ocrExtractBtn');
+    const ocrSpinner = document.getElementById('ocrSpinner');
+    const ocrMessage = document.getElementById('ocrMessage');
+    const ocrStatus = document.getElementById('ocrStatus');
+    const ocrPreview = document.getElementById('ocrPreview');
+    const ocrThumb = document.getElementById('ocrThumb');
+    const ocrBanner = document.getElementById('ocrResultBanner');
+    const ocrResultText = document.getElementById('ocrResultText');
+    const ocrUndoBtn = document.getElementById('ocrUndoBtn');
+
+    let previousValues = {};  // for undo
+
+    ocrInput.addEventListener('change', function() {
+        ocrBtn.disabled = !this.files.length;
+        if (this.files.length) {
+            const url = URL.createObjectURL(this.files[0]);
+            ocrThumb.src = url;
+            ocrPreview.style.display = 'block';
+        }
+    });
+
+    ocrBtn.addEventListener('click', function() {
+        const file = ocrInput.files[0];
+        if (!file) return;
+
+        // Save current values for undo
+        previousValues = {};
+        document.querySelectorAll('.element-input').forEach(inp => {
+            previousValues[inp.name] = inp.value;
+        });
+
+        ocrStatus.style.display = 'block';
+        ocrSpinner.style.display = 'inline-block';
+        ocrMessage.textContent = 'Extracting values from image...';
+        ocrBtn.disabled = true;
+        ocrBanner.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        fetch(window.APP_ROOT + '/chemical/api/ocr-extract', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value }
+        })
+        .then(r => r.json())
+        .then(data => {
+            ocrSpinner.style.display = 'none';
+            if (data.success) {
+                // Auto-fill form fields
+                const elements = data.elements;
+                const fieldMap = {
+                    carbon: 'carbon', silicon: 'silicon', magnesium: 'magnesium',
+                    copper: 'copper', chromium: 'chromium', sulfur: 'sulfur',
+                    manganese: 'manganese', phosphorus: 'phosphorus', lead: 'lead', aluminum: 'aluminum'
+                };
+                let filled = 0;
+                for (const [key, fieldName] of Object.entries(fieldMap)) {
+                    if (elements[key] !== null && elements[key] !== undefined) {
+                        const input = document.querySelector(`input[name="${fieldName}"]`);
+                        if (input) {
+                            input.value = elements[key];
+                            input.dispatchEvent(new Event('input', {bubbles: true}));
+                            input.style.backgroundColor = '#d4edda';
+                            setTimeout(() => { input.style.backgroundColor = ''; }, 3000);
+                            filled++;
+                        }
+                    }
+                }
+                ocrMessage.textContent = data.message;
+                ocrBanner.style.display = 'block';
+                ocrBanner.className = 'alert alert-success mt-2 mb-0 py-1';
+                ocrResultText.textContent = `${filled} element values filled. Please verify before saving.`;
+                ocrUndoBtn.style.display = 'inline-block';
+
+                // Trigger equivalents recalculation and auto-decision
+                if (typeof calculateEquivalents === 'function') calculateEquivalents();
+                if (typeof calculateAutoDecision === 'function') calculateAutoDecision();
+            } else {
+                ocrMessage.textContent = data.error || 'Extraction failed';
+                ocrBanner.style.display = 'block';
+                ocrBanner.className = 'alert alert-danger mt-2 mb-0 py-1';
+                ocrResultText.textContent = data.error || 'Could not extract values from image.';
+            }
+            ocrBtn.disabled = false;
+        })
+        .catch(err => {
+            ocrSpinner.style.display = 'none';
+            ocrMessage.textContent = 'Network error';
+            ocrBanner.style.display = 'block';
+            ocrBanner.className = 'alert alert-danger mt-2 mb-0 py-1';
+            ocrResultText.textContent = 'Network error: ' + err.message;
+            ocrBtn.disabled = false;
+        });
+    });
+
+    // Undo OCR values
+    if (ocrUndoBtn) {
+        ocrUndoBtn.addEventListener('click', function() {
+            for (const [name, val] of Object.entries(previousValues)) {
+                const input = document.querySelector(`input[name="${name}"]`);
+                if (input) {
+                    input.value = val;
+                    input.dispatchEvent(new Event('input', {bubbles: true}));
+                }
+            }
+            ocrBanner.style.display = 'none';
+            ocrUndoBtn.style.display = 'none';
+            if (typeof calculateEquivalents === 'function') calculateEquivalents();
+        });
+    }
+
+    // ========================================================================
+    // EXISTING CODE BELOW
+    // ========================================================================
+
     // State tracking
     let isManualOverride = false;
     let lastAutoDecision = null;
@@ -426,7 +609,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Delay auto-decision to allow equivalents to be calculated first
     setTimeout(calculateAutoDecision, 100);
 
-    // AI Auto-Analysis (triggered automatically when elements change)
+    // AI Auto-Analysis (only when the role is allowed to call the AI endpoint).
+    // The server also enforces this via @requires_permission, so this is a
+    // UX guard, not a security boundary — it stops the JS from triggering
+    // pointless 403s.
+    const aiEnabled = {{ 'true' if can('ai', 'chemical_analysis') else 'false' }};
+    if (aiEnabled) {
     const aiLoadingSpinner = document.getElementById('aiLoadingSpinner');
     const aiErrorAlert = document.getElementById('aiErrorAlert');
     const aiErrorMessage = document.getElementById('aiErrorMessage');
@@ -734,6 +922,8 @@ document.addEventListener('DOMContentLoaded', function() {
         aiErrorAlert.style.display = 'none';
         triggerAiAnalysis();
     });
+    } // end if (aiEnabled) — gate only the AI triggers; the calc functions
+      // below (auto-decision, equivalents, ladle-id) must run for every user.
 
     // Auto-decision calculation function
     function calculateAutoDecision() {

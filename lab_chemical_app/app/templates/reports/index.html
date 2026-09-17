@@ -1,147 +1,288 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} {% block title %}Reports Dashboard{% endblock %} {%
+block content %}
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h1 class="mb-1">
+        {{ 'لوحة التقارير' if current_locale == 'ar' else 'Reports Dashboard' }}
+      </h1>
+      <p class="text-muted">
+        {{ 'عرض وتحليل تقارير الإنتاج والجودة' if current_locale == 'ar' else
+        'View and analyze production, quality, and performance reports' }}
+      </p>
+    </div>
+  </div>
 
-{% block title %}Reports{% endblock %}
+  {# Endpoints whose permission screen is not simply the view-function name. #}
+  {% set card_perms = {
+      'reports.index': 'reports.list',
+      'reports.stage_performance_v2': 'reports.stage_performance',
+      'reports.machine_performance_v2': 'reports.machine_performance',
+      'reports.export_traceability_excel': 'reports.export',
+      'analytics.import_data': 'analytics.import',
+      'reports.pipe_measurements': 'reports.stage_measurements'
+  } %}
 
-{% block content %}
-<div class="container">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col">
-            <h2>
-                <i class="bi bi-file-earmark-bar-graph"></i>
-                {{ 'التقارير' if current_locale == 'ar' else 'Reports' }}
-            </h2>
-            <p class="text-muted">
-                {{ 'اختر نوع التقرير لعرضه أو تصديره' if current_locale == 'ar' else 'Select report type to view or export' }}
+  {# Helper macro for a report card. Takes the endpoint rather than a built URL
+     so the card can hide itself when the role lacks that report's permission —
+     otherwise the dashboard offers links that bounce straight back to it. #}
+  {% macro report_card(endpoint, icon, color,
+  title_en, title_ar, desc_en, desc_ar) %}
+  {% set perm_key = card_perms.get(endpoint, endpoint) %}
+  {% if can(perm_key.split('.')[0], perm_key.split('.')[1]) %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100 shadow-sm hover-card">
+      <div class="card-body">
+        <div class="d-flex align-items-start gap-3">
+          <i
+            class="bi {{ icon }} text-{{ color }}"
+            style="font-size: 2.5rem"
+          ></i>
+          <div>
+            <h6 class="card-title mb-1">
+              {{ title_ar if current_locale == 'ar' else title_en }}
+            </h6>
+            <p class="card-text text-muted small mb-0">
+              {{ desc_ar if current_locale == 'ar' else desc_en }}
             </p>
+          </div>
         </div>
+      </div>
+      <div class="card-footer bg-transparent border-top">
+        <a href="{{ url_for(endpoint) }}" class="btn btn-outline-{{ color }} btn-sm w-100">
+          {{ 'عرض' if current_locale == 'ar' else 'Open' }}
+        </a>
+      </div>
     </div>
+  </div>
+  {% endif %}
+  {% endmacro %}
 
-    <!-- Report Cards -->
-    <div class="row g-4">
-        <!-- Daily Production -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-calendar-day text-primary fs-1"></i>
-                    </div>
-                    <h5>{{ 'الإنتاج اليومي' if current_locale == 'ar' else 'Daily Production' }}</h5>
-                    <p class="text-muted small">
-                        {{ 'تقرير إنتاج الأنابيب لكل يوم حسب الوردية' if current_locale == 'ar' else 'Daily pipe production report by shift' }}
-                    </p>
-                    <a href="{{ url_for('reports.daily_production') }}" class="btn btn-primary">
-                        <i class="bi bi-eye"></i>
-                        {{ 'عرض' if current_locale == 'ar' else 'View' }}
-                    </a>
-                </div>
-            </div>
-        </div>
+  <!-- Management Dashboard (featured) -->
+  <h4 class="text-muted text-uppercase small mb-2 mt-3">
+    {{ 'لوحة الإدارة' if current_locale == 'ar' else 'Management Dashboard' }}
+  </h4>
+  <div class="row g-3 mb-4">
+    {{ report_card('reports.bi_dashboard', 'bi-speedometer2',
+    'primary', 'CCM BI Dashboard', 'لوحة BI الاستراتيجية', 'The full strategic
+    BI board — KPIs, production, rejection reasons, stage funnel, saving matrix
+    — live data, same shape as the Excel dashboard', 'لوحة BI الكاملة — مؤشرات
+    وإنتاج وأسباب رفض وقمع مراحل وتوفير — داتا حية بنفس شكل لوحة الإكسيل') }} {{
+    report_card('reports.management_dashboard', 'bi-speedometer2',
+    'primary', 'Management Dashboard', 'لوحة الإدارة', 'Weekly / monthly KPI
+    summary with top defects and performance highlights', 'ملخص شهري/أسبوعي
+    للمؤشرات الرئيسية') }}
+  </div>
 
-        <!-- Chemical Analysis Report -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-flask text-warning fs-1"></i>
-                    </div>
-                    <h5>{{ 'التحليل الكيميائي' if current_locale == 'ar' else 'Chemical Analysis' }}</h5>
-                    <p class="text-muted small">
-                        {{ 'تقرير نتائج التحليل الكيميائي مع الإحصائيات' if current_locale == 'ar' else 'Chemical analysis results with statistics' }}
-                    </p>
-                    <a href="{{ url_for('reports.chemical_analysis') }}" class="btn btn-warning">
-                        <i class="bi bi-eye"></i>
-                        {{ 'عرض' if current_locale == 'ar' else 'View' }}
-                    </a>
-                </div>
-            </div>
-        </div>
+  <!-- Shift & Delivery -->
+  <h4 class="text-muted text-uppercase small mb-2 mt-3">
+    {{ 'الوردية والتسليم' if current_locale == 'ar' else 'Shift & Delivery' }}
+  </h4>
+  <div class="row g-3 mb-4">
+    {{ report_card('reports.shift_engineer', 'bi-person-badge',
+    'primary', 'Shift Engineer Report', 'تقرير مهندس الوردية', 'Per
+    shift/day/engineer: produced, accepted, rejected, pending, waiting
+    decisions, defects', 'لكل وردية/يوم/مهندس: الإنتاج والمقبول والمرفوض والمعلق
+    والعيوب') }} {{ report_card('reports.shift_engineer_comparison',
+    'bi-people', 'primary', 'Shift Engineer Comparison', 'مقارنة مهندسي
+    الورديات', 'Compare engineers side by side: production, defect %, reject %,
+    weight saving, per-machine', 'مقارنة المهندسين: الإنتاج، نسبة العيوب، الرفض،
+    توفير الوزن، وكل مكنة') }} {{
+    report_card('reports.delivery_overview', 'bi-truck', 'primary',
+    'Delivery Overview', 'نظرة عامة على التسليم', 'Per heat / batch / sales
+    order — what each heat produced and what was delivered', 'لكل معلقة/شحنة/أمر
+    بيع — كل مكة طلعت إيه وما تم تسليمه') }} {{
+    report_card('reports.delivery_comparison', 'bi-bar-chart-line',
+    'primary', 'Delivery Comparison', 'مقارنة التسليمات', 'Delivered pipes
+    compared by customer, engineer, and sales order side by side', 'مقارنة
+    الأنابيب المُسلَّمة حسب العميل والمهندس وأمر البيع') }}
+  </div>
 
-        <!-- Defect Summary -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-exclamation-triangle text-danger fs-1"></i>
-                    </div>
-                    <h5>{{ 'ملخص العيوب' if current_locale == 'ar' else 'Defect Summary' }}</h5>
-                    <p class="text-muted small">
-                        {{ 'تحليل العيوب حسب المرحلة والنوع' if current_locale == 'ar' else 'Defect analysis by stage and type' }}
-                    </p>
-                    <a href="{{ url_for('reports.defect_summary') }}" class="btn btn-danger">
-                        <i class="bi bi-eye"></i>
-                        {{ 'عرض' if current_locale == 'ar' else 'View' }}
-                    </a>
-                </div>
-            </div>
-        </div>
+  <!-- Production Reports -->
+  <h4 class="text-muted text-uppercase small mb-2 mt-3">
+    {{ 'تقارير الإنتاج' if current_locale == 'ar' else 'Production Reports' }}
+  </h4>
+  <div class="row g-3 mb-4">
+    {{ report_card('reports.production_summary', 'bi-graph-up',
+    'primary', 'Production Summary', 'ملخص الإنتاج', 'Total produced, accepted,
+    rejected, RFT %, scrap % — grouped and stat summary', 'إجمالي الإنتاج
+    والمقبول والمرفوض') }} {{ report_card('reports.order_performance',
+    'bi-clipboard-check', 'primary', 'Order Performance', 'أداء الأوامر', 'Per
+    PO: target, produced, completion %, delay days, efficiency %', 'لكل أمر
+    إنتاج: المستهدف والإنتاج وكفاءة') }} {{
+    report_card('reports.customer_production', 'bi-people', 'primary',
+    'Customer Production', 'إنتاج العميل', 'Production and reject % per
+    customer, delivery tracking', 'الإنتاج لكل عميل') }} {{
+    report_card('reports.delivery_report', 'bi-truck', 'primary',
+    'Delivery Report', 'تقرير التسليم', 'Sales order, bundle, receipt, customer,
+    pipes delivered', 'أمر البيع، الباقة، الإيصال') }} {{
+    report_card('reports.daily_production', 'bi-calendar-day',
+    'primary', 'Daily Production', 'الإنتاج اليومي', 'Day-by-day production by
+    shift and diameter', 'الإنتاج اليومي بالوردية والقطر') }}
+  </div>
 
-        <!-- Stage Tracking -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-diagram-3 text-info fs-1"></i>
-                    </div>
-                    <h5>{{ 'متابعة المراحل' if current_locale == 'ar' else 'Stage Tracking' }}</h5>
-                    <p class="text-muted small">
-                        {{ 'تتبع الأنابيب خلال مراحل الإنتاج' if current_locale == 'ar' else 'Track pipes through production stages' }}
-                    </p>
-                    <a href="{{ url_for('stages.list') }}" class="btn btn-info">
-                        <i class="bi bi-eye"></i>
-                        {{ 'عرض' if current_locale == 'ar' else 'View' }}
-                    </a>
-                </div>
-            </div>
-        </div>
+  <!-- Quality Reports -->
+  <h4 class="text-muted text-uppercase small mb-2 mt-3">
+    {{ 'تقارير الجودة' if current_locale == 'ar' else 'Quality Reports' }}
+  </h4>
+  <div class="row g-3 mb-4">
+    {{ report_card('reports.non_conformance', 'bi-exclamation-octagon',
+    'danger', 'Non-Conformance Register', 'سجل عدم المطابقة', 'Every
+    out-of-tolerance, held, or rejected record in one place — source code,
+    stage, problem, root cause, and the action required', 'كل ما هو خارج
+    المواصفات أو محجوز أو مرفوض في مكان واحد — كود المصدر والمرحلة والمشكلة
+    والسبب والإجراء المطلوب') }} {{ report_card('reports.rft_report',
+    'bi-award', 'success', 'RFT (Right First Time)', 'القبول من أول مرة',
+    'First-pass acceptance rate, rework count', 'نسبة القبول من أول مرة') }} {{
+    report_card('reports.rework_report', 'bi-arrow-repeat', 'warning',
+    'Rework by Stage', 'إعادة العمل حسب المرحلة', 'Rework count and rate for
+    every stage — Rework / Retest / Resample / Reheat, including stages that
+    were reworked then accepted', 'عدد ونسبة إعادة العمل لكل مرحلة — إعادة عمل
+    وإعادة اختبار وإعادة عينة وإعادة معالجة حرارية، بما فيها المراحل التي أُعيد
+    العمل بها ثم قُبلت') }} {{
+    report_card('reports.defect_analysis', 'bi-exclamation-triangle',
+    'success', 'Defect Analysis (Pareto)', 'تحليل العيوب', 'Defects by
+    stage/type/DN, Pareto 80/20 analysis', 'العيوب حسب المرحلة، مصفوفة باريتو')
+    }} {{ report_card('reports.andon', 'bi-broadcast-pin',
+    'danger', 'Andon Board', 'لوحة الصالة', 'Wall screen: work waiting at each
+    stage, stopped pipes with their age, today\u2019s yield',
+    'شاشة الصالة: الشغل عند كل مرحلة والمواسير المتوقفة وإنتاجية اليوم') }} {{
+    report_card('reports.traceability_tree', 'bi-diagram-3',
+    'success', 'Traceability Canvas', 'شجرة التتبع', 'The order workflow as a
+    wired graph: ladle, sampling, mechanical, pipes, stages — issues lit',
+    'مخطط سير الأمر: الشحنة والفحص والمراحل — بالمشاكل والقرارات') }} {{
+    report_card('reports.heat_traceability', 'bi-diagram-2',
+    'success', 'Heat / Ladle Traceability', 'تتبع المعلقة', 'Per ladle:
+    chemistry, linked pipes, mechanical test results', 'لكل معلقة: التحليل
+    والخواص') }} {{ report_card('reports.mechanical_statistical',
+    'bi-bar-chart-steps', 'success', 'Mechanical Statistical', 'الإحصاءات
+    الميكانيكية', 'Tensile (KgF/mm² + MPa), elongation, hardness —
+    avg/min/max/std', 'إحصاءات الخواص الميكانيكية') }} {{
+    report_card('reports.spc', 'bi-graph-up-arrow', 'danger', 'SPC
+    Control Charts', 'مخططات التحكم الإحصائي', 'I-MR, X̄-R, P and C charts over
+    lab measurements with Nelson rule violation detection', 'مخططات I-MR وX̄-R وP
+    وC مع كشف مخالفات قواعد نيلسون') }} {{
+    report_card('reports.capability', 'bi-bullseye', 'danger', 'Process
+    Capability', 'قدرة العملية', 'Cp/Cpk/Pp/Ppk and DPMO against spec limits
+    from element rules and tensile threshold', 'مؤشرات Cp/Cpk/Pp/Ppk مقابل حدود
+    المواصفة') }} {{ report_card('reports.lab_trends', 'bi-graph-up',
+    'success', 'Lab Trends', 'اتجاهات المختبر', 'Six trend charts: tensile,
+    hardness, elongation, nodularity, CE, microstructure — each point links to
+    its record', 'ستة مخططات اتجاه — كل نقطة تفتح سجلها') }} {{
+    report_card('reports.stage_cycle_time', 'bi-stopwatch', 'info',
+    'Stage Cycle Time', 'زمن المراحل', 'Per-stage dwell, inter-stage waiting,
+    lead time and bottleneck ranking', 'زمن كل مرحلة والانتظار بين المراحل
+    والاختناقات') }} {{ report_card('reports.stage_audit',
+    'bi-journal-text', 'info', 'Stage Audit Trail', 'سجل تدقيق المراحل', 'Every
+    recorded stage change: who, when, old vs new decision, reason', 'كل تغيير
+    مسجل على المراحل: من ومتى والقرار القديم والجديد') }} {{
+    report_card('reports.stage_measurements', 'bi-rulers', 'info',
+    'Stage Measurements', 'قياسات المراحل', 'Length, thickness, casting
+    temperature and per-meter profiles entered in the stage console popup',
+    'الطول والسماكة وحرارة الصب وملفات كل متر المُدخلة في نافذة المراحل') }} {{
+    report_card('reports.pipe_measurements', 'bi-file-earmark-ruled', 'info',
+    'Pipe Measurement Sheet', 'كشف قياسات الماسورة', 'One pipe: when it was
+    made, every raw reading, and the statistics for each set',
+    'ماسورة واحدة: اتعملت إمتى، وكل القرايات الخام، والإحصائيات بتاعة كل مجموعة')
+    }} {{ report_card('reports.approvals', 'bi-patch-check', 'success',
+    'Approval Register', 'سجل الاعتماد', 'Pipes with a final decision,
+    attributed to the approving user — filter by approver', 'الماسورات المقرر
+    قبولها أو رفضها ومن اعتمدها — فلترة حسب المعتمد') }} {{
+    report_card('reports.approver_comparison', 'bi-people', 'success',
+    'Approver Comparison', 'مقارنة المعتمدين', 'One row per approver: accept /
+    reject split, reject and defect rates, and a per-DN breakdown', 'صف لكل
+    معتمد: القبول والرفض ونسب الرفض والعيوب وتوزيع الأقطار') }}
+  </div>
 
-        <!-- Mechanical Tests -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-gear text-success fs-1"></i>
-                    </div>
-                    <h5>{{ 'الاختبارات الميكانيكية' if current_locale == 'ar' else 'Mechanical Tests' }}</h5>
-                    <p class="text-muted small">
-                        {{ 'تقرير نتائج الاختبارات الميكانيكية' if current_locale == 'ar' else 'Mechanical test results report' }}
-                    </p>
-                    <a href="{{ url_for('mechanical.list') }}" class="btn btn-success">
-                        <i class="bi bi-eye"></i>
-                        {{ 'عرض' if current_locale == 'ar' else 'View' }}
-                    </a>
-                </div>
-            </div>
-        </div>
+  <!-- Analytics Suite -->
+  <h4 class="text-muted text-uppercase small mb-2 mt-3">
+    {{ 'أدوات التحليل' if current_locale == 'ar' else 'Analytics Suite' }}
+  </h4>
+  <div class="row g-3 mb-4">
+    {{ report_card('analytics.pivot', 'bi-table', 'warning', 'Pivot
+    Table Designer', 'جدول محوري', 'Drag rows/cols/values — interactive pivot
+    over pipes, chemical, mechanical', 'تصميم جدول محوري تفاعلي') }} {{
+    report_card('analytics.kpis', 'bi-speedometer', 'warning', 'KPI
+    Designer', 'مؤشرات الأداء', 'Create and monitor custom KPIs with targets and
+    thresholds', 'إنشاء مؤشرات أداء مخصصة') }} {{
+    report_card('analytics.dashboards', 'bi-grid-3x3-gap', 'warning',
+    'Dashboard Designer', 'لوحة مخصصة', 'Compose custom dashboards from saved
+    KPIs', 'تجميع لوحات مخصصة من المؤشرات') }} {{
+    report_card('analytics.query_manager', 'bi-code-square', 'warning',
+    'Query Manager (Admin)', 'مدير الاستعلامات', 'Read-only SQL queries over all
+    tables with CSV export', 'استعلامات SQL للقراءة فقط') }} {{
+    report_card('analytics.import_data', 'bi-upload', 'warning',
+    'Historical Data Import', 'استيراد بيانات', 'Bulk import historical pipes
+    and chemical analyses from CSV', 'استيراد بيانات قديمة من CSV') }} {{
+    report_card('reports.export_traceability_excel',
+    'bi-file-earmark-excel', 'warning', 'Full Traceability Export', 'تصدير
+    التتبع الكامل', 'Multi-sheet Excel: Pipes, Chemical, Mechanical, Stages',
+    'تصدير إكسيل متعدد الأوراق') }}
+  </div>
 
-        <!-- Export Options -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm h-100 bg-light">
-                <div class="card-body text-center">
-                    <div class="bg-secondary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-download text-secondary fs-1"></i>
-                    </div>
-                    <h5>{{ 'تصدير البيانات' if current_locale == 'ar' else 'Export Data' }}</h5>
-                    <p class="text-muted small">
-                        {{ 'تصدير التقارير بصيغة PDF أو Excel' if current_locale == 'ar' else 'Export reports as PDF or Excel' }}
-                    </p>
-                    <div class="btn-group">
-                        <a href="{{ url_for('reports.export_chemical_pdf') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-file-pdf"></i> PDF
-                        </a>
-                        <a href="{{ url_for('reports.export_chemical_excel') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-file-excel"></i> Excel
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  <!-- Performance Reports -->
+  <h4 class="text-muted text-uppercase small mb-2 mt-3">
+    {{ 'تقارير الأداء' if current_locale == 'ar' else 'Performance Reports' }}
+  </h4>
+  <div class="row g-3 mb-4">
+    {{ report_card('reports.stage_performance_v2', 'bi-diagram-3',
+    'info', 'Stage Performance', 'أداء المراحل', 'Per stage: accept %, reject %,
+    defect count', 'لكل مرحلة: نسبة القبول والرفض') }} {{
+    report_card('reports.machine_performance_v2', 'bi-gear', 'info',
+    'Machine Performance', 'أداء الآلات', 'Per machine: production, accept %,
+    reject %, defects', 'لكل آلة: الإنتاج والأداء') }} {{
+    report_card('reports.mold_performance', 'bi-grid-3x3-gap', 'info',
+    'Mold Performance', 'أداء القوالب', 'Per mold: count, accept %, reject %',
+    'لكل قالب: العدد والنسب') }} {{
+    report_card('reports.weight_saving', 'bi-coin', 'info', 'Weight
+    Saving', 'توفير الوزن', 'ISO vs actual weight per DN/machine/mold with
+    saving %', 'مقارنة الوزن الفعلي بالوزن المعياري') }} {{
+    report_card('reports.annealing_hourly', 'bi-clock', 'info',
+    'Annealing Hourly', 'دخول فرن المعالجة', 'Pipes entering annealing furnace
+    by hour', 'الماسورات التي دخلت الفرن بالساعة') }}
+  </div>
+  <!-- BI & Diagnostics -->
+  <h4 class="text-muted text-uppercase small mb-2 mt-3">
+    {{ 'ذكاء الأعمال والتشخيص' if current_locale == 'ar' else 'BI & Diagnostics'
+    }}
+  </h4>
+  <div class="row g-3 mb-4">
+    {{ report_card('reports.diagnosis', 'bi-clipboard2-pulse',
+    'danger', 'Auto Diagnosis', 'التشخيص التلقائي', 'Plant health score +
+    rule-detected problems with root-cause hints', 'درجة صحة المصنع + المشاكل
+    المكتشفة مع تلميحات السبب الجذري') }} {{
+    report_card('reports.ytd_comparison', 'bi-calendar-range',
+    'primary', 'YTD Comparison', 'مقارنة سنوية', 'Month-by-month this year vs
+    any year + reject % by stage × month', 'شهر بشهر مقارنة بأي سنة + نسبة الرفض
+    لكل مرحلة وشهر') }} {{ report_card('reports.period_compare',
+    'bi-arrow-left-right', 'primary', 'Period Compare + Alerts', 'مقارنة فترات
+    مع تنبيهات', 'Any two date ranges: KPI deltas with alert thresholds', 'أي
+    فترتين: فروق المؤشرات مع حدود التنبيه') }} {{
+    report_card('reports.stage_funnel', 'bi-funnel', 'info', 'Stage
+    Funnel', 'قمع المراحل', 'How many pipes reach each stage and where they
+    drop', 'كم ماسورة تصل لكل مرحلة وأين تسقط') }} {{
+    report_card('reports.defect_heatmap', 'bi-grid-3x3', 'warning',
+    'Defect Heatmap DN × Class', 'خريطة العيوب الحرارية', 'Defect count or % per
+    DN × pipe class, color-scaled', 'عدد أو نسبة العيوب لكل قطر × فئة') }} {{
+    report_card('reports.saving_matrix', 'bi-table', 'info', 'Saving
+    Matrix DN × Class', 'مصفوفة التوفير', 'Planned vs actual weight cross-tab
+    with totals', 'الوزن المعياري مقابل الفعلي بجدول متقاطع') }} {{
+    report_card('reports.data_quality', 'bi-clipboard-data',
+    'secondary', 'Data Quality', 'جودة البيانات', 'Field fill rates, per-stage
+    timestamp coverage, what each gap blocks', 'نسب اكتمال الحقول وتغطية الأوقات
+    وما يعطله كل نقص') }}
+  </div>
 </div>
+
+<style>
+  .hover-card {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .hover-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  }
+</style>
 {% endblock %}

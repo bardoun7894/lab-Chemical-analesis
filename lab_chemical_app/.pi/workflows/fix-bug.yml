@@ -1,0 +1,121 @@
+description: "Generic bug fix pipeline: diagnose → fix → verify → docs"
+maxTransitions: 8
+
+phases:
+  - id: diagnose
+    thinking: high
+    tools:
+      - read
+      - bash
+      - grep
+      - find
+      - ls
+      - lsp_diagnostics
+      - module_report
+      - read_symbol
+    output:
+      type: text
+      description: "Root cause analysis with file:line references and reproduction steps."
+    prompt: |
+      Bug report:
+      {{input}}
+
+      Systematically debug this issue:
+      1. Read relevant source files; use module_report for navigable outlines
+      2. Run lsp_diagnostics on the files involved to surface errors/warnings
+      3. Check logs, error messages, stack traces
+      4. Identify root cause with exact file:line references
+      5. Propose a targeted fix (what to change, where, why)
+
+  - id: fix
+    thinking: medium
+    tools:
+      - read
+      - edit
+      - write
+      - bash
+      - grep
+      - find
+      - ls
+      - lsp_diagnostics
+    output:
+      type: text
+      description: "Summary of fix applied: files changed and why."
+    prompt: |
+      Bug report:
+      {{input}}
+
+      Diagnosis:
+      {{phase.diagnose.output}}
+
+      Apply the minimal fix — change only what's needed to resolve the root cause.
+      Do not refactor or add features. After editing, run lsp_diagnostics to confirm
+      no new errors were introduced.
+
+  - id: verify
+    thinking: medium
+    tools:
+      - read
+      - bash
+      - grep
+      - find
+      - ls
+      - lens_diagnostics
+      - lsp_diagnostics
+    output:
+      type: structured
+      status:
+        enum: [PASS, FAIL]
+        description: "PASS when the fix is verified; FAIL when issues remain."
+      report: "Verification results with evidence."
+      data:
+        fields:
+          checksPassed:
+            type: integer
+            description: "Number of verification checks that passed."
+    next:
+      - if:
+          status: FAIL
+        goto: diagnose
+      - if:
+          status: PASS
+        goto: docs
+      - end: true
+    prompt: |
+      Bug report:
+      {{input}}
+
+      Diagnosis:
+      {{phase.diagnose.output}}
+
+      Fix applied:
+      {{phase.fix.output}}
+
+      Verify the fix with real commands (evidence > assertion):
+      1. Run lens_diagnostics mode=all on edited files
+      2. Run any project test suite (npm test, php artisan test, pytest, etc.)
+      3. Run linters (npm run lint, php-cs-fixer, ruff, etc.)
+      4. Confirm the original bug scenario no longer reproduces
+
+  - id: docs
+    thinking: low
+    tools:
+      - read
+      - edit
+      - write
+      - bash
+      - grep
+      - find
+      - ls
+    prompt: |
+      Bug report:
+      {{input}}
+
+      Fix:
+      {{phase.fix.output}}
+
+      Verification:
+      {{phase.verify.output}}
+
+      Update docs/changelog/ with a bug fix entry. If config/env changed, update
+      .env.example and relevant docs. Keep it concise.

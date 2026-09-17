@@ -1,0 +1,242 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block filters %}
+<div class="col-md-2">
+    <label class="form-label small">{{ 'من تاريخ' if current_locale == 'ar' else 'From date' }}</label>
+    <input type="date" name="date_from" class="form-control form-control-sm"
+           value="{{ data.filters.date_from or '' }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">{{ 'إلى تاريخ' if current_locale == 'ar' else 'To date' }}</label>
+    <input type="date" name="date_to" class="form-control form-control-sm"
+           value="{{ data.filters.date_to or '' }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</label>
+    <select name="shift" class="form-select form-select-sm">
+        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+        {% for s in [1, 2, 3] %}
+        <option value="{{ s }}" {{ 'selected' if data.filters.shift == s }}>
+            {{ ('وردية ' if current_locale == 'ar' else 'Shift ') }}{{ s }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+<div class="col-md-3">
+    <label class="form-label small">{{ 'مهندس الوردية' if current_locale == 'ar' else 'Shift Engineer' }}</label>
+    <select name="shift_engineer" class="form-select form-select-sm">
+        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+        {% for e in data.engineers %}
+        <option value="{{ e }}" {{ 'selected' if data.filters.shift_engineer == e }}>{{ e }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endblock %}
+
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header py-2"><span class="small fw-bold">{title}</span></div>
+    <div class="card-body"><canvas id="engChart" height="90"></canvas></div>
+</div>
+<script>
+(function(){
+const rows = {{ data.rows | tojson }};
+    new Chart(document.getElementById('engChart'), { type: 'bar',
+        data: { labels: rows.map(r => r.engineer),
+                datasets: [
+                    { label: 'Pipes', data: rows.map(r => r.total), backgroundColor: '#2563eb' },
+                    { label: 'Reject %', data: rows.map(r => r.reject_rate), backgroundColor: '#e11d48' }] },
+        options: { responsive: true } });
+})();
+</script>
+
+{% set ar = current_locale == 'ar' %}
+
+<!-- Data coverage warning: engineer is often unrecorded -->
+{% if data.coverage.total_pipes and data.coverage.pct < 100 %}
+<div class="alert alert-warning d-flex align-items-center py-2 mb-3">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <div class="small">
+        {% if ar %}
+        {{ data.coverage.with_engineer }} من {{ data.coverage.total_pipes }} أنبوبة فقط ({{ data.coverage.pct }}%)
+        مُسجَّل عليها اسم مهندس. الباقي يظهر في صف <strong>«غير محدد»</strong> — لمقارنة عادلة، يُفضَّل إلزام إدخال اسم المهندس.
+        {% else %}
+        Only {{ data.coverage.with_engineer }} of {{ data.coverage.total_pipes }} pipes ({{ data.coverage.pct }}%)
+        have a recorded engineer. The rest fall under <strong>"غير محدد"</strong>.
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- KPI strip -->
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary"><div class="card-body text-center">
+            <h6 class="text-white-50">{{ 'عدد المهندسين' if ar else 'Engineers' }}</h6>
+            <h2 class="mb-0">{{ data.summary.engineers }}</h2>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary"><div class="card-body text-center">
+            <h6 class="text-white-50">{{ 'مكن CCM' if ar else 'CCM Machines' }}</h6>
+            <h2 class="mb-0">{{ data.summary.machines }}</h2>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger"><div class="card-body text-center">
+            <h6 class="text-white-50">{{ 'أعلى نسبة عيوب' if ar else 'Worst Defect %' }}</h6>
+            <h5 class="mb-0">{{ data.summary.worst_defect_engineer or '-' }}</h5>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success"><div class="card-body text-center">
+            <h6 class="text-white-50">{{ 'أعلى توفير وزن' if ar else 'Best Saving' }}</h6>
+            <h5 class="mb-0">{{ data.summary.best_saving_engineer or '-' }}</h5>
+        </div></div>
+    </div>
+</div>
+
+<!-- 1) Per-engineer comparison -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="bi bi-people"></i>
+            {{ 'مقارنة المهندسين' if ar else 'Engineer Comparison' }} ({{ data.engineer_rows|length }})</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ 'المهندس' if ar else 'Engineer' }}</th>
+                        <th class="text-center">{{ 'الإنتاج' if ar else 'Pipes' }}</th>
+                        <th class="text-center">{{ 'مقبول' if ar else 'Accept' }}</th>
+                        <th class="text-center">{{ 'مرفوض' if ar else 'Reject' }}</th>
+                        <th class="text-center">{{ 'حجز' if ar else 'Hold' }}</th>
+                        <th class="text-center">{{ 'معلّق' if ar else 'Pending' }}</th>
+                        <th class="text-center">{{ 'عيوب' if ar else 'Defects' }}</th>
+                        <th class="text-center">{{ 'نسبة العيوب' if ar else 'Defect %' }}</th>
+                        <th class="text-center">{{ 'نسبة الرفض' if ar else 'Reject %' }}</th>
+                        <th class="text-end">{{ 'توفير (كجم)' if ar else 'Saving (kg)' }}</th>
+                        <th class="text-center">{{ 'توفير %' if ar else 'Saving %' }}</th>
+                        <th class="text-center">{{ 'تغطية الوزن' if ar else 'Wt. cov.' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in data.engineer_rows %}
+                    <tr>
+                        <td>
+                            <strong>{{ r.engineer }}</strong>
+                            {% if r.engineer == 'غير محدد' %}
+                            <span class="badge bg-secondary">{{ 'غير مُسجَّل' if ar else 'unassigned' }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center"><span class="badge bg-primary">{{ r.total }}</span></td>
+                        <td class="text-center text-success">{{ r.accepted }}</td>
+                        <td class="text-center text-danger">{{ r.rejected }}</td>
+                        <td class="text-center text-warning">{{ r.hold }}</td>
+                        <td class="text-center text-muted">{{ r.pending }}</td>
+                        <td class="text-center">{{ r.defect_pipes }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-{{ 'danger' if r.engineer == data.summary.worst_defect_engineer and r.defect_rate > 0 else ('warning text-dark' if r.defect_rate > 0 else 'success') }}">
+                                {{ r.defect_rate }}%
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-{{ 'danger' if r.reject_rate >= 20 else ('warning text-dark' if r.reject_rate > 0 else 'success') }}">
+                                {{ r.reject_rate }}%
+                            </span>
+                        </td>
+                        <td class="text-end {{ 'fw-bold text-success' if r.engineer == data.summary.best_saving_engineer and r.saving > 0 }}">
+                            {{ r.saving }}
+                        </td>
+                        <td class="text-center">{{ r.saving_pct }}%</td>
+                        <td class="text-center small text-muted">{{ r.weight_pipes }}/{{ r.total }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="12" class="text-center text-muted py-3">
+                        {{ 'لا توجد بيانات للفلاتر المختارة' if ar else 'No data for the selected filters' }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- 2) Per-CCM-machine production -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-gear"></i>
+                    {{ 'إنتاج كل مكنة (CCM)' if ar else 'Production per Machine (CCM)' }}</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ 'المكنة' if ar else 'Machine' }}</th>
+                            <th class="text-center">{{ 'الإنتاج' if ar else 'Pipes' }}</th>
+                            <th class="text-center">{{ 'عيوب' if ar else 'Defects' }}</th>
+                            <th class="text-center">{{ 'نسبة العيوب' if ar else 'Defect %' }}</th>
+                            <th class="text-center">{{ 'نسبة الرفض' if ar else 'Reject %' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in data.machine_rows %}
+                        <tr>
+                            <td><strong>{{ m.machine }}</strong></td>
+                            <td class="text-center"><span class="badge bg-primary">{{ m.total }}</span></td>
+                            <td class="text-center">{{ m.defects }}</td>
+                            <td class="text-center">{{ m.defect_rate }}%</td>
+                            <td class="text-center">{{ m.reject_rate }}%</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-center text-muted py-3">
+                            {{ 'لا توجد مكن مسجَّلة' if ar else 'No machine data' }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3) Engineer x Machine cross-tab -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-grid-3x3"></i>
+                    {{ 'مهندس × مكنة' if ar else 'Engineer × Machine' }}</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0 text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-start">{{ 'المهندس' if ar else 'Engineer' }}</th>
+                                {% for code in data.machine_codes %}
+                                <th>{{ code }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in data.engineer_rows %}
+                            <tr>
+                                <td class="text-start"><strong>{{ r.engineer }}</strong></td>
+                                {% for code in data.machine_codes %}
+                                {% set c = r.by_machine.get(code, 0) %}
+                                <td class="{{ 'fw-bold' if c else 'text-muted' }}">{{ c or '·' }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="{{ data.machine_codes|length + 1 }}" class="text-muted py-3">
+                                {{ 'لا توجد بيانات' if ar else 'No data' }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'تعديل السبب' if reason_type else 'إضافة سبب' if current_locale == 'ar' else 'Edit Reason' if reason_type else 'Add Reason' }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-chat-left-text"></i>
+            {% if reason_type %}
+                {{ 'تعديل السبب' if current_locale == 'ar' else 'Edit Reason' }}
+            {% else %}
+                {{ 'إضافة سبب جديد' if current_locale == 'ar' else 'Add New Reason' }}
+            {% endif %}
+        </h2>
+        <a href="{{ url_for('admin.reason_types') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'السبب (إنجليزي)' if current_locale == 'ar' else 'Reason (English)' }} *</label>
+                            <input type="text" name="name_en" class="form-control" required
+                                   value="{{ reason_type.name_en if reason_type else '' }}"
+                                   placeholder="e.g., Customer request">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'السبب (عربي)' if current_locale == 'ar' else 'Reason (Arabic)' }} *</label>
+                            <input type="text" name="name_ar" class="form-control" required
+                                   value="{{ reason_type.name_ar if reason_type else '' }}"
+                                   placeholder="مثلاً: طلب العميل">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الترتيب' if current_locale == 'ar' else 'Sort Order' }}</label>
+                            <input type="number" name="sort_order" class="form-control" min="0"
+                                   value="{{ reason_type.sort_order if reason_type else '0' }}">
+                            <small class="text-muted">{{ 'يستخدم لترتيب الأسباب في القائمة المنسدلة' if current_locale == 'ar' else 'Used to order reasons in dropdown lists' }}</small>
+                        </div>
+
+                        <div class="form-check mb-4">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+                                   {{ 'checked' if not reason_type or reason_type.is_active }}>
+                            <label class="form-check-label" for="is_active">
+                                {{ 'نشط' if current_locale == 'ar' else 'Active' }}
+                            </label>
+                        </div>
+
+                        {% include 'components/_audit_reason.html' %}
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-lg"></i>
+                                {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
+                            </button>
+                            <a href="{{ url_for('admin.reason_types') }}" class="btn btn-outline-secondary">
+                                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        {{ 'معلومات' if current_locale == 'ar' else 'Information' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="small">
+                        {{ 'تظهر الأسباب النشطة كقائمة اختيار سريع بجوار حقل "سبب تغيير القرار" في نماذج التحليل الكيميائي والميكانيكي.' if current_locale == 'ar' else 'Active reasons appear as a quick-pick dropdown next to the "reason for change" field on the chemical and mechanical forms.' }}
+                    </p>
+                    <ul class="small">
+                        <li>{{ 'قائمة عامة واحدة تُستخدم في جميع النماذج' if current_locale == 'ar' else 'A single global list used across all forms' }}</li>
+                        <li>{{ 'يبقى حقل النص حرًّا — يتم إدراج السبب فقط' if current_locale == 'ar' else 'The free-text field stays editable — a reason is only inserted' }}</li>
+                        <li>{{ 'يتم عرض الأسباب النشطة فقط' if current_locale == 'ar' else 'Only active reasons are shown' }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

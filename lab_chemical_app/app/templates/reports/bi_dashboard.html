@@ -1,0 +1,1482 @@
+{% extends 'reports/_analytics_base.html' %}
+{# The page filter bar. machine, mold, shift, customer, engineer and approver
+   were all parsed by parse_filters and honoured by apply_pipe_filters, but no
+   input was ever rendered for them — they worked only if you hand-typed the
+   query string. Options come from the data itself so they cannot drift. #}
+{% block filters %}
+<div class="col-md-2">
+  <label class="form-label small">من تاريخ</label>
+  <input type="date" name="date_from" class="form-control form-control-sm"
+         value="{{ data.filters.date_from or '' }}">
+</div>
+<div class="col-md-2">
+  <label class="form-label small">إلى تاريخ</label>
+  <input type="date" name="date_to" class="form-control form-control-sm"
+         value="{{ data.filters.date_to or '' }}">
+</div>
+<div class="col-md-2">
+  <label class="form-label small">القطر</label>
+  <select name="diameter" class="form-select form-select-sm">
+    <option value="">الكل</option>
+    {% for dn in fo.diameters %}
+    <option value="{{ dn }}" {{ 'selected' if data.filters.diameter == dn }}>DN{{ dn }}</option>
+    {% endfor %}
+  </select>
+</div>
+<div class="col-md-2">
+  <label class="form-label small">النوع</label>
+  <select name="pipe_class" class="form-select form-select-sm">
+    <option value="">الكل</option>
+    {% for c in fo.classes %}
+    <option value="{{ c }}" {{ 'selected' if data.filters.pipe_class == c }}>{{ c }}</option>
+    {% endfor %}
+  </select>
+</div>
+<div class="col-md-2">
+  <label class="form-label small">الوردية</label>
+  <select name="shift" class="form-select form-select-sm">
+    <option value="">الكل</option>
+    {% for n in [1, 2, 3] %}
+    <option value="{{ n }}" {{ 'selected' if data.filters.shift == n }}>وردية {{ n }}</option>
+    {% endfor %}
+  </select>
+</div>
+<div class="col-md-2">
+  <label class="form-label small">المرحلة</label>
+  <select name="stage" class="form-select form-select-sm">
+    <option value="">الكل</option>
+    {% for st in fo.stages %}
+    <option value="{{ st }}" {{ 'selected' if data.filters.stage == st }}>{{ st }}</option>
+    {% endfor %}
+  </select>
+</div>
+<div class="col-md-2">
+  <label class="form-label small">الماكينة</label>
+  <select name="machine_id" class="form-select form-select-sm">
+    <option value="">الكل</option>
+    {% for m in fo.machines %}
+    <option value="{{ m.id }}" {{ 'selected' if data.filters.machine_id == m.id }}>{{ m.code }}</option>
+    {% endfor %}
+  </select>
+</div>
+<div class="col-md-2">
+  <label class="form-label small">القالب</label>
+  <select name="mold_number" class="form-select form-select-sm">
+    <option value="">الكل</option>
+    {% for m in fo.molds %}
+    <option value="{{ m }}" {{ 'selected' if data.filters.mold_number == m }}>{{ m }}</option>
+    {% endfor %}
+  </select>
+</div>
+<div class="col-md-2">
+  <label class="form-label small">العميل</label>
+  <select name="customer" class="form-select form-select-sm">
+    <option value="">الكل</option>
+    {% for c in fo.customers %}
+    <option value="{{ c }}" {{ 'selected' if data.filters.customer == c }}>{{ c }}</option>
+    {% endfor %}
+  </select>
+</div>
+<div class="col-md-2">
+  <label class="form-label small">مهندس الوردية</label>
+  <select name="shift_engineer" class="form-select form-select-sm">
+    <option value="">الكل</option>
+    {% for e in fo.engineers %}
+    <option value="{{ e }}" {{ 'selected' if data.filters.shift_engineer == e }}>{{ e }}</option>
+    {% endfor %}
+  </select>
+</div>
+<div class="col-md-2">
+  <label class="form-label small">المعتمد</label>
+  <select name="approved_by" class="form-select form-select-sm">
+    <option value="">الكل</option>
+    {% for u in fo.approvers %}
+    <option value="{{ u.id }}" {{ 'selected' if data.filters.approved_by == u.id }}>{{ u.name }}</option>
+    {% endfor %}
+  </select>
+</div>
+<div class="col-md-2">
+  <label class="form-label small">أمر الإنتاج</label>
+  <select name="production_order_id" class="form-select form-select-sm">
+    <option value="">الكل</option>
+    {% for o in orders %}
+    <option value="{{ o.id }}" {{ 'selected' if data.filters.production_order_id == o.id }}>
+      {{ o.order_number }}
+    </option>
+    {% endfor %}
+  </select>
+</div>
+{% endblock %}
+
+{% set fo = data.filter_options %}
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{# ─────────────────────────────────────────────────────────────
+   CCM BI hub. Every panel is rendered server-side and toggled by
+   the sidebar; charts initialise on first reveal because Chart.js
+   measures a hidden canvas as zero.
+   Styling lives in style.css (section 15) — no inline styles here.
+   ───────────────────────────────────────────────────────────── #}
+
+{% set ct = data.crosstab %}
+{% set meta = data.crosstab_meta %}
+{% set pn = data.panels %}
+
+{% macro num(v) -%}
+  {%- if v is none -%}<span class="text-muted">—</span>{%- else -%}{{ '{:,.0f}'.format(v) }}{%- endif -%}
+{%- endmacro %}
+
+{% macro pct(v) -%}
+  {%- if v is none -%}<span class="text-muted">—</span>{%- else -%}{{ '%.1f'|format(v) }}%{%- endif -%}
+{%- endmacro %}
+
+{# Target line under a KPI value. Renders nothing at all when the KPI has no
+   target configured, so an unconfigured dashboard looks exactly as before.
+   `delta` arrives already signed so that positive always means better, whether
+   the KPI is one where higher wins (yield) or lower wins (reject rate). #}
+{% macro kpi_target(verdict, fmt='num') -%}
+  {%- if verdict -%}
+  <div class="ccm-kpi-target small mt-1">
+    <span class="badge {{ 'bg-success' if verdict.met else 'bg-danger' }}">
+      <i class="bi bi-{{ 'check2' if verdict.met else 'exclamation-triangle' }}"></i>
+      {{ '%+.1f'|format(verdict.delta) }}
+    </span>
+    <span class="text-muted">
+      الهدف {{ '%.1f'|format(verdict.target) }}{{ '%' if fmt == 'pct' else '' }}
+    </span>
+  </div>
+  {%- endif -%}
+{%- endmacro %}
+
+{# One crosstab cell value, formatted per the measure's declared fmt.
+   A None value prints an em dash: "cannot be computed here" is not "zero". #}
+{% macro xt_cell(cell, key, ct) -%}
+  {%- set v = cell[key] -%}
+  {%- set fmt = ct.measure_meta[key].fmt -%}
+  {%- if v is none -%}
+    <span class="ccm-xt-empty">—</span>
+  {%- elif fmt == 'int' -%}
+    {%- if cell.count -%}
+      <span class="{{ 'ccm-xt-acc' if key == 'acc' else ('ccm-xt-rej' if key == 'rej' else '') }}">{{ v }}</span>
+    {%- else -%}<span class="ccm-xt-empty">·</span>{%- endif -%}
+  {%- elif fmt == 'pct' -%}
+    {%- if cell.decided -%}{{ pct_pill(v) }}{%- else -%}<span class="ccm-xt-empty">·</span>{%- endif -%}
+  {%- elif fmt == 'pct2' -%}
+    {{ '%.2f'|format(v) }}%
+  {%- else -%}
+    {%- if v -%}{{ '%.1f'|format(v) }}{%- else -%}<span class="ccm-xt-empty">·</span>{%- endif -%}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro pct_pill(v) -%}
+  {%- if v is none -%}
+    <span class="ccm-pill mut">لا قرار</span>
+  {%- else -%}
+    <span class="ccm-pill {{ 'bad' if v > 7 else 'warn' if v > 4 else 'ok' }}">{{ '%.1f'|format(v) }}%</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro bar(value, maximum, danger=false) -%}
+  <span class="ccm-bar {{ 'is-danger' if danger }}">
+    <span style="width: {{ (value / maximum * 100) | round(1) if maximum else 0 }}%"></span>
+  </span>
+{%- endmacro %}
+
+{# Ranking table shared by every "breakdown by X" card. #}
+{% macro breakdown(rows, head, show_reject=true) -%}
+  {% if rows %}
+  {% set top = rows | map(attribute='count') | max %}
+  <div class="ccm-scroll">
+    <table class="ccm-table">
+      <thead>
+        <tr>
+          <th>{{ head }}</th>
+          <th class="num">عدد</th>
+          <th>الحجم</th>
+          {% if show_reject %}<th class="num">مرفوض</th><th class="num">نسبة الرفض</th>{% endif %}
+          <th class="num">وزن (طن)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.key }}</td>
+          <td class="num">{{ num(r.count) }}</td>
+          <td>{{ bar(r.count, top) }}</td>
+          {% if show_reject %}
+          <td class="num">{{ num(r.rej) }}</td>
+          <td class="num">{{ pct_pill(r.rej_pct) }}</td>
+          {% endif %}
+          <td class="num">{{ '%.2f'|format(r.weight_mt) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="ccm-empty">لا توجد بيانات ضمن الفلاتر الحالية</div>
+  {% endif %}
+{%- endmacro %}
+
+{# Stage detail panel body — reused for every stage. #}
+{% macro stage_panel(sp, title) -%}
+  {% if not sp.has_data %}
+    <div class="ccm-empty">لا توجد سجلات لمرحلة {{ title }} ضمن الفلاتر الحالية</div>
+  {% else %}
+  {% set t = sp.total %}
+  <div class="ccm-kpis">
+    <div class="ccm-kpi is-navy">
+      <div class="ccm-kpi-label">إجمالي السجلات</div>
+      <div class="ccm-kpi-value">{{ num(t.count) }}</div>
+      <div class="ccm-kpi-note">{{ num(t.decided) }} تم البت فيها</div>
+    </div>
+    <div class="ccm-kpi is-success">
+      <div class="ccm-kpi-label">مقبول</div>
+      <div class="ccm-kpi-value">{{ num(t.acc) }}</div>
+      <div class="ccm-kpi-note">{{ pct(t.acc_pct) }} من المقرَّر</div>
+    </div>
+    <div class="ccm-kpi is-danger">
+      <div class="ccm-kpi-label">مرفوض</div>
+      <div class="ccm-kpi-value">{{ num(t.rej) }}</div>
+      <div class="ccm-kpi-note">{{ pct(t.rej_pct) }} من المقرَّر</div>
+    </div>
+    <div class="ccm-kpi is-warning">
+      <div class="ccm-kpi-label">بانتظار القرار</div>
+      <div class="ccm-kpi-value">{{ num(t.pend) }}</div>
+      <div class="ccm-kpi-note">خارج حساب النسبة</div>
+    </div>
+    <div class="ccm-kpi is-accent">
+      <div class="ccm-kpi-label">الوزن</div>
+      <div class="ccm-kpi-value">{{ '%.2f'|format(t.weight_mt) }}</div>
+      <div class="ccm-kpi-note">طن متري</div>
+    </div>
+  </div>
+
+  <div class="ccm-grid">
+    <div class="ccm-card">
+      <div class="ccm-card-head">حسب القطر DN</div>
+      <div class="ccm-card-body is-flush">{{ breakdown(sp.by_dn, 'القطر') }}</div>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-head">حسب الماكينة</div>
+      <div class="ccm-card-body is-flush">{{ breakdown(sp.by_machine, 'الماكينة') }}</div>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-head">حسب الوردية</div>
+      <div class="ccm-card-body is-flush">{{ breakdown(sp.by_shift, 'الوردية') }}</div>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-head">حسب مهندس الوردية</div>
+      <div class="ccm-card-body is-flush">{{ breakdown(sp.by_supervisor, 'المهندس') }}</div>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-head">حسب الشهر</div>
+      <div class="ccm-card-body is-flush">{{ breakdown(sp.by_month, 'الشهر') }}</div>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-head">أسباب الرفض</div>
+      <div class="ccm-card-body is-flush">
+        {% if sp.by_reason %}
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead><tr><th>السبب</th><th class="num">عدد المرفوض</th><th class="num">إجمالي السجلات</th></tr></thead>
+            <tbody>
+              {% for r in sp.by_reason %}
+              <tr><td>{{ r.key }}</td><td class="num">{{ num(r.rej) }}</td><td class="num">{{ num(r.count) }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="ccm-empty">لا رفض مسجَّل بسبب محدد في هذه المرحلة</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+{%- endmacro %}
+
+
+<div class="ccm-hub">
+
+  <!-- ══════════ Sidebar ══════════ -->
+  <nav class="ccm-nav" id="biNav">
+    <div class="ccm-nav-group">الإنتاج والجودة</div>
+    <button type="button" class="ccm-nav-btn active" data-panel="overview"><i class="bi bi-speedometer2"></i> نظرة عامة</button>
+    <button type="button" class="ccm-nav-btn" data-panel="stagekpi"><i class="bi bi-diagram-3"></i> إنتاجية المراحل</button>
+    <button type="button" class="ccm-nav-btn" data-panel="defects"><i class="bi bi-exclamation-octagon"></i> تحليل الرفض</button>
+    <button type="button" class="ccm-nav-btn" data-panel="reasons"><i class="bi bi-search"></i> أسباب الرفض</button>
+    <button type="button" class="ccm-nav-btn" data-panel="flow"><i class="bi bi-funnel"></i> تدفق المراحل</button>
+
+    <div class="ccm-nav-group">المراحل</div>
+    {% for code, labels in pn.stage_panel_labels.items() %}
+      {% if code in pn.stage_panels %}
+      <button type="button" class="ccm-nav-btn" data-panel="stage-{{ code }}">
+        <i class="bi bi-{{ {'hydrotest':'droplet','annealing':'fire','coating':'brush','lab':'clipboard2-pulse','ccm':'gear-wide-connected','zinc':'shield','cement':'bricks','cutting':'scissors','finish':'check2-square','delivery':'truck'}.get(code, 'circle') }}"></i>
+        {{ labels[1] }}
+      </button>
+      {% endif %}
+    {% endfor %}
+
+    <div class="ccm-nav-group">التحليل</div>
+    <button type="button" class="ccm-nav-btn" data-panel="analytics"><i class="bi bi-grid-3x3"></i> تحليلات متقاطعة</button>
+    <button type="button" class="ccm-nav-btn" data-panel="trends"><i class="bi bi-graph-up"></i> الاتجاهات</button>
+    <button type="button" class="ccm-nav-btn" data-panel="saving"><i class="bi bi-piggy-bank"></i> Saving الوزن</button>
+
+    <div class="ccm-nav-group">التقارير</div>
+    <button type="button" class="ccm-nav-btn" data-panel="crosstab"><i class="bi bi-table"></i> Crosstab</button>
+    <button type="button" class="ccm-nav-btn" data-panel="daily"><i class="bi bi-file-earmark-text"></i> التقرير اليومي</button>
+    <button type="button" class="ccm-nav-btn" data-panel="more"><i class="bi bi-box-arrow-up-right"></i> تقارير أخرى</button>
+  </nav>
+
+  <!-- ══════════ Panels ══════════ -->
+  <div id="biPanels">
+
+  <!-- ─────────── Overview ─────────── -->
+  <section class="ccm-panel active" data-panel="overview">
+    <div class="ccm-panel-head">
+      <h5>نظرة عامة على الإنتاج</h5>
+      <p>{{ num(data.kpis.produced) }} ماسورة · {{ num(pn.fact_count) }} سجل مرحلة ضمن الفلاتر</p>
+    </div>
+
+    <div class="ccm-kpis">
+      {% set kt = data.kpi_targets or {} %}
+      <div class="ccm-kpi is-navy">
+        <div class="ccm-kpi-label">إجمالي الإنتاج</div>
+        <div class="ccm-kpi-value">{{ num(data.kpis.produced) }}</div>
+        <div class="ccm-kpi-note">ماسورة</div>
+        {{ kpi_target(kt.get('produced')) }}
+      </div>
+      <div class="ccm-kpi is-success">
+        <div class="ccm-kpi-label">Yield العائد</div>
+        <div class="ccm-kpi-value">{{ pct(data.kpis.yield_pct) }}</div>
+        <div class="ccm-kpi-note">وزن فعلي / معياري</div>
+        {{ kpi_target(kt.get('yield_pct'), 'pct') }}
+      </div>
+      <div class="ccm-kpi is-danger">
+        <div class="ccm-kpi-label">معدل الرفض</div>
+        <div class="ccm-kpi-value">{{ pct(data.kpis.reject_pct) }}</div>
+        <div class="ccm-kpi-note">{{ num(data.kpis.rejects) }} من {{ num(data.kpis.decided) }} قرار</div>
+        {{ kpi_target(kt.get('reject_pct'), 'pct') }}
+      </div>
+      <div class="ccm-kpi is-accent">
+        <div class="ccm-kpi-label">الوزن الفعلي</div>
+        <div class="ccm-kpi-value">{{ data.kpis.actual_mt }}</div>
+        <div class="ccm-kpi-note">طن متري</div>
+        {{ kpi_target(kt.get('actual_mt')) }}
+      </div>
+      <div class="ccm-kpi {{ 'is-success' if data.kpis.saving_mt >= 0 else 'is-danger' }}">
+        <div class="ccm-kpi-label">Saving</div>
+        <div class="ccm-kpi-value">{{ data.kpis.saving_mt }}</div>
+        <div class="ccm-kpi-note">طن · معياري ناقص فعلي</div>
+        {{ kpi_target(kt.get('saving_mt')) }}
+      </div>
+    </div>
+
+    <div class="ccm-grid">
+      {% for key, title in [('month','شهري'), ('shift','بالوردية'), ('machine','بالماكينة'), ('dn','بالقطر DN'), ('mold','بالقالب')] %}
+      <div class="ccm-card">
+        <div class="ccm-card-head">
+          <span>{{ title }}</span>
+          <span class="ccm-seg" data-toggle-group="{{ key }}">
+            <button type="button" class="active" data-mode="count">عدد</button>
+            <button type="button" data-mode="weight">وزن</button>
+            <button type="button" data-mode="length">طول</button>
+          </span>
+        </div>
+        <div class="ccm-card-body"><div class="ccm-chart"><canvas id="chart_{{ key }}"></canvas></div></div>
+      </div>
+      {% endfor %}
+      <div class="ccm-card">
+        <div class="ccm-card-head"><span>الاتجاه اليومي</span></div>
+        <div class="ccm-card-body"><div class="ccm-chart"><canvas id="chart_daily"></canvas></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── Stage productivity ─────────── -->
+  <section class="ccm-panel" data-panel="stagekpi">
+    <div class="ccm-panel-head">
+      <h5>إنتاجية المراحل</h5>
+      <p>كل مرحلة بترتيب الإنتاج، مع المقبول والمرفوض ونسبة الرفض على المقرَّر فقط</p>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-body is-flush">
+        {% set smax = pn.stage_matrix | map(attribute='count') | max %}
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead>
+              <tr>
+                <th>المرحلة</th><th class="num">السجلات</th><th>الحجم</th>
+                <th class="num">مقبول</th><th class="num">مرفوض</th>
+                <th class="num">بانتظار</th><th class="num">نسبة الرفض</th><th class="num">وزن (طن)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in pn.stage_matrix %}
+              <tr>
+                <td>{{ r.key }}</td>
+                <td class="num">{{ num(r.count) }}</td>
+                <td>{{ bar(r.count, smax) }}</td>
+                <td class="num">{{ num(r.acc) }}</td>
+                <td class="num">{{ num(r.rej) }}</td>
+                <td class="num">{{ num(r.pend) }}</td>
+                <td class="num">{{ pct_pill(r.rej_pct) }}</td>
+                <td class="num">{{ '%.2f'|format(r.weight_mt) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="ccm-card-foot">مرحلة بصفر سجلات تعني أنه لم تُسجَّل أي ماسورة عندها ضمن الفلاتر الحالية — وليس أن المرحلة غير موجودة.</div>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>مقبول مقابل مرفوض لكل مرحلة</span></div>
+      <div class="ccm-card-body"><div class="ccm-chart is-tall"><canvas id="chart_stagekpi"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- ─────────── Defects ─────────── -->
+  <section class="ccm-panel" data-panel="defects">
+    <div class="ccm-panel-head">
+      <h5>تحليل الرفض</h5>
+      <p>نفس البيانات مقطوعة بكل بُعد: الشهر، القطر، النوع، الماكينة، القالب، الوردية، المهندس</p>
+    </div>
+    <div class="ccm-grid">
+      <div class="ccm-card"><div class="ccm-card-head">شهري</div><div class="ccm-card-body is-flush">{{ breakdown(pn.defects.by_month, 'الشهر') }}</div></div>
+      <div class="ccm-card"><div class="ccm-card-head">بالقطر DN</div><div class="ccm-card-body is-flush">{{ breakdown(pn.defects.by_dn, 'القطر') }}</div></div>
+      <div class="ccm-card"><div class="ccm-card-head">بالنوع</div><div class="ccm-card-body is-flush">{{ breakdown(pn.defects.by_class, 'النوع') }}</div></div>
+      <div class="ccm-card"><div class="ccm-card-head">بالماكينة</div><div class="ccm-card-body is-flush">{{ breakdown(pn.defects.by_machine, 'الماكينة') }}</div></div>
+      <div class="ccm-card"><div class="ccm-card-head">بالوردية</div><div class="ccm-card-body is-flush">{{ breakdown(pn.defects.by_shift, 'الوردية') }}</div></div>
+      <div class="ccm-card"><div class="ccm-card-head">بمهندس الوردية</div><div class="ccm-card-body is-flush">{{ breakdown(pn.defects.by_supervisor, 'المهندس') }}</div></div>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>أكثر القوالب رفضاً (أعلى 20)</span></div>
+      <div class="ccm-card-body is-flush">{{ breakdown(pn.defects.by_mold, 'القالب') }}</div>
+    </div>
+  </section>
+
+  <!-- ─────────── Reject reasons ─────────── -->
+  <section class="ccm-panel" data-panel="reasons">
+    <div class="ccm-panel-head">
+      <h5>أسباب الرفض</h5>
+      <p>{{ num(pn.reasons.total_rejects) }} حالة رفض · باريتو تراكمي ثم توزيع الأسباب على الأقطار</p>
+    </div>
+    {% if pn.reasons.pareto %}
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>باريتو الأسباب</span></div>
+      <div class="ccm-card-body"><div class="ccm-chart is-tall"><canvas id="chart_pareto"></canvas></div></div>
+      <div class="ccm-card-body is-flush">
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead><tr><th>السبب</th><th class="num">عدد</th><th class="num">نسبة</th><th class="num">تراكمي</th><th class="num">وزن (كجم)</th></tr></thead>
+            <tbody>
+              {% for r in pn.reasons.pareto %}
+              <tr>
+                <td>{{ r.reason }}</td>
+                <td class="num">{{ num(r.count) }}</td>
+                <td class="num">{{ '%.1f'|format(r.pct) }}%</td>
+                <td class="num">{{ '%.1f'|format(r.cum_pct) }}%</td>
+                <td class="num">{{ '{:,.0f}'.format(r.weight) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    {% if pn.reasons.matrix %}
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>الأسباب حسب القطر DN</span></div>
+      <div class="ccm-card-body is-flush">
+        <div class="ccm-scroll">
+          <table class="ccm-xt">
+            <thead>
+              <tr>
+                <th class="ccm-xt-rowhead">السبب</th>
+                {% for dn in pn.reasons.dn_labels %}<th>{{ dn }}</th>{% endfor %}
+                <th>الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in pn.reasons.matrix %}
+              <tr>
+                <th>{{ row.reason }}</th>
+                {% for c in row.cells %}
+                <td class="num">{% if c %}{{ c }}{% else %}<span class="ccm-xt-empty">·</span>{% endif %}</td>
+                {% endfor %}
+                <td class="num"><strong>{{ row.total }}</strong></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="ccm-card"><div class="ccm-empty">لا حالات رفض ضمن الفلاتر الحالية</div></div>
+    {% endif %}
+  </section>
+
+  <!-- ─────────── Stage flow ─────────── -->
+  <section class="ccm-panel" data-panel="flow">
+    <div class="ccm-panel-head">
+      <h5>تدفق المراحل</h5>
+      <p>عدد المواسير التي وصلت كل مرحلة، مع الفاقد بين كل مرحلة والتي قبلها</p>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-body is-flush">
+        {% set fmax = data.stage.funnel | map(attribute='count') | max %}
+        <div class="ccm-scroll">
+          <table class="ccm-table">
+            <thead><tr><th>المرحلة</th><th class="num">وصلت</th><th>الحجم</th><th class="num">الفاقد</th><th class="num">نسبة الفاقد</th></tr></thead>
+            <tbody>
+              {% for r in data.stage.funnel %}
+              <tr>
+                <td>{{ r.stage }}</td>
+                <td class="num">{{ num(r.count) }}</td>
+                <td>{{ bar(r.count, fmax) }}</td>
+                <td class="num">{{ num(r.drop_abs) if r.drop_abs else '—' }}</td>
+                <td class="num">{{ pct(r.drop_pct) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="ccm-grid">
+      <div class="ccm-card">
+        <div class="ccm-card-head"><span>الرفض بالمرحلة</span></div>
+        <div class="ccm-card-body"><div class="ccm-chart"><canvas id="chart_stage_rej"></canvas></div></div>
+      </div>
+      <div class="ccm-card">
+        <div class="ccm-card-head"><span>توزيع الرفض بالمرحلة</span></div>
+        <div class="ccm-card-body"><div class="ccm-chart"><canvas id="chart_stage_pie"></canvas></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── Per-stage panels ─────────── -->
+  {% for code, labels in pn.stage_panel_labels.items() %}
+    {% if code in pn.stage_panels %}
+    {% set sp = pn.stage_panels[code] %}
+    <section class="ccm-panel" data-panel="stage-{{ code }}">
+      <div class="ccm-panel-head">
+        <h5>{{ labels[1] }}</h5>
+        <p>{{ labels[0] }} · مرحلة "{{ sp.stage }}"</p>
+      </div>
+      {{ stage_panel(sp, labels[1]) }}
+    </section>
+    {% endif %}
+  {% endfor %}
+
+  <!-- ─────────── Cross analytics ─────────── -->
+  <section class="ccm-panel" data-panel="analytics">
+    <div class="ccm-panel-head">
+      <h5>تحليلات متقاطعة</h5>
+      <p>مقاطع لا يظهرها أي بُعد منفرد — قطر × نوع، وماكينة × وردية، وترتيب المهندسين</p>
+    </div>
+
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>نسبة الرفض — القطر × النوع</span></div>
+      <div class="ccm-card-body is-flush">
+        {% if pn.analytics.dn_by_class.rows %}
+        <div class="ccm-scroll">
+          <table class="ccm-xt">
+            <thead>
+              <tr><th class="ccm-xt-rowhead">القطر \ النوع</th>{% for c in pn.analytics.dn_by_class.cols %}<th>{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+              {% for row in pn.analytics.dn_by_class.rows %}
+              <tr>
+                <th>{{ row.key }}</th>
+                {% for cell in row.cells %}
+                <td class="num">
+                  {% if cell.count %}{{ pct_pill(cell.rej_pct) }}<div class="ccm-kpi-note">{{ cell.count }} سجل</div>
+                  {% else %}<span class="ccm-xt-empty">·</span>{% endif %}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}<div class="ccm-empty">لا توجد بيانات</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>نسبة الرفض — الماكينة × الوردية</span></div>
+      <div class="ccm-card-body is-flush">
+        {% if pn.analytics.machine_by_shift.rows %}
+        <div class="ccm-scroll">
+          <table class="ccm-xt">
+            <thead>
+              <tr><th class="ccm-xt-rowhead">الماكينة \ الوردية</th>{% for c in pn.analytics.machine_by_shift.cols %}<th>{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+              {% for row in pn.analytics.machine_by_shift.rows %}
+              <tr>
+                <th>{{ row.key }}</th>
+                {% for cell in row.cells %}
+                <td class="num">
+                  {% if cell.count %}{{ pct_pill(cell.rej_pct) }}<div class="ccm-kpi-note">{{ cell.count }} سجل</div>
+                  {% else %}<span class="ccm-xt-empty">·</span>{% endif %}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}<div class="ccm-empty">لا توجد بيانات</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="ccm-grid">
+      <div class="ccm-card">
+        <div class="ccm-card-head"><span>أفضل مهندسي الورديات</span></div>
+        <div class="ccm-card-body is-flush">{{ breakdown(pn.analytics.best_supervisors, 'المهندس') }}</div>
+        <div class="ccm-card-foot">مُدرج فقط من لديه 5 قرارات أو أكثر، حتى لا تُصدِّر عيّنة صغيرة ترتيباً مضلِّلاً.</div>
+      </div>
+      <div class="ccm-card">
+        <div class="ccm-card-head"><span>الأعلى رفضاً</span></div>
+        <div class="ccm-card-body is-flush">{{ breakdown(pn.analytics.worst_supervisors, 'المهندس') }}</div>
+      </div>
+    </div>
+
+    <div class="ccm-card">
+      <div class="ccm-card-head"><span>ترتيب الماكينات بنسبة الرفض</span></div>
+      <div class="ccm-card-body is-flush">{{ breakdown(pn.analytics.machines, 'الماكينة') }}</div>
+    </div>
+  </section>
+
+  <!-- ─────────── Trends ─────────── -->
+  <section class="ccm-panel" data-panel="trends">
+    <div class="ccm-panel-head">
+      <h5>الاتجاهات</h5>
+      <p>العدد والوزن ونسبة الرفض عبر اليوم والأسبوع والشهر</p>
+    </div>
+    {% for key, title in [('day','يومي'), ('week','أسبوعي'), ('month','شهري')] %}
+    <div class="ccm-card">
+      <div class="ccm-card-head">
+        <span>{{ title }}</span>
+        <span class="ccm-seg" data-trend-group="{{ key }}">
+          <button type="button" class="active" data-mode="count">عدد</button>
+          <button type="button" data-mode="weight">وزن</button>
+          <button type="button" data-mode="rej_pct">نسبة الرفض</button>
+        </span>
+      </div>
+      <div class="ccm-card-body"><div class="ccm-chart"><canvas id="chart_trend_{{ key }}"></canvas></div></div>
+    </div>
+    {% endfor %}
+  </section>
+
+  <!-- ─────────── Saving ─────────── -->
+  <section class="ccm-panel" data-panel="saving">
+    <div class="ccm-panel-head">
+      <h5>Saving الوزن</h5>
+      <p>الفرق بين الوزن المعياري والفعلي لكل قطر ونوع</p>
+    </div>
+    <div class="ccm-card">
+      <div class="ccm-card-body is-flush">
+        <div class="ccm-scroll">
+          <table class="ccm-xt">
+            <thead>
+              <tr><th class="ccm-xt-rowhead">DN \ Class</th>{% for c in data.saving.classes %}<th>{{ c }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+              {% for dn in data.saving.dns %}
+              <tr>
+                <th>DN{{ dn }}</th>
+                {% for c in data.saving.classes %}
+                {% set cell = data.saving.cells.get((dn, c)) %}
+                {% if cell is none or cell.count == 0 %}
+                <td class="ccm-xt-empty">·</td>
+                {% else %}
+                <td class="num">
+                  <strong class="{{ 'ccm-xt-rej' if cell.saving < 0 else 'ccm-xt-acc' }}">{{ '{:,.0f}'.format(cell.saving) }}</strong> كجم
+                  <div class="ccm-kpi-note">{{ '{:,.0f}'.format(cell.planned) }} ← {{ '{:,.0f}'.format(cell.actual) }}</div>
+                </td>
+                {% endif %}
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="ccm-card-foot">
+        <a href="{{ url_for('reports.saving_matrix') }}?{{ request.query_string.decode() }}">المصفوفة الكاملة مع الإجماليات</a>
+        {% if data.saving.excluded_no_weight %}
+        · {{ data.saving.excluded_no_weight }} ماسورة بدون وزن معياري مستبعدة من الحساب
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {# The save form posts to another blueprint, so the current selection has to
+     ride in the query string rather than in the form body. #}
+  {% set xt_query = '?' ~ request.query_string.decode('utf-8') if request.query_string else '' %}
+  <!-- ─────────── Crosstab ─────────── -->
+  <section class="ccm-panel" data-panel="crosstab">
+    <div class="ccm-panel-head">
+      <h5>تقرير Crosstab</h5>
+      <p>اختر بُعد الـ Pivot ليتحول لأعمدة، وأبعاد التفاصيل لتصير صفوفاً — قالب واحد يغطي تقارير الإنتاج والجودة والمراحل</p>
+    </div>
+
+    <form method="get" id="xtForm">
+      {# Carry the page filters so the crosstab and the panels stay on one
+         dataset. _panel and every xt_* key are re-emitted below, so skipping
+         them here is what stops the query string growing on each submit. #}
+      {% for k, v in request.args.items() %}
+        {% if not k.startswith('xt_') and k != '_panel' %}
+        <input type="hidden" name="{{ k }}" value="{{ v }}">
+        {% endif %}
+      {% endfor %}
+      <input type="hidden" name="_panel" value="crosstab">
+      {# Marks a real submission, so clearing every chip means "no grouping"
+         rather than "fall back to the defaults". #}
+      <input type="hidden" name="xt_set" value="1">
+
+      <div class="ccm-grid">
+        <div class="ccm-card">
+          <div class="ccm-card-head"><span>Pivot By — البُعد الذي يتحول لأعمدة</span></div>
+          <div class="ccm-card-body">
+            <div class="ccm-drop" id="xtPivotDrop" data-placeholder="اضغط على بُعد بالأسفل لإضافته كعمود Pivot"></div>
+            <p class="ccm-kpi-note mt-2 mb-2">إضافة أكثر من بُعد تُعشِّش الأعمدة بنفس ترتيب الإضافة: وردية ثم مرحلة تعطي وردية 1 ← (صب، معالجة، هيدروتست...) ثم وردية 2 بنفس المجموعة.</p>
+            <div class="ccm-chips" id="xtPivotPalette">
+              {% for d in meta.dimensions_ar %}
+              <button type="button" class="ccm-chip" data-dim="{{ d.key }}" data-label="{{ d.label }}" data-role="pivot">{{ d.label }}</button>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="ccm-card">
+          <div class="ccm-card-head"><span>أبعاد التفاصيل — صفوف الجدول</span></div>
+          <div class="ccm-card-body">
+            <div class="ccm-drop" id="xtRowDrop" data-placeholder="اضغط على بُعد بالأسفل لإضافته كصف"></div>
+            <p class="ccm-kpi-note mt-2 mb-2">البُعد المختار كـ Pivot يُستبعد تلقائياً من هنا، لأنه صار عناوين الأعمدة نفسها.</p>
+            <div class="ccm-chips" id="xtRowPalette">
+              {% for d in meta.dimensions_ar %}
+              <button type="button" class="ccm-chip" data-dim="{{ d.key }}" data-label="{{ d.label }}" data-role="rows">{{ d.label }}</button>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="ccm-card">
+          <div class="ccm-card-head"><span>إعدادات العرض</span></div>
+          <div class="ccm-card-body">
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small">ترتيب الصفوف</label>
+                <select name="xt_sort" class="form-select form-select-sm">
+                  {% for s in meta.sorts_ar %}
+                  <option value="{{ s.key }}" {{ 'selected' if s.key == ct.sort }}>{{ s.label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label small">عدد الصفوف</label>
+                <select name="xt_limit" class="form-select form-select-sm">
+                  {% for n, lbl in [(0,'الكل'), (10,'أعلى 10'), (20,'أعلى 20'), (50,'أعلى 50'), (100,'أعلى 100')] %}
+                  <option value="{{ n }}" {{ 'selected' if n == ct.row_limit }}>{{ lbl }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label small">المقاييس المعروضة في كل خلية</label>
+                <div class="d-flex flex-wrap gap-3">
+                  {% for key, label in meta.measures_ar %}
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="xt_m"
+                           value="{{ key }}" id="xtm_{{ key }}"
+                           {{ 'checked' if key in ct.measures }}>
+                    <label class="form-check-label small" for="xtm_{{ key }}">{{ label }}</label>
+                  </div>
+                  {% endfor %}
+                </div>
+                {# Marker so an all-unchecked submit is read as a deliberate
+                   clear and falls back to the default, rather than looking
+                   like the browser simply sent nothing. #}
+                <input type="hidden" name="xt_mset" value="1">
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <div class="ccm-kpi-label mb-1">تركيبات جاهزة</div>
+              <div class="ccm-chips">
+                {% for p in meta.presets_ar %}
+                <button type="button" class="ccm-chip" data-preset="{{ p.pivot | join(',') }}|{{ p.rows | join(',') }}">{{ p.label }}</button>
+                {% endfor %}
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-sm mt-3 w-100">
+              <i class="bi bi-play-fill"></i> توليد الجدول
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <div class="ccm-card">
+      <div class="ccm-card-head">
+        <span>النتيجة</span>
+        <span class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="xtCopy()">
+            <i class="bi bi-clipboard"></i> نسخ كجدول
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="xtDownloadCsv()">
+            <i class="bi bi-filetype-csv"></i> CSV
+          </button>
+        </span>
+      </div>
+      <div class="ccm-card-body is-flush">
+        {% if not ct.rows %}
+        <div class="ccm-empty">لا توجد بيانات ضمن الفلاتر الحالية</div>
+        {% else %}
+        <div class="ccm-scroll">
+          <table class="ccm-xt" id="xtTable">
+            {# span = measure columns per pivot column. The Total column is only
+               meaningful when there ARE pivot columns to total across — with no
+               pivot the single column already IS the total. #}
+            {% set span = ct.measures | length %}
+            {% set levels = ct.header_levels | length %}
+            {% set has_pivot = levels > 0 %}
+            <thead>
+              {% if has_pivot %}
+                {% for level in ct.header_levels %}
+                <tr>
+                  {% if loop.first %}
+                  <th class="ccm-xt-rowhead" rowspan="{{ levels + 1 }}" colspan="{{ ct.row_dims | length }}">
+                    {{ ct.row_labels_ar | join(' / ') }}
+                  </th>
+                  {% endif %}
+                  {% for g in level %}
+                  <th colspan="{{ g.span * span }}" class="ccm-xt-group">{{ g.label }}</th>
+                  {% endfor %}
+                  {% if loop.first %}
+                  <th rowspan="{{ levels + 1 }}" colspan="{{ span }}" class="ccm-xt-group">الإجمالي</th>
+                  {% endif %}
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <th class="ccm-xt-rowhead" rowspan="2" colspan="{{ ct.row_dims | length }}">
+                    {{ ct.row_labels_ar | join(' / ') }}
+                  </th>
+                  <th colspan="{{ span }}" class="ccm-xt-group">الإجمالي</th>
+                </tr>
+              {% endif %}
+              <tr>
+                {% for leaf in ct.leaf_keys %}
+                  {% for m in ct.measures %}
+                  <th class="{{ 'ccm-xt-group' if loop.first }}">{{ ct.measure_meta[m].label[1] }}</th>
+                  {% endfor %}
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in ct.rows %}
+              <tr>
+                {% for lbl in row.labels %}<th>{{ lbl }}</th>{% endfor %}
+                {% for cell in row.cells %}
+                  {% for m in ct.measures %}
+                  <td class="num {{ 'ccm-xt-group' if loop.first }}">{{ xt_cell(cell, m, ct) }}</td>
+                  {% endfor %}
+                {% endfor %}
+                {% if has_pivot %}
+                  {% for m in ct.measures %}
+                  <td class="num {{ 'ccm-xt-group' if loop.first }}"><strong>{{ xt_cell(row.total, m, ct) }}</strong></td>
+                  {% endfor %}
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th colspan="{{ ct.row_dims | length }}">الإجمالي</th>
+                {% for cell in ct.col_totals %}
+                  {% for m in ct.measures %}
+                  <td class="num {{ 'ccm-xt-group' if loop.first }}">{{ xt_cell(cell, m, ct) }}</td>
+                  {% endfor %}
+                {% endfor %}
+                {% if has_pivot %}
+                  {% for m in ct.measures %}
+                  <td class="num {{ 'ccm-xt-group' if loop.first }}"><strong>{{ xt_cell(ct.grand_total, m, ct) }}</strong></td>
+                  {% endfor %}
+                {% endif %}
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {% endif %}
+      </div>
+      {# Chart of the rendered crosstab. Built from the table that is on
+         screen, so it always agrees with it — including the row limit. #}
+      <div class="ccm-card-body no-print" id="xtChartWrap">
+        <div class="d-flex flex-wrap gap-2 align-items-end mb-2">
+          <div>
+            <label class="form-label small mb-1">نوع الرسم</label>
+            <select id="xtChartType" class="form-select form-select-sm">
+              <option value="bar">أعمدة</option>
+              <option value="line">خطي</option>
+              <option value="doughnut">دائري</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label small mb-1">القيمة</label>
+            <select id="xtChartMeasure" class="form-select form-select-sm">
+              {% for m in ct.measures %}
+              <option value="{{ m }}">{{ ct.measure_meta[m].label[1] }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="ccm-chart"><canvas id="xtChart"></canvas></div>
+      </div>
+
+      {# Pin the current selection to "لوحتي". The selection is saved, not the
+         numbers, so a pinned view recomputes against current data. #}
+      <div class="ccm-card-body no-print">
+        <div class="ccm-kpi-label mb-2">إضافة لـ «لوحتي»</div>
+        <form method="post" class="row g-2 align-items-end"
+              action="{{ url_for('analytics.save_crosstab_kpi') }}{{ xt_query }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-md-4">
+            <label class="form-label small mb-1">الاسم</label>
+            <input type="text" name="name" class="form-control form-control-sm"
+                   placeholder="مثال: نسبة الرفض حسب الوردية">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">القيمة (للمؤشر)</label>
+            <select name="xt_kpi_measure" class="form-select form-select-sm">
+              {% for m in ct.measures %}
+              <option value="{{ m }}">{{ ct.measure_meta[m].label[1] }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-5 d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" name="render" value="tile">
+              <i class="bi bi-speedometer2"></i> حفظ كـ مؤشر
+            </button>
+            <button class="btn btn-outline-primary btn-sm" name="render" value="table">
+              <i class="bi bi-table"></i> حفظ كـ جدول
+            </button>
+            <button class="btn btn-outline-primary btn-sm" name="render" value="chart"
+                    id="xtSaveChart">
+              <i class="bi bi-bar-chart"></i> حفظ كـ رسم
+            </button>
+            {# Carries whichever chart type is selected above, so a pinned chart
+               comes back as the chart the user was actually looking at. #}
+            <input type="hidden" name="xt_chart_type" id="xtSaveChartType" value="bar">
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('analytics.kpis') }}">
+              فتح لوحتي
+            </a>
+          </div>
+        </form>
+      </div>
+
+      {# AI reads the rendered selection, not the whole dataset. A specific
+         pivot is a far better prompt than every fact row. #}
+      <div class="ccm-card-body no-print">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="ccm-kpi-label">تحليل AI للتحديد الحالي</div>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="xtAiBtn">
+            توليد التحليل
+          </button>
+        </div>
+        <div id="xtAiResult" class="ccm-kpi-note">
+          اضغط «توليد التحليل» لقراءة الجدول المعروض وتحديد الأنماط والتوصيات.
+        </div>
+      </div>
+
+      {% if ct.stats %}
+      {# Describes the cells on screen, so it follows the current pivot,
+         measures and row limit rather than the whole dataset. #}
+      <div class="ccm-card-body">
+        <div class="ccm-kpi-label mb-2">إحصائيات الخلايا المعروضة</div>
+        <div class="table-responsive">
+          <table class="ccm-table">
+            <thead><tr>
+              <th>المقياس</th><th class="num">عدد الخلايا</th><th class="num">المتوسط</th>
+              <th class="num">الأدنى</th><th class="num">الأعلى</th>
+              <th class="num">الانحراف</th><th class="num">الإجمالي</th>
+            </tr></thead>
+            <tbody>
+              {% for st in ct.stats %}
+              <tr>
+                <td>{{ st.label[1] }}</td>
+                <td class="num">{{ st.n }}</td>
+                <td class="num">{{ st.avg }}{{ '%' if st.fmt in ('pct', 'pct2') }}</td>
+                <td class="num">{{ st.min }}{{ '%' if st.fmt in ('pct', 'pct2') }}</td>
+                <td class="num">{{ st.max }}{{ '%' if st.fmt in ('pct', 'pct2') }}</td>
+                <td class="num">{{ st.std }}</td>
+                <td class="num">
+                  {%- if st.total is not none %}{{ num(st.total) }}
+                  {%- else %}<span class="ccm-xt-empty" title="جمع النسب عبر خلايا مختلفة الأحجام لا يعطي رقماً صحيحاً">—</span>
+                  {%- endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+      <div class="ccm-card-foot">
+        {{ num(ct.fact_count) }} سجل · {{ num(ct.total_rows) }} صف مطابق
+        {%- if ct.hidden_rows %} · <strong>{{ num(ct.hidden_rows) }} صف مخفي بحد العرض الحالي</strong>{% endif %}
+        · نسبة الرفض محسوبة على المقرَّر فقط (مقبول + مرفوض)، وسجلات بانتظار القرار خارج المقام.
+        {%- if ct.shows_weight %}
+        · الوزن يُحتسب مرة واحدة لكل ماسورة مهما تعددت مراحلها، والتوفير محسوب من
+        {{ num(ct.grand_total.weighed) }} من {{ num(ct.grand_total.pipes) }} ماسورة لها وزن معياري وفعلي.
+        {%- endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── Daily report ─────────── -->
+  <section class="ccm-panel" data-panel="daily">
+    <div class="ccm-panel-head">
+      <h5>التقرير اليومي</h5>
+      <p>تقرير يوم واحد جاهز للطباعة والتوقيع</p>
+    </div>
+    {% include 'reports/_bi_daily_report.html' %}
+  </section>
+
+  <!-- ─────────── Related reports ─────────── -->
+  <section class="ccm-panel" data-panel="more">
+    <div class="ccm-panel-head">
+      <h5>تقارير أخرى</h5>
+      <p>تقارير قائمة بذاتها تكمّل اللوحة — تفتح بنفس الفلاتر الحالية</p>
+    </div>
+    <div class="ccm-grid">
+      {% for endpoint, title, note, icon in [
+        ('reports.spc', 'Control Charts / SPC', 'خرائط ضبط المتغيرات والصفات مع حدود التحكم', 'graph-down'),
+        ('reports.capability', 'Capability Cp / Cpk', 'قدرة العملية مقابل حدود المواصفة', 'rulers'),
+        ('reports.ytd_comparison', 'مقارنة YTD', 'السنة الحالية مقابل السابقة شهراً بشهر', 'calendar-range'),
+        ('reports.period_compare', 'مقارنة فترتين', 'أي فترتين جنباً إلى جنب مع عتبات الإنذار', 'arrow-left-right'),
+        ('reports.diagnosis', 'التشخيص', 'إنذارات مبنية على قواعد فوق بيانات آخر شهر', 'activity'),
+        ('reports.data_quality', 'جودة البيانات', 'الحقول الناقصة والقيم الشاذة قبل الاعتماد على التقارير', 'shield-check'),
+        ('reports.non_conformance', 'سجل عدم المطابقة', 'كيميائي وميكانيكي ومراحل في سجل واحد', 'journal-x'),
+        ('reports.stage_audit', 'البيانات الخام', 'كل سجلات المراحل مع الأعمدة القابلة للاختيار والتصدير', 'table'),
+        ('reports.defect_heatmap', 'خريطة العيوب الحرارية', 'كثافة العيوب على مصفوفة القطر والنوع', 'grid-3x3-gap'),
+        ('reports.mold_performance', 'أداء القوالب', 'الرفض والإنتاجية لكل قالب', 'bricks'),
+        ('reports.shift_engineer_comparison', 'مقارنة مهندسي الورديات', 'مؤشرات كل مهندس جنباً إلى جنب', 'people'),
+        ('reports.heat_traceability', 'التتبع من البوتقة للماسورة', 'من التحليل الكيميائي حتى التسليم', 'diagram-2')
+      ] %}
+      {% if can('reports', endpoint.split('.')[1]) %}
+      <a class="ccm-card text-decoration-none" href="{{ url_for(endpoint) }}?{{ request.query_string.decode() }}">
+        <div class="ccm-card-head"><span><i class="bi bi-{{ icon }}"></i> {{ title }}</span><i class="bi bi-arrow-left-short"></i></div>
+        <div class="ccm-card-body"><span class="ccm-kpi-note">{{ note }}</span></div>
+      </a>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <div class="ccm-grid">
+      {% if can('analytics', 'query_manager') %}
+      <a class="ccm-card text-decoration-none" href="{{ url_for('analytics.query_manager') }}">
+        <div class="ccm-card-head"><span><i class="bi bi-search"></i> منشئ الاستعلامات</span><i class="bi bi-arrow-left-short"></i></div>
+        <div class="ccm-card-body"><span class="ccm-kpi-note">استعلامات مخصّصة فوق الجداول مباشرة مع التصدير</span></div>
+      </a>
+      {% endif %}
+      {% if can('analytics', 'kpis') %}
+      <a class="ccm-card text-decoration-none" href="{{ url_for('analytics.kpis') }}">
+        <div class="ccm-card-head"><span><i class="bi bi-bullseye"></i> منشئ المؤشرات</span><i class="bi bi-arrow-left-short"></i></div>
+        <div class="ccm-card-body"><span class="ccm-kpi-note">تعريف مؤشرات مخصّصة وحفظها</span></div>
+      </a>
+      {% endif %}
+      {% if can('analytics', 'dashboards') %}
+      <a class="ccm-card text-decoration-none" href="{{ url_for('analytics.dashboards') }}">
+        <div class="ccm-card-head"><span><i class="bi bi-star"></i> لوحاتي</span><i class="bi bi-arrow-left-short"></i></div>
+        <div class="ccm-card-body"><span class="ccm-kpi-note">لوحات مركّبة من المؤشرات المحفوظة</span></div>
+      </a>
+      {% endif %}
+    </div>
+  </section>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const PAYLOAD = {{ data.payload | tojson }};
+  const COLORS = ['#0f2044','#0891b2','#057a55','#b45309','#c81e1e','#4f46e5','#0d9488','#7c3aed','#6b7280','#0e7490'];
+  const ACC = '#057a55', REJ = '#c81e1e', BRAND = '#0f2044', TEAL = '#0891b2';
+
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = '#6b7280';
+
+  const baseOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 12, autoSkip: true } },
+              y: { grid: { color: '#f3f4f6' }, beginAtZero: true } }
+  };
+
+  function merge(extra) { return Object.assign({}, JSON.parse(JSON.stringify(baseOpts)), extra || {}); }
+
+  // ── Panel switching ──────────────────────────────────────────
+  const navBtns = Array.from(document.querySelectorAll('#biNav .ccm-nav-btn'));
+  const panels = Array.from(document.querySelectorAll('#biPanels .ccm-panel'));
+  const built = {};
+
+  function show(name, push) {
+    const target = panels.find(p => p.dataset.panel === name) || panels[0];
+    panels.forEach(p => p.classList.toggle('active', p === target));
+    navBtns.forEach(b => b.classList.toggle('active', b.dataset.panel === target.dataset.panel));
+    if (push !== false) {
+      history.replaceState(null, '', '#' + target.dataset.panel);
+    }
+    buildCharts(target.dataset.panel);
+  }
+
+  navBtns.forEach(b => b.addEventListener('click', () => show(b.dataset.panel)));
+
+  // ── Charts, built on first reveal (a hidden canvas measures as 0) ──
+  function buildCharts(panel) {
+    if (built[panel]) return;
+    built[panel] = true;
+
+    if (panel === 'overview') {
+      ['month', 'shift', 'machine', 'dn', 'mold'].forEach(key => {
+        const rows = PAYLOAD.groups[key] || [];
+        const chart = new Chart(document.getElementById('chart_' + key), {
+          type: 'bar',
+          data: { labels: rows.map(r => r.key),
+                  datasets: [{ data: rows.map(r => r.count), backgroundColor: BRAND, borderRadius: 3, maxBarThickness: 34 }] },
+          options: merge()
+        });
+        document.querySelectorAll('[data-toggle-group="' + key + '"] button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            btn.parentNode.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            chart.data.datasets[0].data = rows.map(r => r[btn.dataset.mode]);
+            chart.update();
+          });
+        });
+      });
+
+      const daily = PAYLOAD.trends.daily || [];
+      new Chart(document.getElementById('chart_daily'), {
+        type: 'line',
+        data: { labels: daily.map(r => r.key),
+                datasets: [{ data: daily.map(r => r.count), borderColor: TEAL,
+                             backgroundColor: 'rgba(8,145,178,.12)', fill: true,
+                             pointRadius: 2, tension: .3, borderWidth: 2 }] },
+        options: merge()
+      });
+    }
+
+    if (panel === 'stagekpi') {
+      const rows = PAYLOAD.panels.stage_matrix || [];
+      new Chart(document.getElementById('chart_stagekpi'), {
+        type: 'bar',
+        data: { labels: rows.map(r => r.key),
+                datasets: [
+                  { label: 'مقبول', data: rows.map(r => r.acc), backgroundColor: ACC, borderRadius: 3 },
+                  { label: 'مرفوض', data: rows.map(r => r.rej), backgroundColor: REJ, borderRadius: 3 }
+                ] },
+        options: merge({
+          plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } },
+          scales: { x: { stacked: true, grid: { display: false } },
+                    y: { stacked: true, grid: { color: '#f3f4f6' }, beginAtZero: true } }
+        })
+      });
+    }
+
+    if (panel === 'reasons') {
+      const rows = (PAYLOAD.panels.reasons.pareto || []).slice(0, 12);
+      const el = document.getElementById('chart_pareto');
+      if (el) {
+        new Chart(el, {
+          data: {
+            labels: rows.map(r => r.reason),
+            datasets: [
+              { type: 'bar', data: rows.map(r => r.count), backgroundColor: REJ, borderRadius: 3, order: 2 },
+              { type: 'line', data: rows.map(r => r.cum_pct), borderColor: BRAND, borderWidth: 2,
+                pointRadius: 3, yAxisID: 'y1', tension: .25, order: 1 }
+            ]
+          },
+          options: merge({
+            scales: {
+              x: { grid: { display: false }, ticks: { maxRotation: 40, minRotation: 0 } },
+              y: { grid: { color: '#f3f4f6' }, beginAtZero: true },
+              y1: { position: 'right', beginAtZero: true, max: 100, grid: { display: false },
+                    ticks: { callback: v => v + '%' } }
+            }
+          })
+        });
+      }
+    }
+
+    if (panel === 'flow') {
+      const rows = PAYLOAD.stage.reject_by_stage || [];
+      new Chart(document.getElementById('chart_stage_rej'), {
+        type: 'bar',
+        data: { labels: rows.map(r => r.stage),
+                datasets: [{ data: rows.map(r => r.rejects), backgroundColor: REJ, borderRadius: 3 }] },
+        options: merge()
+      });
+      new Chart(document.getElementById('chart_stage_pie'), {
+        type: 'doughnut',
+        data: { labels: rows.map(r => r.stage),
+                datasets: [{ data: rows.map(r => r.rejects), backgroundColor: COLORS, borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '58%',
+                   plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } } }
+      });
+    }
+
+    if (panel === 'trends') {
+      ['day', 'week', 'month'].forEach(key => {
+        const rows = PAYLOAD.panels.trends[key] || [];
+        const chart = new Chart(document.getElementById('chart_trend_' + key), {
+          type: 'line',
+          data: { labels: rows.map(r => r.key),
+                  datasets: [{ data: rows.map(r => r.count), borderColor: TEAL,
+                               backgroundColor: 'rgba(8,145,178,.12)', fill: true,
+                               pointRadius: 2, tension: .3, borderWidth: 2 }] },
+          options: merge()
+        });
+        document.querySelectorAll('[data-trend-group="' + key + '"] button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            btn.parentNode.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const mode = btn.dataset.mode;
+            // Stages with no decision yet return null for rej_pct — Chart.js
+            // draws a gap there rather than a misleading zero.
+            chart.data.datasets[0].data = rows.map(r => r[mode]);
+            chart.data.datasets[0].borderColor = mode === 'rej_pct' ? REJ : TEAL;
+            chart.data.datasets[0].backgroundColor = mode === 'rej_pct'
+              ? 'rgba(200,30,30,.10)' : 'rgba(8,145,178,.12)';
+            chart.update();
+          });
+        });
+      });
+    }
+  }
+
+  // ── Crosstab dimension pickers ────────────────────────────────
+  const xtState = {
+    pivot: {{ ct.pivot_dims | tojson }},
+    rows: {{ ct.row_dims | tojson }}
+  };
+  const dimLabels = {};
+  document.querySelectorAll('#xtPivotPalette .ccm-chip').forEach(c => { dimLabels[c.dataset.dim] = c.dataset.label; });
+
+  function renderXt() {
+    ['pivot', 'rows'].forEach(role => {
+      const drop = document.getElementById(role === 'pivot' ? 'xtPivotDrop' : 'xtRowDrop');
+      drop.textContent = '';
+      xtState[role].forEach((dim, i) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'ccm-chip is-on';
+        chip.innerHTML = '<span class="ccm-chip-ord">' + (i + 1) + '</span>' +
+                         (dimLabels[dim] || dim) + ' <i class="bi bi-x"></i>';
+        chip.addEventListener('click', () => {
+          xtState[role] = xtState[role].filter(d => d !== dim);
+          renderXt();
+        });
+        drop.appendChild(chip);
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = role === 'pivot' ? 'xt_pivot' : 'xt_rows';
+        hidden.value = dim;
+        drop.appendChild(hidden);
+      });
+    });
+    // A dimension is a Pivot column or a row, never both. Clicking it in the
+    // other palette MOVES it rather than being blocked, so the chip stays
+    // clickable and only shows where the dimension currently sits.
+    document.querySelectorAll('#xtRowPalette .ccm-chip').forEach(c => {
+      c.classList.toggle('is-on', xtState.rows.indexOf(c.dataset.dim) !== -1);
+      c.title = xtState.pivot.indexOf(c.dataset.dim) !== -1
+        ? 'مستخدم حالياً كعمود Pivot — الضغط ينقله إلى الصفوف' : '';
+    });
+    document.querySelectorAll('#xtPivotPalette .ccm-chip').forEach(c => {
+      c.classList.toggle('is-on', xtState.pivot.indexOf(c.dataset.dim) !== -1);
+      c.title = xtState.rows.indexOf(c.dataset.dim) !== -1
+        ? 'مستخدم حالياً كصف — الضغط ينقله إلى أعمدة Pivot' : '';
+    });
+  }
+
+  document.querySelectorAll('#xtPivotPalette .ccm-chip, #xtRowPalette .ccm-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const role = chip.dataset.role;
+      const dim = chip.dataset.dim;
+      if (xtState[role].indexOf(dim) !== -1) {
+        xtState[role] = xtState[role].filter(d => d !== dim);
+      } else {
+        xtState[role] = xtState[role].concat([dim]);
+        // The server drops a dimension from rows when it is also a pivot
+        // column. Mirror that here in BOTH directions, or the picker shows a
+        // selection the generated table will not honour.
+        const other = role === 'pivot' ? 'rows' : 'pivot';
+        xtState[other] = xtState[other].filter(d => d !== dim);
+      }
+      renderXt();
+    });
+  });
+
+  document.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const parts = btn.dataset.preset.split('|');
+      xtState.pivot = parts[0] ? parts[0].split(',') : [];
+      xtState.rows = parts[1] ? parts[1].split(',') : [];
+      renderXt();
+    });
+  });
+
+  renderXt();
+
+  // ── Crosstab export ───────────────────────────────────────────
+  function tableToRows() {
+    const table = document.getElementById('xtTable');
+    if (!table) return [];
+    return Array.from(table.querySelectorAll('tr')).map(tr =>
+      Array.from(tr.querySelectorAll('th,td')).map(cell => {
+        const span = parseInt(cell.getAttribute('colspan') || '1', 10);
+        const text = cell.innerText.replace(/\s+/g, ' ').trim();
+        return [text].concat(new Array(span - 1).fill(''));
+      }).reduce((a, b) => a.concat(b), [])
+    );
+  }
+
+  window.xtCopy = function () {
+    const rows = tableToRows();
+    if (!rows.length) return;
+    const tsv = rows.map(r => r.join('\t')).join('\n');
+    navigator.clipboard.writeText(tsv).catch(() => window.prompt('انسخ يدوياً', tsv));
+  };
+
+  // ── Crosstab chart ────────────────────────────────────────────────
+  // Series come from CT_DATA (the same object the table rendered from), so the
+  // chart cannot drift from the table — including its row limit.
+  const CT_DATA = {
+    rows: {{ ct.rows | tojson }},
+    leaves: {{ ct.leaf_keys | tojson }},
+    measures: {{ ct.measures | tojson }},
+  };
+
+  let xtChartObj = null;
+  function xtBuildChart() {
+    const canvas = document.getElementById('xtChart');
+    if (!canvas || typeof Chart === 'undefined') { return; }
+    const measure = document.getElementById('xtChartMeasure').value;
+    const type = document.getElementById('xtChartType').value;
+    const labels = CT_DATA.rows.map(r => r.labels.join(' / '));
+
+    const leafNames = CT_DATA.leaves.length
+      ? CT_DATA.leaves.map(l => l.join(' / '))
+      : ['الإجمالي'];
+    const datasets = leafNames.map((name, i) => ({
+      label: name,
+      data: CT_DATA.rows.map(r => {
+        const cell = r.cells[i];
+        const v = cell ? cell[measure] : null;
+        return v === null || v === undefined ? null : v;
+      }),
+    }));
+
+    if (xtChartObj) { xtChartObj.destroy(); }
+    xtChartObj = new Chart(canvas, {
+      type: type,
+      data: {
+        labels: labels,
+        // A doughnut can only show one series; use the first leaf.
+        datasets: type === 'doughnut' ? [datasets[0]] : datasets,
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+      },
+    });
+  }
+
+  ['xtChartType', 'xtChartMeasure'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) { el.addEventListener('change', xtBuildChart); }
+  });
+
+  (function () {
+    const type = document.getElementById('xtChartType');
+    const hidden = document.getElementById('xtSaveChartType');
+    if (!type || !hidden) { return; }
+    const sync = function () { hidden.value = type.value; };
+    type.addEventListener('change', sync);
+    sync();
+  })();
+  if (document.getElementById('xtChart')) { xtBuildChart(); }
+
+  // ── Crosstab AI ───────────────────────────────────────────────────
+  (function () {
+    const btn = document.getElementById('xtAiBtn');
+    if (!btn) { return; }
+    btn.addEventListener('click', function () {
+      const out = document.getElementById('xtAiResult');
+      btn.disabled = true;
+      out.textContent = 'جارٍ التحليل…';
+      fetch('{{ url_for("reports.api_ai_summary", report_type="crosstab") }}'
+            + window.location.search.replace(/^\?/, '&').replace(/^&/, '?'), {
+        method: 'GET',
+      })
+        .then(r => r.json())
+        .then(d => {
+          if (d.error) { out.textContent = d.error; return; }
+          const parts = [];
+          if (d.summary) { parts.push('<p>' + d.summary + '</p>'); }
+          ['insights', 'recommendations'].forEach(function (k) {
+            if (Array.isArray(d[k]) && d[k].length) {
+              parts.push('<ul>' + d[k].map(i => '<li>' + i + '</li>').join('') + '</ul>');
+            }
+          });
+          out.innerHTML = parts.length ? parts.join('')
+            : (typeof d === 'string' ? d : JSON.stringify(d));
+        })
+        .catch(() => { out.textContent = 'تعذّر توليد التحليل.'; })
+        .finally(() => { btn.disabled = false; });
+    });
+  })();
+
+  window.xtDownloadCsv = function () {
+    const rows = tableToRows();
+    if (!rows.length) return;
+    const csv = rows.map(r => r.map(c => '"' + c.replace(/"/g, '""') + '"').join(',')).join('\n');
+    // BOM so Excel opens Arabic headers in UTF-8 instead of mojibake.
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ccm-crosstab.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  // Changing only the fragment is a same-document navigation, so the script
+  // never re-runs — without this, pasting a #panel link while already on the
+  // page (or pressing Back) leaves the wrong panel showing.
+  window.addEventListener('hashchange', function () {
+    show((window.location.hash || '').replace('#', '') || 'overview', false);
+  });
+
+  // ── Boot: honour #hash, then the _panel form marker ───────────
+  const params = new URLSearchParams(window.location.search);
+  const initial = (window.location.hash || '').replace('#', '') || params.get('_panel') || 'overview';
+  show(initial, false);
+})();
+</script>
+{% endblock %}

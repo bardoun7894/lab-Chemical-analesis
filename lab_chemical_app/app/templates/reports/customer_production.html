@@ -1,0 +1,53 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header py-2"><span class="small fw-bold">{title}</span></div>
+    <div class="card-body"><canvas id="custChart" height="90"></canvas></div>
+</div>
+<script>
+(function(){
+const rows = {{ data.rows | tojson }};
+    new Chart(document.getElementById('custChart'), { type: 'bar',
+        data: { labels: rows.map(r => r.customer),
+                datasets: [
+                    { label: 'Produced', data: rows.map(r => r.produced), backgroundColor: '#2563eb' },
+                    { label: 'Rejected', data: rows.map(r => r.rejected), backgroundColor: '#e11d48' }] },
+        options: { responsive: true } });
+})();
+</script>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Customer</th>
+                    <th class="text-end">Produced</th>
+                    <th class="text-end">Accepted</th>
+                    <th class="text-end">Rejected</th>
+                    <th class="text-end">Delivered</th>
+                    <th class="text-end">Reject %</th>
+                    <th class="text-end">Delivered %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.rows %}
+                <tr>
+                    <td><strong>{{ r.customer }}</strong></td>
+                    <td class="text-end">{{ r.produced }}</td>
+                    <td class="text-end text-success">{{ r.accepted }}</td>
+                    <td class="text-end text-danger">{{ r.rejected }}</td>
+                    <td class="text-end">{{ r.delivered }}</td>
+                    <td class="text-end">{{ r.reject_pct }}%</td>
+                    <td class="text-end">{{ r.delivery_pct }}%</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No data</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

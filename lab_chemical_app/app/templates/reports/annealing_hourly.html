@@ -1,0 +1,54 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header py-2"><span class="small fw-bold">{title}</span></div>
+    <div class="card-body"><canvas id="hourChart" height="90"></canvas></div>
+</div>
+<script>
+(function(){
+const rows = {{ data.rows | tojson }};
+    new Chart(document.getElementById('hourChart'), { type: 'bar',
+        data: { labels: rows.map(r => r.hour),
+                datasets: [{ label: 'Pipes', data: rows.map(r => r.count), backgroundColor: '#4f46e5' }] },
+        options: { responsive: true, plugins: { legend: { display: false } } } });
+})();
+</script>
+
+<div class="alert alert-info">
+    {{ data.summary.total_pipes }} pipes processed across {{ data.summary.active_hours }} hours in the selected period.
+</div>
+
+<div class="row g-2">
+    {% for slot in data.rows %}
+    {% if slot.count > 0 %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header d-flex justify-content-between">
+                <strong>{{ slot.hour }}</strong>
+                <span class="badge bg-primary">{{ slot.count }}</span>
+            </div>
+            <div class="card-body p-2">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>Pipe</th><th>Ladle</th><th>DN</th><th>Time</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for p in slot.pipes %}
+                        <tr>
+                            <td><code class="small">{{ p.pipe_code }}</code></td>
+                            <td><small>{{ p.ladle_id or '-' }}</small></td>
+                            <td>DN{{ p.dn }}</td>
+                            <td><small>{{ p.stage_time }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endblock %}

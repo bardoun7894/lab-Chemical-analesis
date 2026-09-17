@@ -1,0 +1,33 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header"><h6 class="mb-0">Pipes reaching each stage</h6></div>
+    <div class="card-body">
+        {% for r in data.rows %}
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <div class="text-end" style="width: 130px">{{ r.stage }}</div>
+            <div class="flex-grow-1">
+                <div class="progress" style="height: 22px">
+                    <div class="progress-bar {{ 'bg-secondary' if r.count == 0 }}"
+                         style="width: {{ (r.count / data.max * 100) | round(1) if data.max else 0 }}%">
+                        {{ r.count }}
+                    </div>
+                </div>
+            </div>
+            <div style="width: 110px" class="small text-end">
+                {% if r.drop_abs > 0 %}
+                <span class="text-danger">−{{ r.drop_abs }} ({{ r.drop_pct }}%)</span>
+                {% elif r.drop_abs < 0 %}
+                <span class="text-success">+{{ -r.drop_abs }} gained</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="card-footer text-muted small">
+        Drop = pipes that reached the previous populated stage but not this one.
+        Stage list is DB-driven — custom stages appear automatically.
+    </div>
+</div>
+{% endblock %}

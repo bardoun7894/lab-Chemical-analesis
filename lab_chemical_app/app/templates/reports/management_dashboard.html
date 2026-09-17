@@ -1,0 +1,116 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary"><div class="card-body">
+            <h6 class="text-white-50">Total Production</h6>
+            <h1 class="mb-0">{{ data.kpis.total_production }}</h1>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success"><div class="card-body">
+            <h6 class="text-white-50">Accepted / RFT %</h6>
+            <h1 class="mb-0">{{ data.kpis.accepted }}</h1>
+            <div>{{ data.kpis.rft_pct }}%</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger"><div class="card-body">
+            <h6 class="text-white-50">Rejected / Scrap %</h6>
+            <h1 class="mb-0">{{ data.kpis.rejected }}</h1>
+            <div>{{ data.kpis.scrap_pct }}%</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning"><div class="card-body">
+            <h6 class="text-white-50">On Hold</h6>
+            <h1 class="mb-0">{{ data.kpis.hold }}</h1>
+        </div></div>
+    </div>
+</div>
+
+<!-- KPI Pie Chart -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header">Accept / Reject / Hold</div>
+            <div class="card-body">
+                <canvas id="kpiPie" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header">Top Defects</div>
+            <div class="card-body">
+                <canvas id="defectBar" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+new Chart(document.getElementById('kpiPie'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Accepted', 'Rejected', 'Hold'],
+        datasets: [{
+            data: [{{ data.kpis.accepted }}, {{ data.kpis.rejected }}, {{ data.kpis.hold }}],
+            backgroundColor: ['#198754', '#dc3545', '#ffc107']
+        }]
+    },
+    options: {responsive: true, plugins: {legend: {position: 'bottom'}}}
+});
+{% if data.top_defects %}
+new Chart(document.getElementById('defectBar'), {
+    type: 'bar',
+    data: {
+        labels: {{ data.top_defects|map(attribute='defect')|list|tojson }},
+        datasets: [{label: 'Count', data: {{ data.top_defects|map(attribute='count')|list|tojson }}, backgroundColor: '#dc3545'}]
+    },
+    options: {responsive: true, indexAxis: 'y', plugins: {legend: {display: false}}}
+});
+{% endif %}
+</script>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header"><strong>Top 3 Defects</strong></div>
+            <div class="card-body">
+                {% if data.top_defects %}
+                <ol>
+                {% for d in data.top_defects %}
+                    <li><strong>{{ d.defect }}</strong> — {{ d.count }} occurrences</li>
+                {% endfor %}
+                </ol>
+                {% else %}
+                <p class="text-muted mb-0">No defects recorded</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header"><strong>Performance Highlights</strong></div>
+            <div class="card-body">
+                {% if data.best_machine %}
+                <p class="mb-1">
+                    <i class="bi bi-award text-success"></i>
+                    <strong>Best Line:</strong> {{ data.best_machine.machine }}
+                    ({{ data.best_machine.accept_pct }}% accept rate)
+                </p>
+                {% endif %}
+                {% if data.worst_stage %}
+                <p class="mb-0">
+                    <i class="bi bi-exclamation-triangle text-danger"></i>
+                    <strong>Worst Stage:</strong> {{ data.worst_stage.stage }}
+                    ({{ data.worst_stage.reject_pct }}% reject rate)
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

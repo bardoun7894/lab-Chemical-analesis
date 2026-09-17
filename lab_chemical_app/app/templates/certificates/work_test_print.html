@@ -1,0 +1,134 @@
+{# Work Test Certificate — form QC-01-F-26.
+
+   Below the material table this form carries the chemical limits the heat was
+   accepted against and the mechanical sample that represents the batch, then
+   the seven inspection clauses (a–g). #}
+{% extends 'certificates/_print_base.html' %}
+
+{% block issue_stamp %}20/11/2024{% endblock %}
+
+{% block extra_styles %}
+        .analysis th, .analysis td { text-align: center; font-size: 11px; }
+        .analysis .rowlbl {
+            background: #f2f2f2; font-weight: 600; text-align: left;
+            width: 118px; white-space: nowrap;
+        }
+        .analysis .elem { background: #f2f2f2; font-weight: 700; }
+
+        .inspection { margin-top: 8px; }
+        .inspection .key {
+            width: 190px; font-weight: 600; vertical-align: top;
+            background: #f2f2f2;
+        }
+        .inspection td { line-height: 1.5; text-align: justify; }
+
+        .mech th, .mech td { text-align: center; font-size: 11px; }
+        .mech .grp { background: #f2f2f2; font-weight: 700; }
+        .mech .notes-cell { text-align: left; }
+{% endblock %}
+
+{% block intro %}
+    <table><tr><td class="intro">
+        This Certificate certify that the Centrifugally cast(Spun) Ductile Iron pipes
+        (suitable for socket &amp; spigot push on joint as detailed below) have been
+        manufactured and tested by our factory in accordance with the specification
+        {{ standards_text }} and all the test results were satisfactory.
+    </td></tr></table>
+{% endblock %}
+
+{% block ref_rows %}
+        <tr>
+            <th>TEST CERTIFICATE NO.</th>
+            <td>{{ cert.certificate_no }}</td>
+        </tr>
+        <tr>
+            <th>DATE</th>
+            <td>{{ cert.issue_date.strftime('%d/%m/%Y') if cert.issue_date else '' }}</td>
+        </tr>
+{% endblock %}
+
+{% block sheet_body %}
+    {# ---- Chemical analysis: the limits every heat was accepted against ---- #}
+    <table class="grid analysis" style="margin-top:6px">
+        <tr><td class="section-title" colspan="{{ elements|length + 2 }}">Chemical Analysis</td></tr>
+        <tr>
+            <th class="elem">DN (mm)</th>
+            {% for element, limit in elements %}
+            <th class="elem">{{ element }}</th>
+            {% endfor %}
+            <th class="rowlbl"></th>
+        </tr>
+        <tr>
+            <td>{{ dn_range }}</td>
+            {% for element, limit in elements %}
+            <td>{{ limit }}</td>
+            {% endfor %}
+            <td class="rowlbl">Specification</td>
+        </tr>
+    </table>
+
+    {# ---- Inspection results (a–g) ---- #}
+    <table class="grid inspection">
+        <tr><td class="section-title" colspan="2">Inspection Results</td></tr>
+        <tr>
+            <td class="key">a) Visual appearance</td>
+            <td>100% visually checked and found satisfactory.</td>
+        </tr>
+        <tr>
+            <td class="key">b) Dimensions</td>
+            <td>External diameter, wall thickness, ovality and straightness have been
+                checked &amp; found comply with specification.</td>
+        </tr>
+        <tr>
+            <td class="key">c) Mechanical Properties</td>
+            <td>The test results are found conforming to {{ standards_text }} and
+                results from our internal records is given below.</td>
+        </tr>
+    </table>
+
+    {# ---- The sample the mechanical clause refers to ---- #}
+    <table class="grid mech">
+        <tr>
+            <th rowspan="2" class="grp" style="width:12%">DN ( mm )</th>
+            <th colspan="2" class="grp">Tensile Strength (Kg/mm2)</th>
+            <th colspan="2" class="grp">Elongation (%)</th>
+            <th rowspan="2" class="grp" style="width:16%">Notes</th>
+        </tr>
+        <tr>
+            <th>Sample Results</th>
+            <th>Standard</th>
+            <th>Sample Results</th>
+            <th>Standard</th>
+        </tr>
+        <tr>
+            <td>{{ sample.dn if sample and sample.dn else dn_range }}</td>
+            <td>{{ sample.tensile if sample and sample.tensile is not none else '' }}</td>
+            <td>Min. : 42.8 (Kgf/mm2 )</td>
+            <td>{{ sample.elongation if sample and sample.elongation is not none else '' }}</td>
+            <td>Min. :10%</td>
+            <td class="notes-cell">{% if sample %}Average of {{ sample.heats }} heat{{ 's' if sample.heats != 1 }}{% if sample.tests != sample.heats %} ({{ sample.tests }} tests){% endif %}{% endif %}</td>
+        </tr>
+    </table>
+
+    <table class="grid inspection">
+        <tr>
+            <td class="key">d ) Hydro-static Test</td>
+            <td>100% pipes have been tested at ( 53 bar from DN100 to DN300, 41 bar
+                from DN350 to DN600 and 35 bar from DN700 to DN800 ) and found no
+                leakage or any kind defects.</td>
+        </tr>
+        <tr>
+            <td class="key">e ) Inside Lining</td>
+            <td>The DI pipes have been internally lined with cement mortar and thickness
+                of lining and bore dia was checked and found conforming to ISO 4179.</td>
+        </tr>
+        <tr>
+            <td class="key">f ) External Coating</td>
+            <td>{{ coating_text }}</td>
+        </tr>
+        <tr>
+            <td class="key">g ) Marking</td>
+            <td>Marking of the pipes is as per the specification &amp; Customer Requirements.</td>
+        </tr>
+    </table>
+{% endblock %}

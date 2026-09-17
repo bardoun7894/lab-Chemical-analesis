@@ -1,0 +1,80 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+{% if data.excluded_no_weight %}
+<div class="alert alert-info py-2">
+    <i class="bi bi-info-circle"></i> {{ data.excluded_no_weight }} pipe(s) had neither
+    iso_weight nor a product standard weight and are excluded from the totals.
+</div>
+{% endif %}
+
+{% if not data.cells %}
+<div class="alert alert-info">No pipes with both DN and class in this filter range.</div>
+{% else %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0 text-center">
+            <thead>
+                <tr><th class="text-start">DN \ Class</th>
+                    {% for c in data.classes %}<th>{{ c }}</th>{% endfor %}
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dn in data.dns %}
+                <tr>
+                    <th class="text-start">DN{{ dn }}</th>
+                    {% for c in data.classes %}
+                    {% set cell = data.cells.get((dn, c)) %}
+                    {% if cell is none or cell.count == 0 %}
+                    <td class="text-muted" style="background:#f8f9fa">·</td>
+                    {% else %}
+                    <td class="{{ 'table-danger' if cell.saving < 0 }}">
+                        <strong>{{ cell.saving }}</strong> kg
+                        <div style="font-size:0.72em" class="text-muted">
+                            {{ cell.planned }} → {{ cell.actual }}
+                            ({{ cell.saving_pct ~ '%' if cell.saving_pct is not none else '—' }})
+                        </div>
+                    </td>
+                    {% endif %}
+                    {% endfor %}
+                    <td class="table-secondary fw-bold">
+                        {% set ns = namespace(s=0) %}
+                        {% for c in data.classes %}
+                            {% set cell = data.cells.get((dn, c)) %}
+                            {% if cell %}{% set ns.s = ns.s + cell.saving %}{% endif %}
+                        {% endfor %}
+                        {{ ns.s | round(1) }} kg
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="table-secondary fw-bold">
+                    <th class="text-start">Total</th>
+                    {% for c in data.classes %}
+                    <td>
+                        {% set ns = namespace(s=0) %}
+                        {% for dn in data.dns %}
+                            {% set cell = data.cells.get((dn, c)) %}
+                            {% if cell %}{% set ns.s = ns.s + cell.saving %}{% endif %}
+                        {% endfor %}
+                        {{ ns.s | round(1) }} kg
+                    </td>
+                    {% endfor %}
+                    <td>{{ data.totals.saving }} kg
+                        <div style="font-size:0.72em" class="text-muted">
+                            {{ data.totals.planned }} → {{ data.totals.actual }}
+                        </div>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <div class="card-footer text-muted small">
+        Cell = saving kg (planned − actual), planned → actual underneath.
+        · = no pipes. Red = actual exceeds planned.
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,8 @@
+{# The dimension grid on its own, for the DN the operator just picked.
+
+   `stages.api_ovality_grid` renders this and the Add form swaps it in, so the
+   columns a DN defines appear before the pipe is ever saved. It is the same
+   macro the full page uses — deliberately, so the two can never disagree.
+#}
+{% import 'components/_standard_dims.html' as std_dims with context %}
+{{ std_dims.ovality_standard_grid(stage_name, dn, entries, points, saved, is_ar) }}

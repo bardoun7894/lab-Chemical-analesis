@@ -1,0 +1,92 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block filters %}
+<div class="col-md-2">
+    <label class="form-label small">Period A from</label>
+    <input type="date" name="a_from" class="form-control form-control-sm" value="{{ data.filters.a_from }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">Period A to</label>
+    <input type="date" name="a_to" class="form-control form-control-sm" value="{{ data.filters.a_to }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">Period B from</label>
+    <input type="date" name="b_from" class="form-control form-control-sm" value="{{ data.filters.b_from }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">Period B to</label>
+    <input type="date" name="b_to" class="form-control form-control-sm" value="{{ data.filters.b_to }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">Alert: reject % Δ (pp)</label>
+    <input type="number" step="0.1" name="th_reject_pct" class="form-control form-control-sm"
+           value="{{ data.filters.thresholds.reject_pct if data.filters.thresholds.reject_pct is not none else 2.0 }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">Alert: defects Δ</label>
+    <input type="number" step="1" name="th_defect_count" class="form-control form-control-sm"
+           value="{{ data.filters.thresholds.defect_count if data.filters.thresholds.defect_count is not none else 5 }}">
+</div>
+{% endblock %}
+
+{% block body %}
+{% if data.a_empty or data.b_empty %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    {{ 'Period A' if data.a_empty }}{{ ' and ' if data.a_empty and data.b_empty }}{{ 'Period B' if data.b_empty }}
+    has no pipes — comparisons against it are shown as no-data, and no alerts fire.
+</div>
+{% endif %}
+
+{% if data.alerts %}
+<div class="card border-danger shadow-sm mb-3">
+    <div class="card-header bg-danger text-white">
+        <h6 class="mb-0"><i class="bi bi-bell"></i> Alerts ({{ data.alerts | length }})</h6>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <tbody>
+                {% for a in data.alerts %}
+                <tr>
+                    <td><span class="badge bg-danger">{{ '▲' if a.direction == 'up' else '▼' }}</span></td>
+                    <td>{{ a.label }}</td>
+                    <td>moved {{ '+' if a.delta > 0 }}{{ a.delta }}{{ a.unit }} (threshold {{ a.threshold }}{{ a.unit }})</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-success py-2">
+    <i class="bi bi-check-circle"></i> No metric breached its alert threshold.
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header"><h6 class="mb-0">KPI comparison</h6></div>
+    <div class="card-body p-0">
+        <table class="table table-sm table-striped mb-0">
+            <thead>
+                <tr><th>KPI</th><th class="text-end">Period A</th><th class="text-end">Period B</th>
+                    <th class="text-end">Δ (B−A)</th><th class="text-end">Alert threshold</th></tr>
+            </thead>
+            <tbody>
+                {% for k in data.kpis %}
+                {% set breached = k.threshold is not none and k.delta is not none and (k.delta | abs) > k.threshold %}
+                <tr class="{{ 'table-danger' if breached }}">
+                    <td>{{ k.label }}</td>
+                    <td class="text-end">{{ k.a if k.a is not none else '—' }}</td>
+                    <td class="text-end">{{ k.b if k.b is not none else '—' }}</td>
+                    <td class="text-end fw-bold {{ 'text-danger' if breached }}">
+                        {{ ('+' ~ k.delta) if k.delta is not none and k.delta > 0 else (k.delta if k.delta is not none else '—') }}
+                        {{ k.unit }}
+                    </td>
+                    <td class="text-end text-muted">{{ k.threshold ~ k.unit if k.threshold is not none else 'off' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,138 +1,159 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_locale }}" dir="{{ 'rtl' if current_locale == 'ar' else 'ltr' }}">
 <head>
+    <!-- The app is served both bare on :9999 and mounted under
+         https://www.mbardouni.dev/lab_chemical. Jinja gets the prefix for free
+         from url_for(); hand-written fetch() paths in page scripts do not, so
+         they must be built from APP_ROOT. Empty string when mounted at root. -->
+    <script>window.APP_ROOT = "{{ request.script_root }}";</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Lab Chemical Analysis</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .login-card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            overflow: hidden;
-            max-width: 400px;
-            width: 100%;
-        }
-        .login-header {
-            background: #4472C4;
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        .login-header i {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-        .login-body {
-            padding: 30px;
-        }
-        .form-floating {
-            margin-bottom: 15px;
-        }
-        .btn-login {
-            background: #4472C4;
-            border: none;
-            padding: 12px;
-            font-size: 16px;
-        }
-        .btn-login:hover {
-            background: #3562b4;
-        }
-        .lang-switch {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-        }
-        .lang-switch a {
-            color: white;
-            text-decoration: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            background: rgba(255,255,255,0.2);
-        }
-        .lang-switch a:hover {
-            background: rgba(255,255,255,0.3);
-        }
-    </style>
-</head>
-<body>
-    <!-- Language Switch -->
-    <div class="lang-switch">
-        <a href="{{ url_for('auth.set_language', lang='en') }}">🇬🇧 EN</a>
-        <a href="{{ url_for('auth.set_language', lang='ar') }}">🇸🇦 AR</a>
-    </div>
+    <title>{{ 'تسجيل الدخول' if current_locale == 'ar' else 'Sign in' }} — GCP QC Pipes Traceability</title>
 
-    <div class="login-card">
-        <div class="login-header">
-            <i class="bi bi-flask"></i>
-            <h3>Lab Chemical Analysis</h3>
-            <p class="mb-0">مختبر التحليل الكيميائي</p>
+    {% if current_locale == 'ar' %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    {% else %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% endif %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Same design system as the app shell: no page-local palette. -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-body">
+
+<div class="auth-split">
+
+    <!-- Brand panel -->
+    <aside class="auth-brand">
+        <div class="auth-brand-inner">
+            <div class="auth-logo">
+                <i class="bi bi-flask"></i>
+                <div>
+                    <div class="auth-logo-name">GCP QC Trace</div>
+                    <div class="auth-logo-sub">نظام تتبع جودة الأنابيب</div>
+                </div>
+            </div>
+
+            <h1 class="auth-brand-title">
+                {{ 'كل أنبوب، من الشحنة إلى التسليم.' if current_locale == 'ar'
+                   else 'Every pipe, from ladle to delivery.' }}
+            </h1>
+            <p class="auth-brand-lede">
+                {{ 'التحليل الكيميائي، الاختبارات الميكانيكية، مراحل الإنتاج وشهادات العملاء في سجل واحد قابل للتتبع.'
+                   if current_locale == 'ar'
+                   else 'Chemical analysis, mechanical tests, production stages and customer certificates in one traceable record.' }}
+            </p>
+
+            <ul class="auth-brand-points">
+                <li><i class="bi bi-clipboard-data"></i>{{ 'قرار المختبر لكل شحنة' if current_locale == 'ar' else 'A lab decision on every ladle' }}</li>
+                <li><i class="bi bi-diagram-3"></i>{{ 'تتبع المراحل حتى المخزن' if current_locale == 'ar' else 'Stage-by-stage traceability to the warehouse' }}</li>
+                <li><i class="bi bi-patch-check"></i>{{ 'شهادات المطابقة جاهزة للطباعة' if current_locale == 'ar' else 'Conformity certificates ready to print' }}</li>
+            </ul>
+        </div>
+        <p class="auth-brand-foot">&copy; 2025 GCP QC Pipes Traceability</p>
+    </aside>
+
+    <!-- Form panel -->
+    <main class="auth-form-panel">
+        <div class="auth-lang">
+            <a href="{{ url_for('auth.set_language', lang='en') }}" class="{{ 'is-current' if current_locale != 'ar' }}">EN</a>
+            <a href="{{ url_for('auth.set_language', lang='ar') }}" class="{{ 'is-current' if current_locale == 'ar' }}">ع</a>
         </div>
 
-        <div class="login-body">
+        <div class="auth-card">
+            {# The brand panel is hidden on phones, so the mark comes back here. #}
+            <div class="auth-card-logo">
+                <i class="bi bi-flask"></i>
+                <span>GCP QC Trace</span>
+            </div>
+
+            <div class="auth-card-head">
+                <h2>{{ 'مرحبًا بعودتك' if current_locale == 'ar' else 'Welcome back' }}</h2>
+                <p>{{ 'سجّل الدخول للمتابعة إلى لوحة الجودة' if current_locale == 'ar' else 'Sign in to continue to the quality dashboard' }}</p>
+            </div>
+
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} py-2 px-3 small" role="alert">
+                        <i class="bi bi-exclamation-circle"></i> {{ message }}
                     </div>
                     {% endfor %}
                 {% endif %}
             {% endwith %}
 
-            <form method="POST" action="{{ url_for('auth.login') }}">
+            <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                <div class="form-floating">
-                    <input type="text" class="form-control" id="username" name="username"
-                           placeholder="Username" required autofocus>
-                    <label for="username">
-                        <i class="bi bi-person"></i> Username / اسم المستخدم
-                    </label>
+                <div class="auth-field">
+                    <label for="username">{{ 'اسم المستخدم' if current_locale == 'ar' else 'Username' }}</label>
+                    <div class="auth-input">
+                        <i class="bi bi-person"></i>
+                        <input type="text" id="username" name="username" required autofocus
+                               autocomplete="username" spellcheck="false"
+                               placeholder="{{ 'اسم المستخدم' if current_locale == 'ar' else 'your.username' }}">
+                    </div>
                 </div>
 
-                <div class="form-floating">
-                    <input type="password" class="form-control" id="password" name="password"
-                           placeholder="Password" required>
-                    <label for="password">
-                        <i class="bi bi-lock"></i> Password / كلمة المرور
-                    </label>
+                <div class="auth-field">
+                    <label for="password">{{ 'كلمة المرور' if current_locale == 'ar' else 'Password' }}</label>
+                    <div class="auth-input">
+                        <i class="bi bi-lock"></i>
+                        <input type="password" id="password" name="password" required
+                               autocomplete="current-password" placeholder="••••••••">
+                        <button type="button" class="auth-reveal" data-reveal="password"
+                                aria-label="{{ 'إظهار كلمة المرور' if current_locale == 'ar' else 'Show password' }}">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                    <label class="form-check-label" for="remember">
-                        Remember me / تذكرني
-                    </label>
+                <div class="auth-row">
+                    <div class="form-check m-0">
+                        <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                        <label class="form-check-label" for="remember">
+                            {{ 'تذكرني' if current_locale == 'ar' else 'Remember me' }}
+                        </label>
+                    </div>
+                    <span class="auth-help" title="{{ 'اتصل بمسؤول النظام' if current_locale == 'ar' else 'Contact your system administrator' }}">
+                        {{ 'نسيت كلمة المرور؟' if current_locale == 'ar' else 'Forgot password?' }}
+                    </span>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-login w-100">
-                    <i class="bi bi-box-arrow-in-right"></i>
-                    Login / دخول
+                <button type="submit" class="auth-submit">
+                    {{ 'تسجيل الدخول' if current_locale == 'ar' else 'Sign in' }}
+                    <i class="bi bi-arrow-right"></i>
                 </button>
             </form>
 
-            <hr>
-
-            <div class="text-center text-muted">
-                <small>
-                    Default admin: admin / admin123<br>
-                    المسؤول الافتراضي: admin / admin123
-                </small>
-            </div>
+            <p class="auth-foot-note">
+                <i class="bi bi-shield-lock"></i>
+                {{ 'الحسابات يصدرها مسؤول النظام. لا يوجد تسجيل ذاتي.' if current_locale == 'ar'
+                   else 'Accounts are issued by your administrator. There is no self sign-up.' }}
+            </p>
         </div>
-    </div>
+    </main>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    /* Password reveal. Swaps the input type in place so the browser keeps the
+       value and the autofill association. */
+    document.querySelectorAll('.auth-reveal').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var input = document.getElementById(btn.dataset.reveal);
+            if (!input) return;
+            var shown = input.type === 'text';
+            input.type = shown ? 'password' : 'text';
+            btn.querySelector('i').className = shown ? 'bi bi-eye' : 'bi bi-eye-slash';
+            input.focus();
+        });
+    });
+</script>
 </body>
 </html>

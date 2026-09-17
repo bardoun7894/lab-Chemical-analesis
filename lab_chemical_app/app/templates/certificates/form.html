@@ -1,0 +1,430 @@
+{% extends 'base.html' %}
+
+{% set is_warranty = cert_type == 'warranty' %}
+{% set type_title = cert_types[cert_type].title_ar if current_locale == 'ar' else cert_types[cert_type].title_en %}
+
+{% block title %}{{ type_title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-patch-check"></i>
+            {{ type_title }}
+            {% if certificate %}<small class="text-muted">{{ certificate.certificate_no }}</small>{% endif %}
+            <small class="text-muted">{{ cert_types[cert_type].form_code }}</small>
+        </h2>
+        <a href="{{ url_for('certificates.index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-{{ 'left' if current_locale != 'ar' else 'right' }}"></i>
+            {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+        </a>
+    </div>
+
+    {# The form is picked before anything else; changing it reloads the page. #}
+    {% if not certificate %}
+    <ul class="nav nav-pills mb-3">
+        {% set order_id_list = orders|map(attribute='id')|list if orders else None %}
+        {% for key, spec in cert_types.items() %}
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if key == cert_type }}"
+               href="{{ url_for('certificates.new', type=key, order_ids=order_id_list,
+                                 primary_order_id=primary_id,
+                                 reissue_of_id=reissue_candidate.id if reissue_candidate else None) }}">
+                {{ spec.title_ar if current_locale == 'ar' else spec.title_en }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {# Customer first, then the order the certificate is issued under, then
+       any further orders whose pipes ride on the same certificate — same
+       customer or not. The customer select only narrows the two order lists;
+       the server never reads it. A repeatable order_ids param, plus the legacy
+       single order_id, so old links keep working. #}
+    <form method="GET" action="{{ url_for('certificates.new') }}" class="card border-0 shadow-sm mb-3">
+        <input type="hidden" name="type" value="{{ cert_type }}">
+        {% if reissue_candidate %}<input type="hidden" name="reissue_of_id" value="{{ reissue_candidate.id }}">{% endif %}
+        <div class="card-body py-3">
+            {% set selected_order_ids = orders|map(attribute='id')|list %}
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold" for="customerFilter">
+                        {{ 'العميل' if current_locale == 'ar' else 'Customer' }}
+                    </label>
+                    <select id="customerFilter" class="form-select">
+                        <option value="">{{ 'كل العملاء' if current_locale == 'ar' else 'All customers' }}</option>
+                        {% for key, name in customers %}
+                        <option value="{{ key }}">{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="primaryOrder">
+                        {{ 'الأمر الأساسي (تصدر الشهادة باسمه)' if current_locale == 'ar' else 'Primary order (certificate issued under)' }}
+                    </label>
+                    <select id="primaryOrder" name="primary_order_id" class="form-select">
+                        {% for o in available_orders %}
+                        <option value="{{ o.id }}" data-customer="{{ customer_key(o) or '' }}"
+                                {% if o.id == primary_id %}selected{% endif %}>
+                            {{ o.order_number }}{% if customer_name(o) %} — {{ customer_name(o) }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold" for="extraOrders">
+                        {{ 'أوامر إضافية (اختياري)' if current_locale == 'ar' else 'Additional orders (optional)' }}
+                    </label>
+                    <div class="input-group">
+                        <select id="extraOrders" name="order_ids" class="form-select" multiple size="4">
+                            {% for o in available_orders %}
+                            <option value="{{ o.id }}" data-customer="{{ customer_key(o) or '' }}"
+                                    {% if o.id in selected_order_ids and o.id != primary_id %}selected{% endif %}>
+                                {{ o.order_number }}{% if customer_name(o) %} — {{ customer_name(o) }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-outline-primary" type="submit">
+                            {{ 'تحميل المواسير' if current_locale == 'ar' else 'Load pipes' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="form-text">
+                {{ 'اختر العميل ثم الأمر الأساسي؛ أضف أوامر أخرى (لنفس العميل أو غيره) لو الشحنة تجمع مواسير من أكتر من أمر — Ctrl/Cmd + نقرة للتحديد المتعدد.'
+                   if current_locale == 'ar' else
+                   'Pick the customer, then the primary order; add other orders (same customer or not) when the delivery draws on more than one — Ctrl/Cmd-click to select several.' }}
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+    {% if orders %}
+    {% if fallback_order_numbers %}
+    <div class="alert alert-warning" role="alert">
+        {{ 'تحذير: يتم استخدام مواصفات النموذج القديم للأوامر التالية لعدم وجود ملف Application:'
+           if current_locale == 'ar' else
+           'Warning: legacy Application fallback is being used because these orders have no Application profile:' }}
+        {{ fallback_order_numbers|join(', ') }}.
+    </div>
+    {% endif %}
+
+    {% if not certificate and can_reissue %}
+    <form method="GET" action="{{ url_for('certificates.new') }}" class="card border-warning mb-3">
+        <input type="hidden" name="type" value="{{ cert_type }}">
+        {% for o in orders %}<input type="hidden" name="order_ids" value="{{ o.id }}">{% endfor %}
+        {% if primary_id %}<input type="hidden" name="primary_order_id" value="{{ primary_id }}">{% endif %}
+        <div class="card-body row g-2 align-items-end py-2">
+            <div class="col-md-4">
+                <label class="form-label" for="reissueQuery">
+                    {{ 'بحث برقم الشهادة' if current_locale == 'ar' else 'Search certificate number' }}
+                </label>
+                <input id="reissueQuery" name="reissue_query" class="form-control"
+                       value="{{ reissue_query }}" placeholder="WC-2026-001">
+            </div>
+            <div class="col-md-5">
+                <label class="form-label" for="reissueMode">
+                    {{ 'إعادة إصدار استثنائية' if current_locale == 'ar' else 'Exceptional reissue mode' }}
+                </label>
+                <select id="reissueMode" name="reissue_of_id" class="form-select">
+                    <option value="">{{ 'شهادة عادية جديدة' if current_locale == 'ar' else 'New ordinary certificate' }}</option>
+                    {% for original in reissue_options %}
+                    <option value="{{ original.id }}" {% if reissue_candidate and reissue_candidate.id == original.id %}selected{% endif %}>
+                        {{ original.certificate_no }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-warning w-100" type="submit">
+                    {{ 'بحث / تحميل' if current_locale == 'ar' else 'Search / load' }}
+                </button>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+    {% set selection_id = 'certificatePipeSelection' %}
+    {% set selection_is_ar = current_locale == 'ar' %}
+    {% set selected_order_ids = orders|map(attribute='id')|list %}
+    {% set selection_lookup_url = url_for('certificates.lookup', type=cert_type, current_certificate_id=certificate.id if certificate else (reissue_candidate.id if reissue_candidate else None)) %}
+    {% set selection_lookup_fallback_action = selection_state_action %}
+    {% set selection_lookup_method = 'get' %}
+    {% set selection_lookup_name = 'pipe_lookup' %}
+    {% set selection_order_action = selection_state_action %}
+    {% set selection_target_form = 'certificateForm' %}
+    {% set selection_storage_key = '' %}
+    {% with orders=available_orders %}
+        {% include 'shared/_pipe_selection.html' %}
+    {% endwith %}
+
+    {% for linked in duplicate_certificates %}
+    <div class="alert alert-warning py-2">
+        {{ linked.certificate_no }} —
+        <a href="{{ url_for('certificates.print_view', id=linked.id) }}">{{ 'طباعة' if current_locale == 'ar' else 'print' }}</a>
+        /
+        <a href="{{ url_for('certificates.edit', id=linked.id) }}">{{ 'تعديل' if current_locale == 'ar' else 'edit' }}</a>
+    </div>
+    {% endfor %}
+
+    <form method="POST" id="certificateForm"
+          action="{{ url_for('certificates.edit', id=certificate.id) if certificate else url_for('certificates.new', type=cert_type) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% for o in orders %}
+        <input type="hidden" name="order_ids" value="{{ o.id }}">
+        {% endfor %}
+        {% if primary_id %}
+        <input type="hidden" name="primary_order_id" value="{{ primary_id }}">
+        {% endif %}
+
+        <div class="row g-3">
+            {# ---- What the system already knows ---- #}
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-light py-2">
+                        <h6 class="mb-0">{{ 'من النظام' if current_locale == 'ar' else 'From the system' }}</h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0 small">
+                            <dt class="col-5">{{ 'رقم الشهادة' if current_locale == 'ar' else 'Certificate No.' }}</dt>
+                            <dd class="col-7">{{ certificate.certificate_no if certificate else ('يصدر عند الحفظ' if current_locale == 'ar' else 'issued on save') }}</dd>
+
+                            {% set primary = (orders|selectattr('id', 'equalto', primary_id)|list|first) if primary_id else orders[0] %}
+                            <dt class="col-5">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</dt>
+                            <dd class="col-7 fw-semibold">{{ customer_name(primary) or '—' }}</dd>
+
+                            <dt class="col-5">{{ 'أوامر الإنتاج' if current_locale == 'ar' else 'Orders' }}</dt>
+                            <dd class="col-7">
+                                <ul class="list-unstyled mb-0">
+                                {% for o in orders %}
+                                    <li>
+                                        {{ o.order_number }} — {{ customer_name(o) or '—' }}
+                                        {% if o.id == primary.id %}
+                                        <span class="badge bg-secondary">{{ 'أساسي' if current_locale == 'ar' else 'primary' }}</span>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                                </ul>
+                            </dd>
+
+                            <dt class="col-5">{{ 'الكمية المختارة' if current_locale == 'ar' else 'Selected QTY' }}</dt>
+                            <dd class="col-7"><span class="badge bg-primary" id="qtyBadge">0</span></dd>
+
+                            <dt class="col-5">{{ 'مجموع الأطوال الفعلية' if current_locale == 'ar' else 'Actual length, summed' }}</dt>
+                            <dd class="col-7"><span id="lengthSum">0</span> m</dd>
+                        </dl>
+
+                        {# The computed sum, offered for confirmation: it follows
+                           the ticks until the user types, then the typed figure
+                           is what prints. Blank on save = print the computed sum. #}
+                        <div class="mt-3">
+                            <label class="form-label mb-1" for="totalLength">
+                                {{ 'إجمالي الطول الفعلي (م) — يُطبع على الشهادة' if current_locale == 'ar' else 'Total actual length (m) — as printed' }}
+                            </label>
+                            <input type="number" step="0.01" min="0" id="totalLength" name="total_length_m"
+                                   class="form-control"
+                                   value="{{ typed_total if typed_total is not none else '' }}"
+                                   {% if typed_total is not none %}data-touched="1"{% endif %}>
+                            <div class="form-text">
+                                {{ 'محسوب من طول التشطيب للمواسير المختارة؛ عدّله لو الشريط قال غير كده.'
+                                   if current_locale == 'ar' else
+                                   'Computed from the ticked pipes’ Finish length; edit it if the tape says otherwise.' }}
+                            </div>
+                        </div>
+                        {% if cert_type == 'work_test' %}
+                        <p class="text-muted small mb-0 mt-2">
+                            {{ 'التحليل الكيميائي ونتيجة العينة الميكانيكية تُسحب تلقائيًا عند الطباعة.'
+                               if current_locale == 'ar' else
+                               'The chemical limits and the mechanical sample result are pulled in at print time.' }}
+                        </p>
+                        {% elif cert_type == 'mtc' %}
+                        <p class="text-muted small mb-0 mt-2">
+                            {{ 'البوتقات والباتشات والتحاليل ونتائج الشد والاستطالة والصلادة تُسحب تلقائيًا من المواسير المختارة.'
+                               if current_locale == 'ar' else
+                               'Heats, batches, analyses and the tensile / elongation / hardness results are pulled from the selected pipes.' }}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# ---- What only the customer's paperwork knows ---- #}
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-light py-2">
+                        <h6 class="mb-0">{{ 'بيانات تُدخل يدويًا' if current_locale == 'ar' else 'Filled in here' }}</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    {% if is_warranty %}
+                                        {{ 'تاريخ الإصدار' if current_locale == 'ar' else 'Issue Date' }}
+                                    {% else %}
+                                        {{ 'التاريخ' if current_locale == 'ar' else 'Date' }}
+                                    {% endif %}
+                                </label>
+                                <input type="date" name="issue_date" class="form-control"
+                                       value="{{ certificate.issue_date.isoformat() if certificate and certificate.issue_date else today }}">
+                            </div>
+                            {% if is_warranty %}
+                            <div class="col-md-6">
+                                <label class="form-label">{{ 'تاريخ بدء الضمان' if current_locale == 'ar' else 'Warranty Date' }}</label>
+                                <input type="date" name="warranty_start_date" class="form-control"
+                                       value="{{ certificate.warranty_start_date.isoformat() if certificate and certificate.warranty_start_date else '' }}">
+                            </div>
+                            {% endif %}
+                            <div class="col-md-6">
+                                <label class="form-label">{{ 'رقم الطلب (العميل)' if current_locale == 'ar' else 'Order No.' }}</label>
+                                <input type="text" name="customer_order_no" class="form-control"
+                                       value="{{ certificate.customer_order_no if certificate else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ 'اسم المشروع' if current_locale == 'ar' else 'Project Name' }}</label>
+                                <input type="text" name="project_name" class="form-control"
+                                       value="{{ certificate.project_name if certificate else '' }}">
+                            </div>
+                            {% if is_warranty %}
+                            <div class="col-md-6">
+                                <label class="form-label">{{ 'مدة الضمان' if current_locale == 'ar' else 'Warranty period' }}</label>
+                                <select name="warranty_years" class="form-select">
+                                    {% for years, words in period_options %}
+                                    <option value="{{ years }}"
+                                        {% if (certificate.warranty_years if certificate else 3) == years %}selected{% endif %}>
+                                        {{ words[1] if current_locale == 'ar' else words[0] }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% endif %}
+                            {% if cert_type == 'mtc' %}
+                            {# The same delivery goes out with limits or with
+                               measured values depending on what the customer
+                               asked for; both are approved. #}
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    {{ 'الأرقام تظهر' if current_locale == 'ar' else 'Figures show' }}
+                                </label>
+                                <select name="values_mode" class="form-select">
+                                    {% for key, words in value_modes.items() %}
+                                    <option value="{{ key }}"
+                                        {% if (certificate.values_mode if certificate else 'standard') == key %}selected{% endif %}>
+                                        {{ words[1] if current_locale == 'ar' else words[0] }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    {{ 'الحدود القياسية زي الفورم، أو تحليل كل بوتقة ومتوسط نتائجها الميكانيكية.'
+                                       if current_locale == 'ar' else
+                                       'The standard limits as printed on the form, or each ladle’s own analysis and the mean of its mechanical tests.' }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox"
+                                           id="showPipeNumbers" name="show_pipe_numbers" value="1"
+                                           {% if certificate and certificate.show_pipe_numbers %}checked{% endif %}>
+                                    <label class="form-check-label" for="showPipeNumbers">
+                                        {{ 'إظهار أرقام المواسير' if current_locale == 'ar' else 'Show pipe numbers' }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endif %}
+                            <div class="col-md-6">
+                                <label class="form-label">{{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}</label>
+                                <input type="text" name="notes" class="form-control"
+                                       value="{{ certificate.notes if certificate else '' }}">
+                            </div>
+                            {% if not certificate and reissue_candidate %}
+                            <div class="col-12"><hr class="my-1"></div>
+                            <input type="hidden" name="reissue_of_id" value="{{ reissue_candidate.id }}">
+                            <div class="col-md-6 alert alert-warning mb-0">
+                                {{ 'إعادة إصدار من' if current_locale == 'ar' else 'Reissuing' }}
+                                <strong>{{ reissue_candidate.certificate_no }}</strong>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="reissueReason">
+                                    {{ 'سبب إعادة الإصدار' if current_locale == 'ar' else 'Reissue reason' }}
+                                </label>
+                                <input id="reissueReason" name="reissue_reason" class="form-control"
+                                       value="{{ request.form.get('reissue_reason', '') }}">
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-3 mb-5">
+            {# Disabled on submit: a double-click would otherwise issue two
+               certificate numbers for the same delivery. #}
+            <button type="submit" class="btn btn-primary" id="saveBtn">
+                <i class="bi bi-printer"></i>
+                {{ 'حفظ وطباعة' if current_locale == 'ar' else 'Save & print' }}
+            </button>
+        </div>
+    </form>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    // The customer select only narrows the two order lists; nothing is posted.
+    var customerFilter = document.getElementById('customerFilter');
+    if (customerFilter) {
+        var orderSelects = [document.getElementById('primaryOrder'),
+                            document.getElementById('extraOrders')];
+        customerFilter.addEventListener('change', function () {
+            var key = customerFilter.value;
+            orderSelects.forEach(function (sel) {
+                if (!sel) { return; }
+                Array.prototype.forEach.call(sel.options, function (opt) {
+                    var show = !key || opt.getAttribute('data-customer') === key;
+                    opt.hidden = !show;
+                    if (!show) { opt.selected = false; }
+                });
+            });
+        });
+    }
+})();
+
+(function () {
+    var form = document.getElementById('certificateForm');
+    var badge = document.getElementById('qtyBadge');
+    if (!form || !badge) { return; }
+    var sumEl = document.getElementById('lengthSum');
+    var total = document.getElementById('totalLength');
+    var lengths = {{ lengths|tojson }};
+
+    function refresh() {
+        var selected = Array.prototype.slice.call(
+            form.querySelectorAll('input[name="pipe_ids"][data-selection-hidden]'));
+        badge.textContent = selected.length;
+        var sum = selected.reduce(function (acc, input) {
+            var v = parseFloat(lengths[input.value]);
+            return isNaN(v) ? acc : acc + v;
+        }, 0);
+        var rounded = Math.round(sum * 100) / 100;
+        if (sumEl) { sumEl.textContent = rounded; }
+        if (total && !total.getAttribute('data-touched')) {
+            total.value = selected.length ? rounded : '';
+        }
+    }
+
+    if (total) {
+        total.addEventListener('input', function () { total.setAttribute('data-touched', '1'); });
+    }
+    new MutationObserver(refresh).observe(form, { childList: true });
+    refresh();
+
+    var save = document.getElementById('saveBtn');
+    if (save && save.form) {
+        save.form.addEventListener('submit', function () {
+            // Let the submit through, then block a second one.
+            setTimeout(function () { save.disabled = true; }, 0);
+        });
+    }
+})();
+</script>
+{% endblock %}

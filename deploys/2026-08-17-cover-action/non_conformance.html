@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% from 'components/table_tools.html' import table_tools with context %}
+
+{% set is_ar = current_locale == 'ar' %}
+
+{% block title %}{{ 'سجل عدم المطابقة' if is_ar else 'Non-Conformance Register' }}{% endblock %}
+
+{% macro severity_badge(sev) %}
+    {% set map = {'critical': ('danger', 'حرج', 'Critical'),
+                  'high': ('warning', 'مرتفع', 'High'),
+                  'medium': ('info', 'متوسط', 'Medium'),
+                  'low': ('secondary', 'منخفض', 'Low')} %}
+    {% set color, ar, en = map.get(sev, ('secondary', sev, sev)) %}
+    <span class="badge bg-{{ color }}">{{ ar if is_ar else en }}</span>
+{% endmacro %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <h1 class="mb-1">
+                <i class="bi bi-exclamation-octagon text-danger"></i>
+                {{ 'سجل عدم المطابقة' if is_ar else 'Non-Conformance Register' }}
+            </h1>
+            <p class="text-muted mb-0">
+                {{ 'كل ما هو خارج المواصفات أو محجوز أو مرفوض في أي مرحلة — المصدر، المشكلة، السبب، والإجراء المطلوب'
+                   if is_ar else
+                   'Everything out of tolerance, held, or rejected at any stage — source, problem, root cause, and the action required' }}
+            </p>
+        </div>
+        {{ table_tools('ncr',
+                       export_url=url_for('reports.non_conformance_export', **request.args),
+                       columns=picker_columns) }}
+    </div>
+
+    <!-- Summary tiles -->
+    <div class="row g-3 mb-4">
+        {% set tiles = [
+            ('total',          summary.total,          'secondary', 'إجمالي البنود', 'Open items'),
+            ('critical',       summary.critical,       'danger',    'حرج',           'Critical'),
+            ('rejects',        summary.rejects,        'dark',      'مرفوض/تالف',    'Rejected'),
+            ('holds',          summary.holds,          'warning',   'محجوز/إعادة',   'Held / rework'),
+            ('affected_pipes', summary.affected_pipes, 'info',      'مواسير متأثرة', 'Pipes affected')
+        ] %}
+        {% for key, value, color, ar, en in tiles %}
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card border-0 shadow-sm h-100 border-start border-4 border-{{ color }}">
+                <div class="card-body py-3">
+                    <div class="text-muted small text-truncate">{{ ar if is_ar else en }}</div>
+                    <div class="h3 mb-0 text-{{ color }}">{{ value }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4 d-print-hide">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-1">{{ 'من تاريخ' if is_ar else 'From' }}</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ filters.date_from }}">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-1">{{ 'إلى تاريخ' if is_ar else 'To' }}</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ filters.date_to }}">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-1">{{ 'المصدر' if is_ar else 'Source' }}</label>
+                    <select name="source" class="form-select form-select-sm">
+                        <option value="">{{ 'الكل' if is_ar else 'All' }}</option>
+                        {% for key, labels in source_labels.items() %}
+                        <option value="{{ key }}" {{ 'selected' if filters.source == key }}>
+                            {{ labels[1] if is_ar else labels[0] }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-1">{{ 'المرحلة' if is_ar else 'Stage' }}</label>
+                    <select name="stage" class="form-select form-select-sm">
+                        <option value="">{{ 'الكل' if is_ar else 'All' }}</option>
+                        {% for name in stage_names %}
+                        <option value="{{ name }}" {{ 'selected' if filters.stage == name }}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-1">{{ 'الخطورة' if is_ar else 'Severity' }}</label>
+                    <select name="severity" class="form-select form-select-sm">
+                        <option value="">{{ 'الكل' if is_ar else 'All' }}</option>
+                        <option value="critical" {{ 'selected' if filters.severity == 'critical' }}>{{ 'حرج' if is_ar else 'Critical' }}</option>
+                        <option value="high" {{ 'selected' if filters.severity == 'high' }}>{{ 'مرتفع' if is_ar else 'High' }}</option>
+                        <option value="medium" {{ 'selected' if filters.severity == 'medium' }}>{{ 'متوسط' if is_ar else 'Medium' }}</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-1">{{ 'الحالة' if is_ar else 'Status' }}</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">{{ 'الكل' if is_ar else 'All' }}</option>
+                        <option value="reject" {{ 'selected' if filters.status == 'reject' }}>{{ 'مرفوض / تالف' if is_ar else 'Rejected' }}</option>
+                        <option value="hold" {{ 'selected' if filters.status == 'hold' }}>{{ 'محجوز / إعادة' if is_ar else 'Held / rework' }}</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-8">
+                    <label class="form-label small mb-1">{{ 'بحث' if is_ar else 'Search' }}</label>
+                    <input type="text" name="search" class="form-control form-control-sm"
+                           value="{{ filters.search }}"
+                           placeholder="{{ 'كود المصدر، المشكلة، السبب…' if is_ar else 'Source code, problem, reason…' }}">
+                </div>
+                <div class="col-12 col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                        <i class="bi bi-funnel"></i> {{ 'تصفية' if is_ar else 'Filter' }}
+                    </button>
+                    <a href="{{ url_for('reports.non_conformance') }}" class="btn btn-outline-secondary btn-sm flex-fill">
+                        {{ 'إعادة تعيين' if is_ar else 'Reset' }}
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            {% if not rows %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-check-circle text-success" style="font-size:3rem"></i>
+                <p class="mt-3 mb-0">
+                    {{ 'لا توجد بنود غير مطابقة في هذه الفترة' if is_ar else 'No non-conforming items in this period' }}
+                </p>
+            </div>
+            {% else %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle small" data-table-tools="ncr">
+                    <thead class="table-light">
+                        <tr>
+                            <th data-col="source">{{ 'المصدر' if is_ar else 'Source' }}</th>
+                            <th data-col="source_code">{{ 'كود المصدر' if is_ar else 'Source Code' }}</th>
+                            <th data-col="stage">{{ 'المرحلة' if is_ar else 'Stage' }}</th>
+                            <th data-col="date">{{ 'التاريخ' if is_ar else 'Date' }}</th>
+                            <th data-col="severity">{{ 'الخطورة' if is_ar else 'Severity' }}</th>
+                            <th data-col="status">{{ 'الحالة' if is_ar else 'Status' }}</th>
+                            <th data-col="problem">{{ 'المشكلة' if is_ar else 'Problem' }}</th>
+                            <th data-col="root_cause">{{ 'السبب الجذري' if is_ar else 'Root Cause' }}</th>
+                            <th data-col="action">{{ 'الإجراء المطلوب' if is_ar else 'Required Action' }}</th>
+                            <th data-col="affected" class="text-center">{{ 'مواسير' if is_ar else 'Pipes' }}</th>
+                            <th class="d-print-hide"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                        <tr class="{{ 'table-danger' if row.severity == 'critical' else ('table-warning' if row.severity == 'high') }}">
+                            <td data-col="source">
+                                {% set labels = source_labels.get(row.source, (row.source, row.source)) %}
+                                <span class="badge bg-secondary">{{ labels[1] if is_ar else labels[0] }}</span>
+                            </td>
+                            <td data-col="source_code"><strong>{{ row.source_code }}</strong></td>
+                            <td data-col="stage">{{ row.stage }}</td>
+                            <td data-col="date">{{ row.date.strftime('%Y-%m-%d') if row.date else '—' }}</td>
+                            <td data-col="severity">{{ severity_badge(row.severity) }}</td>
+                            <td data-col="status">
+                                <span class="badge bg-{{ 'dark' if is_reject(row.status) else 'warning text-dark' }}">
+                                    {{ row.status }}
+                                </span>
+                            </td>
+                            <td data-col="problem" style="max-width:320px">{{ row.problem }}</td>
+                            <td data-col="root_cause" class="text-muted">
+                                {{ row.root_cause or '—' }}
+                                {% if row.cascade_from and row.cascade_from != row.source_code %}
+                                <div class="small">
+                                    <i class="bi bi-arrow-return-right"></i>
+                                    {{ 'ناتج عن' if is_ar else 'from' }} <strong>{{ row.cascade_from }}</strong>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td data-col="action">
+                                <span class="fw-semibold">{{ row.action[1] if is_ar else row.action[0] }}</span>
+                            </td>
+                            <td data-col="affected" class="text-center">{{ row.affected or '—' }}</td>
+                            <td class="text-nowrap d-print-hide">
+                                {% set action = actions_by_key.get((row.source, row.source_code)) %}
+                                {% set status_colors = {'Open': 'secondary', 'In Progress': 'warning', 'Done': 'success', 'Cancelled': 'dark'} %}
+                                <div class="d-inline-flex align-items-center gap-1">
+                                    {% if action %}
+                                    {% set s_color = status_colors.get(action.status, 'secondary') %}
+                                    <span class="badge bg-{{ s_color }}"
+                                          title="{{ action.responsible }}{% if action.responsible_date %} — {{ action.responsible_date }}{% endif %}"
+                                          data-bs-toggle="tooltip">
+                                        {{ action.status }}
+                                    </span>
+                                    {% endif %}
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-warning"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#coverModal"
+                                            data-source="{{ row.source }}"
+                                            data-source-code="{{ row.source_code }}"
+                                            data-root-cause="{{ action.root_cause if action else '' }}"
+                                            data-corrective-action="{{ action.corrective_action if action else '' }}"
+                                            data-responsible="{{ action.responsible if action else '' }}"
+                                            data-responsible-date="{{ action.responsible_date if action else '' }}"
+                                            data-status="{{ action.status if action else 'Open' }}">
+                                        <i class="bi bi-clipboard-check"></i>
+                                        {{ 'تغطية' if is_ar else 'Cover' }}
+                                    </button>
+                                    <a href="{{ row.url }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                        {{ 'اتخاذ إجراء' if is_ar else 'Act' }}
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Cover (Corrective Action) modal -->
+<div class="modal fade" id="coverModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-clipboard-check"></i>
+                    {{ 'إجراء تصحيحي (تغطية)' if is_ar else 'Corrective Action (Cover)' }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <input type="hidden" id="coverSource" name="source">
+                    <input type="hidden" id="coverSourceCode" name="source_code">
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {{ 'السبب الجذري' if is_ar else 'Root Cause' }}
+                        </label>
+                        <textarea id="coverRootCause" name="root_cause"
+                                  class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {{ 'الإجراء التصحيحي' if is_ar else 'Corrective Action' }}
+                        </label>
+                        <textarea id="coverCorrectiveAction" name="corrective_action"
+                                  class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                {{ 'المسؤول عن الإجراء' if is_ar else 'Corrective Action Responsible' }}
+                            </label>
+                            <input type="text" id="coverResponsible" name="responsible"
+                                   class="form-control" maxlength="120">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                {{ 'تاريخ الاستحقاق' if is_ar else 'Responsible Date' }}
+                            </label>
+                            <input type="date" id="coverResponsibleDate" name="responsible_date"
+                                   class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {{ 'الحالة' if is_ar else 'Status' }}
+                        </label>
+                        <select id="coverStatus" name="status" class="form-select">
+                            <option value="Open">{{ 'مفتوح' if is_ar else 'Open' }}</option>
+                            <option value="In Progress">{{ 'قيد التنفيذ' if is_ar else 'In Progress' }}</option>
+                            <option value="Done">{{ 'منتهي' if is_ar else 'Done' }}</option>
+                            <option value="Cancelled">{{ 'ملغي' if is_ar else 'Cancelled' }}</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {{ 'إلغاء' if is_ar else 'Cancel' }}
+                </button>
+                <button type="button" class="btn btn-success" id="coverSaveBtn">
+                    <i class="bi bi-check-lg"></i>
+                    {{ 'حفظ' if is_ar else 'Save' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const COVER_CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+const COVER_SAVE_URL = "{{ url_for('reports.non_conformance_action_save') }}";
+const COVER_ERR_TEXT = "{{ 'فشل الحفظ' if is_ar else 'Save failed' }}";
+
+document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('coverModal');
+    if (!modal) return;
+
+    modal.addEventListener('show.bs.modal', function (event) {
+        const btn = event.relatedTarget;
+        document.getElementById('coverSource').value = btn.dataset.source || '';
+        document.getElementById('coverSourceCode').value = btn.dataset.sourceCode || '';
+        document.getElementById('coverRootCause').value = btn.dataset.rootCause || '';
+        document.getElementById('coverCorrectiveAction').value = btn.dataset.correctiveAction || '';
+        document.getElementById('coverResponsible').value = btn.dataset.responsible || '';
+        document.getElementById('coverResponsibleDate').value = btn.dataset.responsibleDate || '';
+        document.getElementById('coverStatus').value = btn.dataset.status || 'Open';
+    });
+
+    document.getElementById('coverSaveBtn').addEventListener('click', async function () {
+        const payload = {
+            source: document.getElementById('coverSource').value,
+            source_code: document.getElementById('coverSourceCode').value,
+            root_cause: document.getElementById('coverRootCause').value,
+            corrective_action: document.getElementById('coverCorrectiveAction').value,
+            responsible: document.getElementById('coverResponsible').value,
+            responsible_date: document.getElementById('coverResponsibleDate').value,
+            status: document.getElementById('coverStatus').value,
+        };
+        try {
+            const resp = await fetch(COVER_SAVE_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': COVER_CSRF,
+                },
+                body: JSON.stringify(payload),
+            });
+            if (!resp.ok) throw new Error(resp.status);
+            // Reload so the row badge reflects the new status.
+            location.reload();
+        } catch (e) {
+            alert(COVER_ERR_TEXT + ': ' + e);
+        }
+    });
+
+    // Bootstrap tooltips (status badges)
+    if (window.bootstrap && bootstrap.Tooltip) {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+            new bootstrap.Tooltip(el);
+        });
+    }
+});
+</script>
+{% endblock %}

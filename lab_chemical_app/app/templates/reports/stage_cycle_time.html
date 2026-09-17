@@ -1,0 +1,87 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+{% set cov = data.coverage %}
+<div class="alert {{ 'alert-warning' if cov.fraction < 0.8 else 'alert-info' }} py-2">
+    <i class="bi bi-clipboard-data"></i>
+    Coverage: {{ cov.intervals_used }} of {{ cov.intervals_possible }} possible
+    inter-stage intervals used
+    ({{ '%.0f'|format(cov.fraction * 100) }}%) —
+    {{ cov.excluded_missing_ts }} excluded for missing date/time,
+    {{ cov.excluded_negative }} excluded as negative (out-of-order timestamps).
+</div>
+
+<div class="row g-3">
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header">
+                <h6 class="mb-0">Bottleneck ranking — avg dwell hours per stage</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped mb-0">
+                    <thead>
+                        <tr><th>#</th><th>Stage</th><th>Pipes</th>
+                            <th>Avg (h)</th><th>Min (h)</th><th>Max (h)</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for s in data.stages %}
+                        <tr class="{{ 'table-danger' if loop.first and s.count }}">
+                            <td>{{ loop.index }}</td>
+                            <td>{{ s.stage }}</td>
+                            <td>{{ s.count }}</td>
+                            <td>{{ '%.1f'|format(s.avg) }}</td>
+                            <td>{{ '%.1f'|format(s.min) }}</td>
+                            <td>{{ '%.1f'|format(s.max) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-muted text-center py-3">
+                            No timestamped stage intervals in this range.
+                        </td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header"><h6 class="mb-0">End-to-end lead time</h6></div>
+            <div class="card-body text-center">
+                <div class="fs-3 fw-bold">{{ '%.1f'|format(data.lead_times.avg) }} h</div>
+                <div class="text-muted small">
+                    avg over {{ data.lead_times.count }} pipes ·
+                    min {{ '%.1f'|format(data.lead_times.min) }} ·
+                    max {{ '%.1f'|format(data.lead_times.max) }}
+                </div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header"><h6 class="mb-0">Waiting between consecutive stages</h6></div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped mb-0">
+                    <thead><tr><th>From → To</th><th>Pipes</th><th>Avg (h)</th></tr></thead>
+                    <tbody>
+                        {% for p in data.pairs %}
+                        <tr>
+                            <td>{{ p.from }} → {{ p.to }}</td>
+                            <td>{{ p.count }}</td>
+                            <td>{{ '%.1f'|format(p.avg) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-muted text-center py-3">
+                            No stage pairs in this range.
+                        </td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<p class="text-muted small mt-3">
+    Dwell time = stage timestamp → next stage timestamp (canonical stage order from the
+    DB-backed stage list — custom stages appear automatically). Stages missing a date or
+    time are excluded and counted in the coverage note above.
+</p>
+{% endblock %}

@@ -1,0 +1,3818 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PQ Analytics Suite — Production Quality</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0f2044;
+      --navy2: #162d5c;
+      --blue: #1a56db;
+      --blue2: #1e429f;
+      --teal: #0891b2;
+      --teal2: #164e63;
+      --green: #057a55;
+      --green2: #014737;
+      --green-lt: #d1fae5;
+      --amber: #b45309;
+      --amber2: #78350f;
+      --amber-lt: #fef3c7;
+      --red: #c81e1e;
+      --red-lt: #fde8e8;
+      --cyan: #0e7490;
+      --cyan-lt: #ecfeff;
+      --gray50: #f9fafb;
+      --gray100: #f3f4f6;
+      --gray200: #e5e7eb;
+      --gray300: #d1d5db;
+      --gray400: #9ca3af;
+      --gray500: #6b7280;
+      --gray600: #4b5563;
+      --gray700: #374151;
+      --gray800: #1f2937;
+      --gray900: #111827;
+      --white: #ffffff;
+      --font: 'IBM Plex Sans', system-ui, sans-serif;
+      --mono: 'IBM Plex Mono', monospace;
+      --r: 8px;
+      --r-lg: 12px;
+      --r-xl: 16px;
+      --sh: 0 1px 3px rgba(0, 0, 0, .1), 0 1px 2px rgba(0, 0, 0, .06);
+      --sh-md: 0 4px 6px -1px rgba(0, 0, 0, .1), 0 2px 4px -1px rgba(0, 0, 0, .06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--gray100);
+      color: var(--gray900);
+      font-size: 13px;
+      display: flex;
+      min-height: 100vh
+    }
+
+    /* ── SIDEBAR ── */
+    .sb {
+      width: 240px;
+      background: var(--navy);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      flex-shrink: 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      overflow-y: auto;
+      z-index: 200
+    }
+
+    .sb-brand {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .08)
+    }
+
+    .sb-brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: .3px
+    }
+
+    .sb-brand-sub {
+      font-size: 10px;
+      color: rgba(255, 255, 255, .4);
+      margin-top: 2px;
+      letter-spacing: .5px;
+      text-transform: uppercase
+    }
+
+    .sb-sect {
+      padding: 14px 16px 4px;
+      font-size: 9px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, .3);
+      letter-spacing: 1px;
+      text-transform: uppercase
+    }
+
+    .sb-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 14px;
+      margin: 1px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: rgba(255, 255, 255, .65);
+      font-size: 12px;
+      font-weight: 500;
+      transition: all .12s;
+      border: none;
+      background: none;
+      text-align: left;
+      width: calc(100% - 12px)
+    }
+
+    .sb-item:hover {
+      background: rgba(255, 255, 255, .08);
+      color: #fff
+    }
+
+    .sb-item.active {
+      background: var(--blue);
+      color: #fff;
+      font-weight: 600
+    }
+
+    .sb-item.active .sb-dot {
+      background: #fff
+    }
+
+    .sb-sub {
+      padding: 2px 0 2px 18px
+    }
+
+    .sb-sub .sb-item {
+      font-size: 11px;
+      padding: 6px 12px;
+      color: rgba(255, 255, 255, .5)
+    }
+
+    .sb-sub .sb-item.active {
+      background: rgba(26, 86, 219, .7);
+      color: #fff
+    }
+
+    .sb-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .3);
+      flex-shrink: 0
+    }
+
+    .sb-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 13px
+    }
+
+    .sb-footer {
+      margin-top: auto;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255, 255, 255, .08);
+      font-size: 10px;
+      color: rgba(255, 255, 255, .3)
+    }
+
+    /* ── MAIN ── */
+    .main {
+      margin-left: 240px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh
+    }
+
+    .topbar {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray200);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--sh)
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .topbar-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gray900)
+    }
+
+    .topbar-breadcrumb {
+      font-size: 11px;
+      color: var(--gray400);
+      display: flex;
+      align-items: center;
+      gap: 4px
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .tbtn {
+      padding: 6px 14px;
+      font-size: 12px;
+      border-radius: var(--r);
+      cursor: pointer;
+      font-weight: 600;
+      transition: all .12s;
+      border: 1px solid var(--gray200);
+      background: var(--white);
+      color: var(--gray700)
+    }
+
+    .tbtn:hover {
+      background: var(--gray50);
+      border-color: var(--gray300)
+    }
+
+    .tbtn.primary {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue)
+    }
+
+    .tbtn.primary:hover {
+      background: var(--blue2)
+    }
+
+    .tbtn.green {
+      background: var(--green);
+      color: #fff;
+      border-color: var(--green)
+    }
+
+    .content {
+      padding: 20px 24px;
+      flex: 1
+    }
+
+    /* ── PAGE ── */
+    .page {
+      display: none
+    }
+
+    .page.active {
+      display: block
+    }
+
+    /* ── SECTION HEADERS (matches real app color-coded headers) ── */
+    .sec-hdr {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: var(--r) var(--r) 0 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: .2px
+    }
+
+    .sec-hdr.blue {
+      background: var(--blue2)
+    }
+
+    .sec-hdr.teal {
+      background: var(--teal)
+    }
+
+    .sec-hdr.green {
+      background: var(--green)
+    }
+
+    .sec-hdr.amber {
+      background: var(--amber)
+    }
+
+    .sec-hdr.navy {
+      background: var(--navy2)
+    }
+
+    .sec-hdr.gray {
+      background: var(--gray600)
+    }
+
+    .sec-hdr.cyan {
+      background: var(--cyan)
+    }
+
+    .sec-body {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-top: none;
+      padding: 16px;
+      border-radius: 0 0 var(--r) var(--r)
+    }
+
+    .sec-wrap {
+      border-radius: var(--r);
+      box-shadow: var(--sh);
+      overflow: hidden;
+      margin-bottom: 14px
+    }
+
+    /* ── FORM ELEMENTS ── */
+    .form-grid {
+      display: grid;
+      gap: 12px
+    }
+
+    .form-grid-2 {
+      grid-template-columns: 1fr 1fr
+    }
+
+    .form-grid-3 {
+      grid-template-columns: 1fr 1fr 1fr
+    }
+
+    .form-grid-4 {
+      grid-template-columns: 1fr 1fr 1fr 1fr
+    }
+
+    .f-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .f-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gray600);
+      letter-spacing: .2px
+    }
+
+    .f-label.required::after {
+      content: ' *';
+      color: var(--red)
+    }
+
+    .f-input,
+    .f-select,
+    .f-textarea {
+      width: 100%;
+      padding: 7px 10px;
+      font-size: 12px;
+      border: 1px solid var(--gray300);
+      border-radius: var(--r);
+      background: var(--white);
+      color: var(--gray900);
+      font-family: var(--font);
+      outline: none;
+      transition: border-color .12s
+    }
+
+    .f-input:focus,
+    .f-select:focus,
+    .f-textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(26, 86, 219, .1)
+    }
+
+    .f-input:disabled,
+    .f-select:disabled {
+      background: var(--gray100);
+      color: var(--gray500);
+      cursor: not-allowed
+    }
+
+    .f-hint {
+      font-size: 10px;
+      color: var(--gray400);
+      margin-top: 2px
+    }
+
+    .f-calc {
+      background: var(--amber-lt);
+      border-color: var(--amber);
+      color: var(--amber2)
+    }
+
+    .f-auto {
+      background: var(--cyan-lt);
+      border-color: var(--cyan);
+      color: var(--cyan)
+    }
+
+    .spec-box {
+      background: var(--cyan-lt);
+      border: 1px solid var(--cyan);
+      border-radius: var(--r);
+      padding: 10px 14px;
+      font-size: 11px;
+      color: var(--teal2);
+      margin-bottom: 12px;
+      line-height: 1.6
+    }
+
+    .spec-box strong {
+      font-weight: 700
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--r-lg);
+      box-shadow: var(--sh);
+      overflow: hidden
+    }
+
+    .card-hdr {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--gray200);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--gray50)
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gray800);
+      display: flex;
+      align-items: center;
+      gap: 7px
+    }
+
+    .card-body {
+      padding: 16px
+    }
+
+    .card-body.pad0 {
+      padding: 0
+    }
+
+    /* ── KPI CARDS ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px
+    }
+
+    .kpi {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--r-lg);
+      padding: 16px;
+      box-shadow: var(--sh);
+      border-left: 4px solid var(--blue);
+      transition: all .15s
+    }
+
+    .kpi:hover {
+      box-shadow: var(--sh-md);
+      transform: translateY(-1px)
+    }
+
+    .kpi.green {
+      border-left-color: var(--green)
+    }
+
+    .kpi.amber {
+      border-left-color: var(--amber)
+    }
+
+    .kpi.red {
+      border-left-color: var(--red)
+    }
+
+    .kpi.teal {
+      border-left-color: var(--teal)
+    }
+
+    .kpi.navy {
+      border-left-color: var(--navy)
+    }
+
+    .kpi-val {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--gray900);
+      line-height: 1;
+      margin-bottom: 4px
+    }
+
+    .kpi-unit {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--gray500);
+      margin-left: 2px
+    }
+
+    .kpi-label {
+      font-size: 11px;
+      color: var(--gray500);
+      font-weight: 500;
+      margin-bottom: 6px
+    }
+
+    .kpi-delta {
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 3px
+    }
+
+    .kpi-delta.up {
+      color: var(--green)
+    }
+
+    .kpi-delta.down {
+      color: var(--red)
+    }
+
+    .kpi-delta.neutral {
+      color: var(--gray400)
+    }
+
+    .kpi-bar {
+      height: 3px;
+      background: var(--gray200);
+      border-radius: 2px;
+      margin-top: 8px
+    }
+
+    .kpi-bar-fill {
+      height: 100%;
+      border-radius: 2px
+    }
+
+    /* ── TABLE ── */
+    .tbl-wrap {
+      overflow-x: auto
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px
+    }
+
+    th {
+      background: var(--gray50);
+      color: var(--gray500);
+      font-weight: 700;
+      font-size: 10px;
+      padding: 8px 12px;
+      border-bottom: 2px solid var(--gray200);
+      white-space: nowrap;
+      text-align: left;
+      letter-spacing: .4px;
+      text-transform: uppercase
+    }
+
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--gray100);
+      color: var(--gray800);
+      vertical-align: middle
+    }
+
+    tr:last-child td {
+      border-bottom: none
+    }
+
+    tr:hover td {
+      background: var(--gray50)
+    }
+
+    .td-code {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--blue)
+    }
+
+    .td-bold {
+      font-weight: 700
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .2px
+    }
+
+    .badge.green {
+      background: var(--green-lt);
+      color: var(--green2)
+    }
+
+    .badge.amber {
+      background: var(--amber-lt);
+      color: var(--amber2)
+    }
+
+    .badge.red {
+      background: var(--red-lt);
+      color: var(--red)
+    }
+
+    .badge.blue {
+      background: #dbeafe;
+      color: var(--blue2)
+    }
+
+    .badge.gray {
+      background: var(--gray200);
+      color: var(--gray600)
+    }
+
+    .badge.teal {
+      background: var(--cyan-lt);
+      color: var(--teal2)
+    }
+
+    .col-grn {
+      color: var(--green);
+      font-weight: 700
+    }
+
+    .col-red {
+      color: var(--red);
+      font-weight: 700
+    }
+
+    .col-amb {
+      color: var(--amber);
+      font-weight: 700
+    }
+
+    .col-blu {
+      color: var(--blue);
+      font-weight: 700
+    }
+
+    /* ── FILTERS PANEL ── */
+    .filter-panel {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--r-lg);
+      box-shadow: var(--sh);
+      margin-bottom: 14px;
+      overflow: hidden
+    }
+
+    .filter-panel-head {
+      padding: 10px 16px;
+      background: var(--navy2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer
+    }
+
+    .filter-panel-head span {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 7px
+    }
+
+    .fp-arrow {
+      color: rgba(255, 255, 255, .6);
+      font-size: 10px;
+      transition: transform .2s
+    }
+
+    .fp-arrow.open {
+      transform: rotate(180deg)
+    }
+
+    .filter-body {
+      padding: 16px;
+      display: none
+    }
+
+    .filter-body.open {
+      display: block
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--gray200);
+      flex-wrap: wrap
+    }
+
+    /* ── TOGGLE BUTTONS (PCs / Weight / Length / Standard / Actual) ── */
+    .toggle-group {
+      display: flex;
+      background: var(--gray100);
+      border-radius: var(--r);
+      padding: 3px;
+      gap: 2px;
+      flex-wrap: wrap
+    }
+
+    .toggle-btn {
+      padding: 5px 14px;
+      font-size: 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      background: transparent;
+      color: var(--gray600);
+      transition: all .12s
+    }
+
+    .toggle-btn.active {
+      background: var(--white);
+      color: var(--blue);
+      box-shadow: var(--sh)
+    }
+
+    /* ── PARAM CHIPS ── */
+    .param-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px
+    }
+
+    .param-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border: 1.5px solid var(--gray200);
+      border-radius: var(--r);
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--gray600);
+      background: var(--white);
+      transition: all .15s;
+      font-weight: 500;
+      user-select: none
+    }
+
+    .param-chip.active {
+      border-color: var(--blue);
+      background: #dbeafe;
+      color: var(--blue2)
+    }
+
+    .param-chip .chk {
+      width: 15px;
+      height: 15px;
+      border: 2px solid currentColor;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      flex-shrink: 0
+    }
+
+    .param-chip.active .chk::after {
+      content: '✓';
+      font-weight: 700
+    }
+
+    /* ── CHARTS ── */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 14px;
+      margin-bottom: 14px
+    }
+
+    .chart-box {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--r-lg);
+      padding: 16px;
+      box-shadow: var(--sh)
+    }
+
+    .chart-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gray800);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .chart-sub {
+      font-size: 10px;
+      color: var(--gray400);
+      font-weight: 400
+    }
+
+    canvas {
+      max-height: 220px
+    }
+
+    /* ── PIVOT ── */
+    .zone-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px
+    }
+
+    .pv-zone {
+      border: 1.5px dashed var(--gray300);
+      border-radius: var(--r);
+      padding: 10px;
+      min-height: 60px;
+      transition: all .15s;
+      background: var(--gray50)
+    }
+
+    .pv-zone.over {
+      border-color: var(--blue);
+      background: #dbeafe
+    }
+
+    .pv-zone-lbl {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--gray400);
+      margin-bottom: 5px;
+      letter-spacing: .5px;
+      text-transform: uppercase
+    }
+
+    .pv-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      background: var(--white);
+      border: 1px solid var(--gray300);
+      border-radius: 10px;
+      font-size: 11px;
+      color: var(--gray800);
+      margin: 2px
+    }
+
+    .pv-chip .x {
+      cursor: pointer;
+      color: var(--gray400);
+      font-size: 9px;
+      margin-left: 2px
+    }
+
+    .pv-chip .x:hover {
+      color: var(--red)
+    }
+
+    .pv-empty {
+      font-size: 10px;
+      color: var(--gray400);
+      text-align: center;
+      padding: 6px 0;
+      font-style: italic
+    }
+
+    .pv-field-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--gray200);
+      background: var(--white);
+      cursor: grab;
+      font-size: 11px;
+      color: var(--gray700);
+      margin-bottom: 4px;
+      transition: all .12s;
+      user-select: none
+    }
+
+    .pv-field-item:hover {
+      border-color: #93C5FD;
+      background: #dbeafe;
+      color: var(--blue2)
+    }
+
+    .pv-field-item.dragging {
+      opacity: .3
+    }
+
+    .pv-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: inline-block
+    }
+
+    .dot-dim {
+      background: #0891b2
+    }
+
+    .dot-meas {
+      background: #1a56db
+    }
+
+    .dot-time {
+      background: #b45309
+    }
+
+    /* ── SQL BOX ── */
+    .sql-box {
+      background: #0f172a;
+      border-radius: var(--r);
+      padding: 14px 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: #e2e8f0;
+      line-height: 1.9;
+      white-space: pre;
+      overflow-x: auto;
+      margin-top: 10px
+    }
+
+    .kw {
+      color: #7dd3fc;
+      font-weight: 700
+    }
+
+    .str2 {
+      color: #86efac
+    }
+
+    .op3 {
+      color: #fca5a5
+    }
+
+    .cmt3 {
+      color: #475569;
+      font-style: italic
+    }
+
+    .fn3 {
+      color: #f9a8d4
+    }
+
+    /* ── DECISION BOX ── */
+    .decision-wrap {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--r);
+      overflow: hidden
+    }
+
+    .decision-hdr {
+      background: var(--green);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff
+    }
+
+    .decision-body {
+      padding: 14px
+    }
+
+    /* ── CALC RESULT ── */
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px
+    }
+
+    .calc-cell {
+      background: var(--amber-lt);
+      border: 1px solid #fbbf24;
+      border-radius: 6px;
+      padding: 8px 10px
+    }
+
+    .calc-cell .val {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--amber2)
+    }
+
+    .calc-cell .lbl {
+      font-size: 10px;
+      color: var(--amber);
+      margin-top: 2px
+    }
+
+    .calc-cell .formula {
+      font-size: 9px;
+      color: var(--amber);
+      opacity: .7;
+      margin-top: 1px;
+      font-family: var(--mono)
+    }
+
+    .test-result {
+      background: var(--green-lt);
+      border: 1px solid #6ee7b7;
+      border-radius: var(--r);
+      padding: 12px 14px;
+      margin-top: 10px
+    }
+
+    .test-result .lbl {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--green2);
+      letter-spacing: .3px;
+      text-transform: uppercase;
+      margin-bottom: 8px
+    }
+
+    .test-result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px
+    }
+
+    .tr-cell {
+      text-align: center
+    }
+
+    .tr-cell .val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--green)
+    }
+
+    .tr-cell .name {
+      font-size: 10px;
+      color: var(--green2)
+    }
+
+    .tr-cell .formula2 {
+      font-size: 9px;
+      color: var(--green);
+      opacity: .7;
+      font-family: var(--mono)
+    }
+
+    /* ── PIVOT TABLE ── */
+    .pv-tbl th.col-h {
+      background: #dbeafe;
+      color: var(--blue2);
+      text-align: center;
+      border-bottom: 2px solid #93c5fd
+    }
+
+    .pv-tbl th.row-h {
+      background: var(--green-lt);
+      color: var(--green2);
+      border-bottom: 2px solid #6ee7b7
+    }
+
+    .pv-tbl td.row-k {
+      font-weight: 700;
+      background: var(--gray50)
+    }
+
+    .pv-tbl td.grand {
+      font-weight: 700;
+      background: var(--gray50)
+    }
+
+    .heat-hi {
+      color: var(--blue2);
+      font-weight: 700
+    }
+
+    .heat-lo {
+      color: var(--red);
+      font-weight: 700
+    }
+
+    .heat-md {
+      color: var(--amber);
+      font-weight: 700
+    }
+
+    /* ── MISC ── */
+    .row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      align-items: flex-start;
+      flex-wrap: wrap
+    }
+
+    .row>.flex-1 {
+      flex: 1;
+      min-width: 240px
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--gray200);
+      margin: 14px 0
+    }
+
+    .info-box {
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      border-radius: var(--r);
+      padding: 10px 14px;
+      font-size: 11px;
+      color: var(--blue2);
+      margin-bottom: 12px;
+      line-height: 1.6
+    }
+
+    .warn-box {
+      background: var(--amber-lt);
+      border: 1px solid #fbbf24;
+      border-radius: var(--r);
+      padding: 10px 14px;
+      font-size: 11px;
+      color: var(--amber2);
+      margin-bottom: 12px
+    }
+
+    .logic-toggle {
+      display: inline-flex;
+      background: var(--gray100);
+      border-radius: 6px;
+      padding: 2px
+    }
+
+    .lt-btn {
+      padding: 4px 12px;
+      font-size: 11px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--gray600);
+      font-weight: 700;
+      transition: all .12s
+    }
+
+    .lt-btn.active {
+      background: var(--white);
+      color: var(--blue);
+      box-shadow: var(--sh)
+    }
+
+    .qb-row {
+      display: grid;
+      grid-template-columns: 160px 110px 1fr 30px;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 6px
+    }
+
+    .qb-row .f-select,
+    .qb-row .f-input {
+      font-size: 12px;
+      padding: 6px 9px
+    }
+
+    .rm-btn {
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--gray200);
+      border-radius: 6px;
+      background: var(--white);
+      cursor: pointer;
+      color: var(--gray400);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .12s;
+      flex-shrink: 0
+    }
+
+    .rm-btn:hover {
+      border-color: var(--red);
+      color: var(--red);
+      background: var(--red-lt)
+    }
+
+    .stage-th {
+      background: #dbeafe;
+      color: var(--blue2);
+      text-align: center;
+      border-bottom: 2px solid #93c5fd
+    }
+
+    .summary-row td {
+      background: var(--gray50);
+      font-weight: 700;
+      border-top: 2px solid var(--gray300)
+    }
+
+    .agg-row {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap
+    }
+
+    .agg-chip {
+      padding: 4px 11px;
+      font-size: 11px;
+      border: 1px solid var(--gray200);
+      border-radius: 10px;
+      cursor: pointer;
+      color: var(--gray500);
+      background: var(--white);
+      font-weight: 500;
+      transition: all .12s
+    }
+
+    .agg-chip.active {
+      background: #dbeafe;
+      color: var(--blue2);
+      border-color: #93c5fd;
+      font-weight: 700
+    }
+
+    .chk-lbl {
+      font-size: 12px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      cursor: pointer;
+      padding: 3px 0
+    }
+
+    .chk-lbl input {
+      accent-color: var(--blue)
+    }
+
+    .col-checks {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap
+    }
+
+    .col-checks label {
+      font-size: 11px;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      cursor: pointer;
+      background: var(--gray50);
+      border: 1px solid var(--gray200);
+      padding: 3px 8px;
+      border-radius: 6px;
+      transition: all .12s
+    }
+
+    .col-checks label:hover {
+      background: #dbeafe;
+      border-color: #93c5fd
+    }
+
+    .col-checks input {
+      accent-color: var(--blue)
+    }
+
+    .res-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap
+    }
+
+    .res-badge {
+      background: var(--green-lt);
+      color: var(--green2);
+      font-size: 10px;
+      padding: 3px 9px;
+      border-radius: 10px;
+      font-weight: 700;
+      border: 1px solid #6ee7b7
+    }
+
+    .copied {
+      font-size: 11px;
+      color: var(--green);
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity .3s
+    }
+
+    .copied.show {
+      opacity: 1
+    }
+
+    .save-btn {
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--r);
+      padding: 9px 24px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .12s
+    }
+
+    .save-btn:hover {
+      background: var(--blue2)
+    }
+
+    .cancel-btn {
+      background: var(--white);
+      color: var(--gray600);
+      border: 1px solid var(--gray300);
+      border-radius: var(--r);
+      padding: 9px 24px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .12s;
+      width: 100%;
+      text-align: center;
+      margin-top: 6px
+    }
+
+    .cancel-btn:hover {
+      background: var(--gray50)
+    }
+
+    .step-badge {
+      background: var(--blue);
+      color: #fff;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0
+    }
+
+    .pipe-list {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--r);
+      max-height: 140px;
+      overflow-y: auto;
+      margin-top: 4px
+    }
+
+    .pipe-list-item {
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--gray800);
+      border-bottom: 1px solid var(--gray100);
+      font-family: var(--mono)
+    }
+
+    .pipe-list-item:last-child {
+      border-bottom: none
+    }
+
+    .pipe-list-item:hover {
+      background: #dbeafe;
+      color: var(--blue2)
+    }
+
+    .search-input {
+      position: relative
+    }
+
+    .search-input input {
+      padding-left: 28px
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray400);
+      font-size: 12px;
+      pointer-events: none
+    }
+
+    .stat-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 8px;
+      padding: 14px;
+      background: var(--navy);
+      border-radius: var(--r-lg)
+    }
+
+    .stat-cell {
+      text-align: center
+    }
+
+    .stat-cell .val {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff
+    }
+
+    .stat-cell .lbl {
+      font-size: 9px;
+      color: rgba(255, 255, 255, .5);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin-top: 2px
+    }
+
+    .report-header {
+      background: var(--navy);
+      color: #fff;
+      border-radius: var(--r-lg) var(--r-lg) 0 0;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .report-header h2 {
+      font-size: 15px;
+      font-weight: 700
+    }
+
+    .report-header .meta {
+      font-size: 11px;
+      color: rgba(255, 255, 255, .5);
+      margin-top: 2px
+    }
+
+    .widget-tile {
+      border: 1.5px dashed var(--gray300);
+      border-radius: var(--r);
+      padding: 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: all .15s;
+      background: var(--gray50)
+    }
+
+    .widget-tile:hover {
+      border-color: var(--blue);
+      background: #dbeafe
+    }
+
+    .widget-tile.added {
+      border-color: var(--green);
+      background: var(--green-lt)
+    }
+
+    .wt-icon {
+      font-size: 20px;
+      margin-bottom: 4px
+    }
+
+    .wt-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gray700)
+    }
+
+    .wt-sub {
+      font-size: 10px;
+      color: var(--gray400);
+      margin-top: 2px
+    }
+
+    .dash-canvas {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px
+    }
+
+    .dash-widget {
+      background: var(--white);
+      border: 1px solid var(--gray200);
+      border-radius: var(--r-lg);
+      padding: 14px;
+      position: relative;
+      box-shadow: var(--sh)
+    }
+
+    .dw-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--gray100);
+      border: 1px solid var(--gray200);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: var(--gray500);
+      transition: all .12s
+    }
+
+    .dw-close:hover {
+      background: var(--red-lt);
+      color: var(--red);
+      border-color: var(--red)
+    }
+
+    .dw-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gray800);
+      margin-bottom: 10px;
+      padding-right: 20px
+    }
+
+    .kpi-builder-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px
+    }
+
+    .kpi-preview {
+      background: var(--navy);
+      border-radius: var(--r-lg);
+      padding: 20px;
+      text-align: center;
+      color: #fff
+    }
+
+    .kpi-preview .val {
+      font-size: 36px;
+      font-weight: 700
+    }
+
+    .kpi-preview .lbl {
+      font-size: 12px;
+      color: rgba(255, 255, 255, .6);
+      margin-top: 4px
+    }
+
+    .kpi-preview .delta {
+      font-size: 12px;
+      margin-top: 8px;
+      font-weight: 600
+    }
+
+    @media(max-width:900px) {
+      .sb {
+        width: 52px
+      }
+
+      .sb .sb-item span,
+      .sb-brand-title,
+      .sb-brand-sub,
+      .sb-sect,
+      .sb-footer,
+      .sb-sub {
+        display: none
+      }
+
+      .main {
+        margin-left: 52px
+      }
+    }
+
+    @media print {
+
+      .sb,
+      .topbar {
+        display: none !important
+      }
+
+      .main {
+        margin-left: 0 !important
+      }
+
+      .content {
+        padding: 0 !important
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- SIDEBAR -->
+  <nav class="sb">
+    <div class="sb-brand">
+      <div class="sb-brand-title">PQ Analytics Suite</div>
+      <div class="sb-brand-sub">Production Quality System</div>
+    </div>
+
+    <div class="sb-sect">Production Reports</div>
+    <button class="sb-item active" onclick="nav('prod-summary')"><span class="sb-icon">▦</span><span>Production
+        Summary</span></button>
+    <button class="sb-item" onclick="nav('order-perf')"><span class="sb-icon">◈</span><span>Order
+        Performance</span></button>
+    <button class="sb-item" onclick="nav('customer-prod')"><span class="sb-icon">◉</span><span>Customer
+        Production</span></button>
+    <button class="sb-item" onclick="nav('delivery')"><span class="sb-icon">▷</span><span>Delivery
+        Report</span></button>
+
+    <div class="sb-sect">Quality Reports</div>
+    <button class="sb-item" onclick="nav('rft')"><span class="sb-icon">✓</span><span>RFT Report</span></button>
+    <button class="sb-item" onclick="nav('defect')"><span class="sb-icon">⚠</span><span>Defect Analysis</span></button>
+    <button class="sb-item" onclick="nav('heat-trace')"><span class="sb-icon">⊕</span><span>Heat / Ladle
+        Trace</span></button>
+    <button class="sb-item" onclick="nav('mech-stat')"><span class="sb-icon">≋</span><span>Mechanical
+        Statistical</span></button>
+
+    <div class="sb-sect">Performance Reports</div>
+    <button class="sb-item" onclick="nav('stage-perf')"><span class="sb-icon">◑</span><span>Stage
+        Performance</span></button>
+    <button class="sb-item" onclick="nav('machine-perf')"><span class="sb-icon">⚙</span><span>Machine
+        Performance</span></button>
+    <button class="sb-item" onclick="nav('mold-perf')"><span class="sb-icon">◻</span><span>Mold
+        Performance</span></button>
+    <button class="sb-item" onclick="nav('weight-saving')"><span class="sb-icon">↓</span><span>Weight
+        Saving</span></button>
+    <button class="sb-item" onclick="nav('annealing')"><span class="sb-icon">~</span><span>Annealing
+        Hourly</span></button>
+
+    <div class="sb-sect">Management</div>
+    <button class="sb-item" onclick="nav('mgmt-dash')"><span class="sb-icon">★</span><span>Management
+        Dashboard</span></button>
+
+    <div class="sb-sect">Advanced Tools</div>
+    <button class="sb-item" onclick="nav('report-builder')"><span class="sb-icon">≡</span><span>Report
+        Builder</span></button>
+    <button class="sb-item" onclick="nav('pivot')"><span class="sb-icon">⊞</span><span>Pivot Mode</span></button>
+    <button class="sb-item" onclick="nav('kpi-builder')"><span class="sb-icon">◈</span><span>KPI Builder</span></button>
+    <button class="sb-item" onclick="nav('dash-builder')"><span class="sb-icon">▦</span><span>Dashboard
+        Builder</span></button>
+    <button class="sb-item" onclick="nav('query-mgr')"><span class="sb-icon">⌥</span><span>Query Manager</span></button>
+
+    <div class="sb-footer">PQ Suite v3.0</div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="topbar-title" id="tb-title">Production Summary</div>
+          <div class="topbar-breadcrumb" id="tb-crumb"><span>Reports</span><span>›</span><span>Production</span></div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="tbtn" onclick="window.print()">Print</button>
+        <button class="tbtn" onclick="exportCSV()">↓ Export CSV</button>
+        <button class="tbtn primary" onclick="refreshPage()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══════════════════════════════════════════════ -->
+      <!-- PAGE: PRODUCTION SUMMARY -->
+      <!-- ══════════════════════════════════════════════ -->
+      <div class="page active" id="page-prod-summary">
+        <div class="filter-panel">
+          <div class="filter-panel-head" onclick="toggleFP('fp-ps')">
+            <span>⚙ Filters &amp; Parameters</span>
+            <span class="fp-arrow open" id="fp-ps-arr">▼</span>
+          </div>
+          <div class="filter-body open" id="fp-ps">
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+              <div>
+                <div class="f-label" style="margin-bottom:5px">Measure</div>
+                <div class="toggle-group" id="ps-measure">
+                  <button class="toggle-btn active" onclick="setToggle('ps-measure',this)">Pieces (PCs)</button>
+                  <button class="toggle-btn" onclick="setToggle('ps-measure',this)">Pipe Weight</button>
+                  <button class="toggle-btn" onclick="setToggle('ps-measure',this)">Pipe Length</button>
+                </div>
+              </div>
+              <div>
+                <div class="f-label" style="margin-bottom:5px">Value Type</div>
+                <div class="toggle-group" id="ps-valtype">
+                  <button class="toggle-btn active" onclick="setToggle('ps-valtype',this)">Standard</button>
+                  <button class="toggle-btn" onclick="setToggle('ps-valtype',this)">Actual</button>
+                </div>
+              </div>
+              <div>
+                <div class="f-label" style="margin-bottom:5px">Group By</div>
+                <div class="toggle-group" id="ps-grp">
+                  <button class="toggle-btn active" onclick="setToggle('ps-grp',this)">Product</button>
+                  <button class="toggle-btn" onclick="setToggle('ps-grp',this)">Line</button>
+                  <button class="toggle-btn" onclick="setToggle('ps-grp',this)">Shift</button>
+                  <button class="toggle-btn" onclick="setToggle('ps-grp',this)">Customer</button>
+                </div>
+              </div>
+            </div>
+            <div class="filter-grid">
+              <div class="f-group">
+                <div class="f-label">From Date</div><input class="f-input" type="date" value="2025-01-01">
+              </div>
+              <div class="f-group">
+                <div class="f-label">To Date</div><input class="f-input" type="date" value="2025-12-31">
+              </div>
+              <div class="f-group">
+                <div class="f-label">Production Order</div><input class="f-input" placeholder="All orders">
+              </div>
+              <div class="f-group">
+                <div class="f-label">Customer</div><select class="f-select">
+                  <option>-- All --</option>
+                  <option>Customer A</option>
+                  <option>Customer B</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">DN (Diameter)</div><select class="f-select" multiple size="3">
+                  <option>DN80</option>
+                  <option>DN100</option>
+                  <option>DN150</option>
+                  <option>DN200</option>
+                  <option>DN250</option>
+                  <option>DN300</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Class</div><select class="f-select" multiple size="3">
+                  <option>K9</option>
+                  <option>K10</option>
+                  <option>K12</option>
+                  <option>C25</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Line</div><select class="f-select">
+                  <option>-- All --</option>
+                  <option>Line 1</option>
+                  <option>Line 2</option>
+                  <option>Line 3</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Shift</div><select class="f-select">
+                  <option>-- All --</option>
+                  <option>Morning</option>
+                  <option>Evening</option>
+                  <option>Night</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Zinc Type</div><select class="f-select">
+                  <option>-- All --</option>
+                  <option>Hot Dip</option>
+                  <option>Electrogalvanized</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Internal Finish</div><select class="f-select">
+                  <option>-- All --</option>
+                  <option>Cement Mortar</option>
+                  <option>Epoxy</option>
+                  <option>None</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">External Finish</div><select class="f-select">
+                  <option>-- All --</option>
+                  <option>Bitumen</option>
+                  <option>Polyethylene</option>
+                  <option>None</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Project Type</div><select class="f-select">
+                  <option>-- All --</option>
+                  <option>Water</option>
+                  <option>Sewage</option>
+                  <option>Industrial</option>
+                </select>
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button class="tbtn primary" onclick="buildProdSummary()">Generate Report</button>
+              <button class="tbtn" onclick="resetFilters(this)">Reset</button>
+              <button class="tbtn">Save Filter</button>
+              <button class="tbtn">Custom Filter +</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="ps-kpis">
+          <div class="kpi green">
+            <div class="kpi-label">Total Produced</div>
+            <div class="kpi-val">4,821<span class="kpi-unit">pcs</span></div>
+            <div class="kpi-delta up">▲ +8.3% vs last period</div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" style="width:82%;background:var(--green)"></div>
+            </div>
+          </div>
+          <div class="kpi blue">
+            <div class="kpi-label">Total Weight</div>
+            <div class="kpi-val">12,450<span class="kpi-unit">ton</span></div>
+            <div class="kpi-delta up">▲ +5.1%</div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" style="width:74%;background:var(--blue)"></div>
+            </div>
+          </div>
+          <div class="kpi teal">
+            <div class="kpi-label">Acceptance Rate</div>
+            <div class="kpi-val">94.8<span class="kpi-unit">%</span></div>
+            <div class="kpi-delta down">▼ -1.2%</div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" style="width:95%;background:var(--teal)"></div>
+            </div>
+          </div>
+          <div class="kpi amber">
+            <div class="kpi-label">Rejection Rate</div>
+            <div class="kpi-val">3.2<span class="kpi-unit">%</span></div>
+            <div class="kpi-delta up">▲ +0.4%</div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" style="width:32%;background:var(--amber)"></div>
+            </div>
+          </div>
+          <div class="kpi navy">
+            <div class="kpi-label">Weight Saving</div>
+            <div class="kpi-val">186<span class="kpi-unit">ton</span></div>
+            <div class="kpi-delta up">▲ +2.6%</div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" style="width:60%;background:var(--navy)"></div>
+            </div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Orders Completed</div>
+            <div class="kpi-val">47<span class="kpi-unit">orders</span></div>
+            <div class="kpi-delta neutral">— stable</div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" style="width:47%;background:var(--gray400)"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-grid">
+          <div class="chart-box">
+            <div class="chart-title">Daily production output <span class="chart-sub">pcs / day</span></div>
+            <canvas id="ch-daily"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-title">Acceptance vs Rejection by DN <span class="chart-sub">%</span></div>
+            <canvas id="ch-dn"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-title">Production by line <span class="chart-sub">pcs</span></div>
+            <canvas id="ch-line"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-title">Stage yield flow <span class="chart-sub">quality distribution</span></div>
+            <canvas id="ch-yield"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hdr">
+            <span class="card-title">Production detail — by product</span>
+            <div style="display:flex;gap:6px">
+              <button class="tbtn" onclick="exportRepCSV()">↓ CSV</button>
+              <button class="tbtn">↓ PDF</button>
+            </div>
+          </div>
+          <div class="card-body pad0">
+            <div class="tbl-wrap">
+              <table id="ps-table">
+                <thead>
+                  <tr>
+                    <th rowspan="2">Product code</th>
+                    <th rowspan="2">DN</th>
+                    <th rowspan="2">Class</th>
+                    <th rowspan="2">Nom. weight (kg)</th>
+                    <th rowspan="2">Act. weight (kg)</th>
+                    <th rowspan="2">Saving (kg)</th>
+                    <th colspan="5" class="stage-th">Casting stage</th>
+                    <th colspan="5" class="stage-th">Annealing stage</th>
+                    <th colspan="5" class="stage-th">Finishing stage</th>
+                  </tr>
+                  <tr>
+                    <th>Acc</th>
+                    <th>Hold</th>
+                    <th>Rej</th>
+                    <th>Total</th>
+                    <th>%</th>
+                    <th>Acc</th>
+                    <th>Hold</th>
+                    <th>Rej</th>
+                    <th>Total</th>
+                    <th>%</th>
+                    <th>Acc</th>
+                    <th>Hold</th>
+                    <th>Rej</th>
+                    <th>Total</th>
+                    <th>%</th>
+                  </tr>
+                </thead>
+                <tbody id="ps-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div style="padding:14px 16px;border-top:1px solid var(--gray200);background:var(--gray50)">
+            <div class="stat-summary" style="border-radius:var(--r)">
+              <div class="stat-cell">
+                <div class="val">4,821</div>
+                <div class="lbl">Total pcs</div>
+              </div>
+              <div class="stat-cell">
+                <div class="val">94.8%</div>
+                <div class="lbl">Avg acceptance</div>
+              </div>
+              <div class="stat-cell">
+                <div class="val">3.2%</div>
+                <div class="lbl">Avg rejection</div>
+              </div>
+              <div class="stat-cell">
+                <div class="val">186t</div>
+                <div class="lbl">Total saving</div>
+              </div>
+              <div class="stat-cell">
+                <div class="val">12.5%</div>
+                <div class="lbl">Std dev acc</div>
+              </div>
+              <div class="stat-cell">
+                <div class="val">96.2%</div>
+                <div class="lbl">Max acc rate</div>
+              </div>
+              <div class="stat-cell">
+                <div class="val">88.3%</div>
+                <div class="lbl">Min acc rate</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════ -->
+      <!-- PAGE: RFT REPORT -->
+      <!-- ══════════════════════════════════════════════ -->
+      <div class="page" id="page-rft">
+        <div class="filter-panel">
+          <div class="filter-panel-head" onclick="toggleFP('fp-rft')">
+            <span>⚙ RFT Filters</span><span class="fp-arrow open" id="fp-rft-arr">▼</span>
+          </div>
+          <div class="filter-body open" id="fp-rft">
+            <div class="filter-grid">
+              <div class="f-group">
+                <div class="f-label">From Date</div><input class="f-input" type="date" value="2025-01-01">
+              </div>
+              <div class="f-group">
+                <div class="f-label">To Date</div><input class="f-input" type="date" value="2025-12-31">
+              </div>
+              <div class="f-group">
+                <div class="f-label">DN</div><select class="f-select">
+                  <option>All</option>
+                  <option>DN80</option>
+                  <option>DN100</option>
+                  <option>DN150</option>
+                  <option>DN200</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Class</div><select class="f-select">
+                  <option>All</option>
+                  <option>K9</option>
+                  <option>K10</option>
+                  <option>K12</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Line</div><select class="f-select">
+                  <option>All</option>
+                  <option>Line 1</option>
+                  <option>Line 2</option>
+                  <option>Line 3</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Production Order</div><input class="f-input" placeholder="PO number...">
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button class="tbtn primary">Generate RFT Report</button>
+              <button class="tbtn">Reset</button>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi green">
+            <div class="kpi-label">RFT Rate</div>
+            <div class="kpi-val">91.4<span class="kpi-unit">%</span></div>
+            <div class="kpi-delta up">▲ +2.1%</div>
+          </div>
+          <div class="kpi amber">
+            <div class="kpi-label">Rework Required</div>
+            <div class="kpi-val">6.8<span class="kpi-unit">%</span></div>
+            <div class="kpi-delta down">▼ -1.3%</div>
+          </div>
+          <div class="kpi red">
+            <div class="kpi-label">Scrap Rate</div>
+            <div class="kpi-val">1.8<span class="kpi-unit">%</span></div>
+            <div class="kpi-delta neutral">— no change</div>
+          </div>
+          <div class="kpi teal">
+            <div class="kpi-label">Inspected Pipes</div>
+            <div class="kpi-val">5,214<span class="kpi-unit">pcs</span></div>
+            <div class="kpi-delta up">▲ +412</div>
+          </div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-box">
+            <div class="chart-title">RFT trend by month</div><canvas id="ch-rft-trend"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-title">Defect cause Pareto</div><canvas id="ch-rft-pareto"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><span class="card-title">RFT detail by production order</span></div>
+          <div class="card-body pad0">
+            <div class="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Order #</th>
+                    <th>Product</th>
+                    <th>DN</th>
+                    <th>Class</th>
+                    <th>Total pcs</th>
+                    <th>Pass 1st time</th>
+                    <th>Rework</th>
+                    <th>Scrap</th>
+                    <th>RFT %</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="td-code">PO-2025-001</td>
+                    <td>HDPE-K9</td>
+                    <td>DN150</td>
+                    <td>K9</td>
+                    <td>480</td>
+                    <td class="col-grn">452</td>
+                    <td class="col-amb">22</td>
+                    <td class="col-red">6</td>
+                    <td class="col-grn">94.2%</td>
+                    <td><span class="badge green">Pass</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-code">PO-2025-002</td>
+                    <td>DI-K10</td>
+                    <td>DN200</td>
+                    <td>K10</td>
+                    <td>320</td>
+                    <td class="col-grn">291</td>
+                    <td class="col-amb">24</td>
+                    <td class="col-red">5</td>
+                    <td class="col-amb">90.9%</td>
+                    <td><span class="badge amber">Review</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-code">PO-2025-003</td>
+                    <td>DI-K12</td>
+                    <td>DN80</td>
+                    <td>K12</td>
+                    <td>612</td>
+                    <td class="col-grn">598</td>
+                    <td class="col-amb">10</td>
+                    <td class="col-red">4</td>
+                    <td class="col-grn">97.7%</td>
+                    <td><span class="badge green">Pass</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════ -->
+      <!-- PAGE: HEAT / LADLE TRACEABILITY -->
+      <!-- ══════════════════════════════════════════════ -->
+      <div class="page" id="page-heat-trace">
+        <div class="filter-panel">
+          <div class="filter-panel-head" onclick="toggleFP('fp-ht')">
+            <span>⚙ Traceability Filters</span><span class="fp-arrow open" id="fp-ht-arr">▼</span>
+          </div>
+          <div class="filter-body open" id="fp-ht">
+            <div class="filter-grid">
+              <div class="f-group">
+                <div class="f-label">From Date</div><input class="f-input" type="date" value="2025-01-01">
+              </div>
+              <div class="f-group">
+                <div class="f-label">To Date</div><input class="f-input" type="date" value="2025-12-31">
+              </div>
+              <div class="f-group">
+                <div class="f-label">Ladle ID</div><input class="f-input" placeholder="e.g. 102042025">
+              </div>
+              <div class="f-group">
+                <div class="f-label">Furnace</div><select class="f-select">
+                  <option>All</option>
+                  <option>Furnace 1</option>
+                  <option>Furnace 2</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Pipe Code</div><input class="f-input" placeholder="e.g. P1002-4-131032026">
+              </div>
+              <div class="f-group">
+                <div class="f-label">Decision</div><select class="f-select">
+                  <option>All</option>
+                  <option>Accepted</option>
+                  <option>Rejected</option>
+                  <option>Hold</option>
+                </select>
+              </div>
+            </div>
+            <div class="filter-actions"><button class="tbtn primary">Trace</button><button class="tbtn">Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="flex-1">
+            <div class="sec-wrap">
+              <div class="sec-hdr blue">Chemical Analysis — Ladle 102042026</div>
+              <div class="sec-body">
+                <div class="spec-box"><strong>Specifications:</strong> C: 3.0–3.9 | Si: 1.86–2.7 | Mg: 0.031–0.07 | Cu:
+                  max 0.1 | Cr: max 0.1 | S: max 0.02 | Mn: max 0.4 | P: max 0.059 | Pb: max 0.003 | Al: max 0.049</div>
+                <div class="form-grid form-grid-4">
+                  <div class="f-group">
+                    <div class="f-label">C (Carbon)</div><input class="f-input f-auto" value="3.52" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Si (Silicon)</div><input class="f-input f-auto" value="2.18" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Mg (Magnesium)</div><input class="f-input f-auto" value="0.048" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Cu (Copper)</div><input class="f-input f-auto" value="0.04" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Cr (Chromium)</div><input class="f-input f-auto" value="0.03" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">S (Sulfur)</div><input class="f-input f-auto" value="0.008" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Mn (Manganese)</div><input class="f-input f-auto" value="0.12" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">P (Phosphorus)</div><input class="f-input f-auto" value="0.031" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Pb (Lead)</div><input class="f-input f-auto" value="0.001" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Al (Aluminum)</div><input class="f-input f-auto" value="0.018" readonly>
+                  </div>
+                </div>
+                <div class="calc-grid">
+                  <div class="calc-cell">
+                    <div class="val">4.34</div>
+                    <div class="lbl">CE (Carbon Equiv.)</div>
+                    <div class="formula">C + Si/3 + P/2</div>
+                  </div>
+                  <div class="calc-cell">
+                    <div class="val">0.28</div>
+                    <div class="lbl">MnE (Manganese Equiv.)</div>
+                    <div class="formula">3×Cr + Cu + Mn + P</div>
+                  </div>
+                  <div class="calc-cell">
+                    <div class="val">0.040</div>
+                    <div class="lbl">MgE (Magnesium Equiv.)</div>
+                    <div class="formula">Mg - S</div>
+                  </div>
+                </div>
+                <div style="margin-top:10px"><span class="badge green" style="font-size:12px;padding:4px 12px">Decision:
+                    Accepted</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="flex-1">
+            <div class="sec-wrap">
+              <div class="sec-hdr teal">Mechanical Test — Pipe P1002-4-131032026</div>
+              <div class="sec-body">
+                <div class="spec-box"><strong>Acceptance Criteria:</strong> σ ≥ 42.50 KgF/mm² | E ≥ 10%</div>
+                <div class="form-grid form-grid-4">
+                  <div class="f-group">
+                    <div class="f-label">Thickness (mm)</div><input class="f-input f-auto" value="7.2" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">D1 (mm)</div><input class="f-input f-auto" value="168.4" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">D2 (mm)</div><input class="f-input f-auto" value="168.1" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">D3 (mm)</div><input class="f-input f-auto" value="168.6" readonly>
+                  </div>
+                </div>
+                <div class="calc-grid" style="grid-template-columns:1fr 1fr 1fr">
+                  <div class="calc-cell">
+                    <div class="val">168.37</div>
+                    <div class="lbl">AV.D (mm)</div>
+                    <div class="formula">(D1+D2+D3)/3</div>
+                  </div>
+                  <div class="calc-cell">
+                    <div class="val">841.8</div>
+                    <div class="lbl">Lo (mm)</div>
+                    <div class="formula">AV.D × 5</div>
+                  </div>
+                  <div class="calc-cell">
+                    <div class="val">222.5</div>
+                    <div class="lbl">A (mm²)</div>
+                    <div class="formula">π/4 × D²</div>
+                  </div>
+                </div>
+                <div class="form-grid form-grid-2" style="margin-top:10px">
+                  <div class="f-group">
+                    <div class="f-label">F (KgF)</div><input class="f-input f-auto" value="9,580" readonly>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Lf (mm)</div><input class="f-input f-auto" value="1,014" readonly>
+                  </div>
+                </div>
+                <div class="test-result">
+                  <div class="lbl">Test Results</div>
+                  <div class="test-result-grid">
+                    <div class="tr-cell">
+                      <div class="val">43.05</div>
+                      <div class="name">σ (KgF/mm²)</div>
+                      <div class="formula2">F/A (≥42.50)</div>
+                    </div>
+                    <div class="tr-cell">
+                      <div class="val">20.4</div>
+                      <div class="name">E (%)</div>
+                      <div class="formula2">(Lf-Lo)/Lo×100 (≥10)</div>
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+                  <span class="badge green" style="font-size:12px;padding:4px 12px">Decision: Accepted</span>
+                  <div class="sec-wrap" style="margin:0;flex:1">
+                    <div
+                      style="padding:6px 10px;background:var(--green-lt);border:1px solid #6ee7b7;border-radius:var(--r);font-size:11px;color:var(--green2)">
+                      <strong>Microstructure:</strong> %Nd=88 | %F=72 | NC=420 | Carbides=0.8% | HB=215 ✓
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hdr"><span class="card-title">Pipes produced from Ladle 102042026</span></div>
+          <div class="card-body pad0">
+            <div class="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Pipe Code</th>
+                    <th>DN</th>
+                    <th>Class</th>
+                    <th>Length (m)</th>
+                    <th>Weight (kg)</th>
+                    <th>Cast Stage</th>
+                    <th>Anneal Stage</th>
+                    <th>Finish Stage</th>
+                    <th>Chem. Decision</th>
+                    <th>Mech. Decision</th>
+                    <th>Final</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="td-code">P1002-4-131032026</td>
+                    <td>DN150</td>
+                    <td>K9</td>
+                    <td>6.00</td>
+                    <td>124.5</td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Pass</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-code">P1001-2-131032026</td>
+                    <td>DN150</td>
+                    <td>K9</td>
+                    <td>6.00</td>
+                    <td>124.1</td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge amber">Hold</span></td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge amber">Review</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-code">P1000-3-131032026</td>
+                    <td>DN150</td>
+                    <td>K9</td>
+                    <td>6.00</td>
+                    <td>123.8</td>
+                    <td><span class="badge red">Rej</span></td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td>—</td>
+                    <td><span class="badge red">Fail</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-code">P101-1-230032026</td>
+                    <td>DN200</td>
+                    <td>K10</td>
+                    <td>5.50</td>
+                    <td>198.4</td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Acc</span></td>
+                    <td><span class="badge green">Pass</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════ -->
+      <!-- PAGE: REPORT BUILDER -->
+      <!-- ══════════════════════════════════════════════ -->
+      <div class="page" id="page-report-builder">
+        <!-- Parameters -->
+        <div class="sec-wrap">
+          <div class="sec-hdr blue">① Report Parameters</div>
+          <div class="sec-body">
+            <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+              <div>
+                <div class="f-label" style="margin-bottom:8px">Measure type</div>
+                <div class="param-chips" id="rb-measure">
+                  <div class="param-chip active" data-v="pcs" onclick="rbToggle('rb-measure',this)"><span
+                      class="chk"></span>Pieces (PCs)</div>
+                  <div class="param-chip" data-v="weight" onclick="rbToggle('rb-measure',this)"><span
+                      class="chk"></span>Pipe Weight (kg)</div>
+                  <div class="param-chip" data-v="length" onclick="rbToggle('rb-measure',this)"><span
+                      class="chk"></span>Pipe Length (m)</div>
+                </div>
+              </div>
+              <div>
+                <div class="f-label" style="margin-bottom:8px">Value basis</div>
+                <div class="param-chips" id="rb-basis">
+                  <div class="param-chip active" data-v="standard" onclick="rbToggle('rb-basis',this)"><span
+                      class="chk"></span>Standard</div>
+                  <div class="param-chip" data-v="actual" onclick="rbToggle('rb-basis',this)"><span
+                      class="chk"></span>Actual</div>
+                </div>
+              </div>
+              <div>
+                <div class="f-label" style="margin-bottom:8px">Stage breakdown</div>
+                <div class="param-chips" id="rb-stages">
+                  <div class="param-chip active" data-v="casting" onclick="rbToggleMulti('rb-stages',this)"><span
+                      class="chk"></span>Casting</div>
+                  <div class="param-chip active" data-v="annealing" onclick="rbToggleMulti('rb-stages',this)"><span
+                      class="chk"></span>Annealing</div>
+                  <div class="param-chip active" data-v="finishing" onclick="rbToggleMulti('rb-stages',this)"><span
+                      class="chk"></span>Finishing</div>
+                  <div class="param-chip" data-v="zinccoat" onclick="rbToggleMulti('rb-stages',this)"><span
+                      class="chk"></span>Zinc Coating</div>
+                  <div class="param-chip" data-v="cement" onclick="rbToggleMulti('rb-stages',this)"><span
+                      class="chk"></span>Cement Lining</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="sec-wrap">
+          <div class="sec-hdr teal">② Dynamic Filters</div>
+          <div class="sec-body">
+            <div class="filter-grid">
+              <div class="f-group">
+                <div class="f-label">From Date</div><input class="f-input" type="date" value="2025-01-01">
+              </div>
+              <div class="f-group">
+                <div class="f-label">To Date</div><input class="f-input" type="date" value="2025-12-31">
+              </div>
+              <div class="f-group">
+                <div class="f-label">Sales Order</div><input class="f-input" placeholder="SO-XXXXX">
+              </div>
+              <div class="f-group">
+                <div class="f-label">Customer</div><input class="f-input" placeholder="Customer name...">
+              </div>
+              <div class="f-group">
+                <div class="f-label">Production Order</div><input class="f-input" placeholder="PO-XXXXX">
+              </div>
+              <div class="f-group">
+                <div class="f-label">Delivery Note (DN)</div><input class="f-input" placeholder="DN-XXXXX">
+              </div>
+              <div class="f-group">
+                <div class="f-label">Class</div><select class="f-select" multiple size="3">
+                  <option>K9</option>
+                  <option>K10</option>
+                  <option>K12</option>
+                  <option>C25</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Diameter (DN)</div><select class="f-select" multiple size="3">
+                  <option>DN80</option>
+                  <option>DN100</option>
+                  <option>DN150</option>
+                  <option>DN200</option>
+                  <option>DN250</option>
+                  <option>DN300</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Product</div><select class="f-select" multiple size="3">
+                  <option>Ductile Iron K9</option>
+                  <option>Ductile Iron K10</option>
+                  <option>Ductile Iron K12</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Pipe Code</div><input class="f-input" placeholder="e.g. P1002-4-...">
+              </div>
+              <div class="f-group">
+                <div class="f-label">Line</div><select class="f-select" multiple size="3">
+                  <option>Line 1</option>
+                  <option>Line 2</option>
+                  <option>Line 3</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Stage</div><select class="f-select" multiple size="3">
+                  <option>Casting</option>
+                  <option>Annealing</option>
+                  <option>Finishing</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Machine</div><select class="f-select" multiple size="3">
+                  <option>M-01</option>
+                  <option>M-02</option>
+                  <option>M-03</option>
+                  <option>M-04</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Mold</div><select class="f-select" multiple size="3">
+                  <option>Mold-A</option>
+                  <option>Mold-B</option>
+                  <option>Mold-C</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Shift</div><select class="f-select">
+                  <option>All</option>
+                  <option>Morning</option>
+                  <option>Evening</option>
+                  <option>Night</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Pipe Status</div><select class="f-select">
+                  <option>All</option>
+                  <option>Accepted</option>
+                  <option>Hold</option>
+                  <option>Rejected</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Zinc Type</div><select class="f-select">
+                  <option>All</option>
+                  <option>Hot Dip</option>
+                  <option>Electro</option>
+                </select>
+              </div>
+              <div class="f-group">
+                <div class="f-label">Intended Use</div><select class="f-select">
+                  <option>All</option>
+                  <option>Water</option>
+                  <option>Sewage</option>
+                  <option>Industrial</option>
+                </select>
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button class="tbtn primary" onclick="buildRBReport()">Generate Report</button>
+              <button class="tbtn">Reset Filters</button>
+              <button class="tbtn">Save Custom Filter</button>
+              <button class="tbtn">+ Add Custom Filter</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output Table -->
+        <div class="card" id="rb-output-card">
+          <div class="card-hdr">
+            <span class="card-title" id="rb-title">Output — Pieces (PCs) | Standard | All Stages</span>
+            <div style="display:flex;gap:6px">
+              <button class="tbtn" onclick="exportRepCSV()">↓ CSV</button>
+              <button class="tbtn">↓ Excel</button>
+              <button class="tbtn">↓ PDF</button>
+            </div>
+          </div>
+          <div class="card-body pad0">
+            <div class="tbl-wrap">
+              <table id="rb-table">
+                <thead>
+                  <tr>
+                    <th rowspan="2">Pipe code</th>
+                    <th rowspan="2">DN</th>
+                    <th rowspan="2">Class</th>
+                    <th rowspan="2">Nom.</th>
+                    <th rowspan="2">Act.</th>
+                    <th rowspan="2">Saving</th>
+                    <th colspan="6" class="stage-th">Casting</th>
+                    <th colspan="6" class="stage-th">Annealing</th>
+                    <th colspan="6" class="stage-th">Finishing</th>
+                  </tr>
+                  <tr>
+                    <th>Acc</th>
+                    <th>Hold</th>
+                    <th>Rej</th>
+                    <th>Tot</th>
+                    <th>%</th>
+                    <th>Label</th>
+                    <th>Acc</th>
+                    <th>Hold</th>
+                    <th>Rej</th>
+                    <th>Tot</th>
+                    <th>%</th>
+                    <th>Label</th>
+                    <th>Acc</th>
+                    <th>Hold</th>
+                    <th>Rej</th>
+                    <th>Tot</th>
+                    <th>%</th>
+                    <th>Label</th>
+                  </tr>
+                </thead>
+                <tbody id="rb-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Summary at end of report -->
+          <div style="padding:14px 16px;border-top:2px solid var(--gray300);background:var(--navy)">
+            <div
+              style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">
+              Report Summary &amp; Statistics</div>
+            <div class="stat-summary" style="border-radius:var(--r);background:rgba(255,255,255,.05)">
+              <div class="stat-cell" id="sum-total">
+                <div class="val">—</div>
+                <div class="lbl">Total pcs</div>
+              </div>
+              <div class="stat-cell" id="sum-acc">
+                <div class="val">—</div>
+                <div class="lbl">Total acc</div>
+              </div>
+              <div class="stat-cell" id="sum-rej">
+                <div class="val">—</div>
+                <div class="lbl">Total rej</div>
+              </div>
+              <div class="stat-cell" id="sum-avg">
+                <div class="val">—</div>
+                <div class="lbl">Avg acc %</div>
+              </div>
+              <div class="stat-cell" id="sum-max">
+                <div class="val">—</div>
+                <div class="lbl">Max acc %</div>
+              </div>
+              <div class="stat-cell" id="sum-min">
+                <div class="val">—</div>
+                <div class="lbl">Min acc %</div>
+              </div>
+              <div class="stat-cell" id="sum-std">
+                <div class="val">—</div>
+                <div class="lbl">Std dev</div>
+              </div>
+              <div class="stat-cell" id="sum-save">
+                <div class="val">—</div>
+                <div class="lbl">Total saving</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════ -->
+      <!-- PAGE: PIVOT MODE -->
+      <!-- ══════════════════════════════════════════════ -->
+      <div class="page" id="page-pivot">
+        <div style="display:grid;grid-template-columns:220px 1fr;gap:14px">
+          <div>
+            <div class="card" style="margin-bottom:12px">
+              <div class="card-hdr"><span class="card-title">Fields</span></div>
+              <div class="card-body" style="padding:10px">
+                <div style="display:flex;gap:10px;font-size:10px;color:var(--gray500);margin-bottom:8px;flex-wrap:wrap">
+                  <span><span class="pv-dot dot-dim"></span> Dimension</span>
+                  <span><span class="pv-dot dot-meas"></span> Measure</span>
+                  <span><span class="pv-dot dot-time"></span> Time</span>
+                </div>
+                <div id="pv-fields"></div>
+              </div>
+            </div>
+            <div class="card" style="margin-bottom:12px">
+              <div class="card-hdr"><span class="card-title">Aggregation</span></div>
+              <div class="card-body" style="padding:10px">
+                <div class="agg-row" id="pv-agg">
+                  <div class="agg-chip active" onclick="setPvAgg('SUM')">Sum</div>
+                  <div class="agg-chip" onclick="setPvAgg('AVG')">Avg</div>
+                  <div class="agg-chip" onclick="setPvAgg('COUNT')">Count</div>
+                  <div class="agg-chip" onclick="setPvAgg('MAX')">Max</div>
+                  <div class="agg-chip" onclick="setPvAgg('MIN')">Min</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hdr"><span class="card-title">Options</span></div>
+              <div class="card-body">
+                <label class="chk-lbl"><input type="checkbox" id="pv-rt" checked onchange="buildPivot()"> Row
+                  totals</label>
+                <label class="chk-lbl"><input type="checkbox" id="pv-ct" checked onchange="buildPivot()"> Column
+                  totals</label>
+                <label class="chk-lbl"><input type="checkbox" id="pv-hm" onchange="buildPivot()"> Heatmap</label>
+                <label class="chk-lbl"><input type="checkbox" id="pv-pct" onchange="buildPivot()"> % of grand
+                  total</label>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:12px">
+              <div class="card-hdr"><span class="card-title">Drop zones — drag fields to configure pivot</span></div>
+              <div class="card-body">
+                <div class="zone-grid">
+                  <div class="pv-zone" id="zone-rows" ondragover="pvOver(event,'zone-rows')"
+                    ondrop="pvDrop(event,'rows')" ondragleave="pvLeave('zone-rows')">
+                    <div class="pv-zone-lbl">Rows</div>
+                    <div id="zone-rows-c">
+                      <div class="pv-empty">drag dimension here</div>
+                    </div>
+                  </div>
+                  <div class="pv-zone" id="zone-cols" ondragover="pvOver(event,'zone-cols')"
+                    ondrop="pvDrop(event,'cols')" ondragleave="pvLeave('zone-cols')">
+                    <div class="pv-zone-lbl">Columns</div>
+                    <div id="zone-cols-c">
+                      <div class="pv-empty">drag dimension here</div>
+                    </div>
+                  </div>
+                  <div class="pv-zone" id="zone-vals" ondragover="pvOver(event,'zone-vals')"
+                    ondrop="pvDrop(event,'vals')" ondragleave="pvLeave('zone-vals')" style="grid-column:span 2">
+                    <div class="pv-zone-lbl">Values (measures)</div>
+                    <div id="zone-vals-c">
+                      <div class="pv-empty">drag measure fields here</div>
+                    </div>
+                  </div>
+                </div>
+                <button class="tbtn primary" style="width:100%" onclick="buildPivot()">Build pivot table</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hdr"><span class="card-title">Pivot output</span><button class="tbtn"
+                  onclick="exportPivotCSV()">↓ CSV</button></div>
+              <div class="card-body pad0">
+                <div style="overflow-x:auto">
+                  <div id="pv-out"
+                    style="padding:16px;color:var(--gray400);text-align:center;font-style:italic;font-size:12px">
+                    Configure zones then click Build pivot table</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════ -->
+      <!-- PAGE: KPI BUILDER -->
+      <!-- ══════════════════════════════════════════════ -->
+      <div class="page" id="page-kpi-builder">
+        <div class="row">
+          <div class="flex-1">
+            <div class="sec-wrap">
+              <div class="sec-hdr amber">KPI Definition</div>
+              <div class="sec-body">
+                <div class="form-grid form-grid-2">
+                  <div class="f-group">
+                    <div class="f-label required">KPI Name</div><input class="f-input"
+                      placeholder="e.g. Acceptance Rate">
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Category</div><select class="f-select">
+                      <option>Quality</option>
+                      <option>Production</option>
+                      <option>Performance</option>
+                      <option>Management</option>
+                    </select>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label required">Data Source Table</div><select class="f-select">
+                      <option>production_pipes</option>
+                      <option>chemical_analysis</option>
+                      <option>mechanical_tests</option>
+                      <option>production_orders</option>
+                      <option>delivery_notes</option>
+                    </select>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label required">Value Field</div><select class="f-select">
+                      <option>acceptance_pct</option>
+                      <option>rejection_pct</option>
+                      <option>actual_weight</option>
+                      <option>saving_weight</option>
+                      <option>pieces_count</option>
+                    </select>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label required">Aggregation</div><select class="f-select">
+                      <option>AVG</option>
+                      <option>SUM</option>
+                      <option>COUNT</option>
+                      <option>MAX</option>
+                      <option>MIN</option>
+                      <option>CUSTOM</option>
+                    </select>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Unit</div><input class="f-input" placeholder="%, kg, pcs, ton...">
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Target value</div><input class="f-input" type="number" placeholder="e.g. 95">
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Warning threshold</div><input class="f-input" type="number"
+                      placeholder="e.g. 90">
+                  </div>
+                </div>
+                <div class="divider"></div>
+                <div class="f-group" style="margin-bottom:10px">
+                  <div class="f-label">Custom SQL formula</div><textarea class="f-textarea" rows="3"
+                    placeholder="e.g. SUM(accepted_pcs) / SUM(total_pcs) * 100"></textarea>
+                </div>
+                <div class="f-group">
+                  <div class="f-label">Filter condition (WHERE)</div><input class="f-input"
+                    placeholder="e.g. stage = 'Casting' AND line = 'Line 1'">
+                </div>
+                <div class="filter-actions" style="margin-top:12px">
+                  <button class="tbtn primary">Save KPI</button>
+                  <button class="tbtn">Preview</button>
+                  <button class="tbtn">Reset</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flex-1">
+            <div class="sec-wrap" style="margin-bottom:12px">
+              <div class="sec-hdr green">KPI Preview</div>
+              <div class="sec-body">
+                <div class="kpi-preview" style="margin-bottom:10px">
+                  <div
+                    style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">
+                    Acceptance Rate</div>
+                  <div class="val">94.8<span style="font-size:18px;opacity:.6"> %</span></div>
+                  <div class="lbl">AVG across all stages</div>
+                  <div class="delta" style="color:#6ee7b7">▲ +2.1% vs target (95%)</div>
+                </div>
+                <div class="kpi-grid" style="grid-template-columns:1fr 1fr">
+                  <div class="kpi green">
+                    <div class="kpi-label">Above target</div>
+                    <div class="kpi-val">12<span class="kpi-unit">days</span></div>
+                  </div>
+                  <div class="kpi amber">
+                    <div class="kpi-label">Below warning</div>
+                    <div class="kpi-val">3<span class="kpi-unit">days</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="sec-wrap">
+              <div class="sec-hdr navy">Saved KPIs</div>
+              <div class="sec-body" style="padding:0">
+                <table style="width:100%;font-size:12px">
+                  <thead>
+                    <tr>
+                      <th>KPI</th>
+                      <th>Value</th>
+                      <th>Target</th>
+                      <th>Status</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="td-bold">Acceptance Rate</td>
+                      <td class="col-grn">94.8%</td>
+                      <td>95%</td>
+                      <td><span class="badge amber">Near</span></td>
+                      <td><button class="tbtn" style="font-size:11px;padding:3px 8px">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td class="td-bold">Rejection Rate</td>
+                      <td class="col-red">3.2%</td>
+                      <td>≤3%</td>
+                      <td><span class="badge red">Alert</span></td>
+                      <td><button class="tbtn" style="font-size:11px;padding:3px 8px">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td class="td-bold">Weight Saving</td>
+                      <td class="col-blu">186t</td>
+                      <td>150t</td>
+                      <td><span class="badge green">Pass</span></td>
+                      <td><button class="tbtn" style="font-size:11px;padding:3px 8px">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td class="td-bold">RFT Rate</td>
+                      <td class="col-grn">91.4%</td>
+                      <td>90%</td>
+                      <td><span class="badge green">Pass</span></td>
+                      <td><button class="tbtn" style="font-size:11px;padding:3px 8px">Edit</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════ -->
+      <!-- PAGE: DASHBOARD BUILDER -->
+      <!-- ══════════════════════════════════════════════ -->
+      <div class="page" id="page-dash-builder">
+        <div style="display:grid;grid-template-columns:250px 1fr;gap:14px">
+          <div>
+            <div class="card" style="margin-bottom:12px">
+              <div class="card-hdr"><span class="card-title">Widget palette</span></div>
+              <div class="card-body" style="padding:10px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="widget-palette"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hdr"><span class="card-title">Dashboard settings</span></div>
+              <div class="card-body">
+                <div class="f-group" style="margin-bottom:10px">
+                  <div class="f-label">Dashboard title</div><input class="f-input"
+                    value="Management Dashboard — Weekly">
+                </div>
+                <div class="f-group" style="margin-bottom:10px">
+                  <div class="f-label">Period</div><select class="f-select">
+                    <option>This week</option>
+                    <option>This month</option>
+                    <option>This quarter</option>
+                    <option>Custom</option>
+                  </select>
+                </div>
+                <div class="f-group" style="margin-bottom:10px">
+                  <div class="f-label">Columns</div><select class="f-select" id="dash-cols" onchange="applyDashCols()">
+                    <option value="1">1</option>
+                    <option value="2" selected>2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                  </select>
+                </div>
+                <div class="filter-actions" style="margin-top:8px">
+                  <button class="tbtn primary" style="flex:1">Save Layout</button>
+                  <button class="tbtn" onclick="clearDash()">Clear</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-hdr"><span class="card-title">Dashboard canvas</span><button class="tbtn"
+                onclick="window.print()">↓ Export</button></div>
+            <div class="card-body">
+              <div class="dash-canvas" id="dash-canvas">
+                <div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--gray400);font-style:italic">
+                  Click widgets from the palette to add to dashboard</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════ -->
+      <!-- PAGE: QUERY MANAGER -->
+      <!-- ══════════════════════════════════════════════ -->
+      <div class="page" id="page-query-mgr">
+        <div style="display:grid;grid-template-columns:260px 1fr;gap:14px">
+          <div>
+            <div class="card" style="margin-bottom:12px">
+              <div class="card-hdr"><span class="card-title">Database tables</span></div>
+              <div class="card-body" style="padding:8px">
+                <div id="qm-tables"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hdr"><span class="card-title">Table relations</span></div>
+              <div class="card-body" style="padding:10px;font-size:11px;color:var(--gray600);line-height:1.9">
+                <div><strong>production_pipes</strong> → production_orders <em>(via order_id)</em></div>
+                <div><strong>chemical_analysis</strong> → production_pipes <em>(via ladle_id)</em></div>
+                <div><strong>mechanical_tests</strong> → production_pipes <em>(via pipe_code)</em></div>
+                <div><strong>delivery_notes</strong> → production_orders <em>(via order_id)</em></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:12px">
+              <div class="card-hdr"><span class="card-title">Query conditions</span></div>
+              <div class="card-body">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+                  <span style="font-size:12px;color:var(--gray500)">Match</span>
+                  <div class="logic-toggle">
+                    <button class="lt-btn active" id="lt-and" onclick="setLogic('AND')">AND</button>
+                    <button class="lt-btn" id="lt-or" onclick="setLogic('OR')">OR</button>
+                  </div>
+                  <span style="font-size:12px;color:var(--gray500)">of the following conditions:</span>
+                </div>
+                <div id="qb-rows-wrap"></div>
+                <button class="tbtn" onclick="addQBRow()" style="margin-top:8px;font-size:12px">+ Add condition</button>
+                <div class="divider"></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                  <div class="f-group">
+                    <div class="f-label">Group by</div>
+                    <select class="f-select" id="qb-grp" onchange="updateSQL()">
+                      <option value="">None</option>
+                      <option value="pipe_code">Pipe code</option>
+                      <option value="product_code">Product code</option>
+                      <option value="line">Line</option>
+                      <option value="stage">Stage</option>
+                      <option value="shift">Shift</option>
+                      <option value="customer">Customer</option>
+                      <option value="dn_size">DN size</option>
+                      <option value="class">Class</option>
+                      <option value="ladle_id">Ladle ID</option>
+                    </select>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Order by</div>
+                    <div style="display:flex;gap:0">
+                      <select id="qb-ord"
+                        style="flex:1;padding:7px 9px;font-size:12px;border:1px solid var(--gray300);border-right:none;border-radius:var(--r) 0 0 var(--r);background:var(--white);color:var(--gray900);outline:none"
+                        onchange="updateSQL()">
+                        <option value="">None</option>
+                        <option value="actual_weight">Actual weight</option>
+                        <option value="saving_weight">Saving weight</option>
+                        <option value="acceptance_pct">Acceptance %</option>
+                        <option value="production_date">Date</option>
+                        <option value="pipe_code">Pipe code</option>
+                      </select>
+                      <select id="qb-dir"
+                        style="width:66px;padding:7px;font-size:12px;border:1px solid var(--gray300);border-radius:0 var(--r) var(--r) 0;background:var(--white);color:var(--gray900);outline:none"
+                        onchange="updateSQL()">
+                        <option>DESC</option>
+                        <option>ASC</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="f-group">
+                    <div class="f-label">Limit rows</div>
+                    <input type="number" id="qb-lim" value="1000"
+                      style="padding:7px 9px;font-size:12px;border:1px solid var(--gray300);border-radius:var(--r);background:var(--white);color:var(--gray900);outline:none;width:100%"
+                      oninput="updateSQL()">
+                  </div>
+                </div>
+                <div class="divider"></div>
+                <div class="f-label" style="margin-bottom:8px">Select output columns</div>
+                <div class="col-checks" id="qm-col-sel"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hdr"><span class="card-title">Generated SQL</span></div>
+              <div class="card-body" style="padding:10px">
+                <div class="sql-box" id="sql-out"></div>
+                <div class="res-bar">
+                  <span style="font-size:12px;color:var(--gray500)">Query ready</span>
+                  <span class="res-badge" id="est-rows">est. rows: —</span>
+                  <span class="copied" id="copied-lbl">Copied!</span>
+                  <button class="tbtn" onclick="copySQL()">Copy SQL</button>
+                  <button class="tbtn primary" style="margin-left:auto">Run Query</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════ -->
+      <!-- OTHER REPORT STUBS -->
+      <!-- ══════════════════════════════════════════════ -->
+      <div class="page" id="page-order-perf">
+        <div class="kpi-grid">
+          <div class="kpi green">
+            <div class="kpi-label">On-time delivery</div>
+            <div class="kpi-val">87.3<span class="kpi-unit">%</span></div>
+            <div class="kpi-delta up">▲ +3.1%</div>
+          </div>
+          <div class="kpi blue">
+            <div class="kpi-label">Open orders</div>
+            <div class="kpi-val">23<span class="kpi-unit">orders</span></div>
+            <div class="kpi-delta neutral">— stable</div>
+          </div>
+          <div class="kpi amber">
+            <div class="kpi-label">Avg completion days</div>
+            <div class="kpi-val">14.2<span class="kpi-unit">days</span></div>
+            <div class="kpi-delta down">▼ -1.8</div>
+          </div>
+          <div class="kpi teal">
+            <div class="kpi-label">Orders this month</div>
+            <div class="kpi-val">47<span class="kpi-unit">orders</span></div>
+            <div class="kpi-delta up">▲ +7</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><span class="card-title">Order performance by customer</span></div>
+          <div class="card-body pad0">
+            <div class="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Order #</th>
+                    <th>Customer</th>
+                    <th>Product</th>
+                    <th>Qty ordered</th>
+                    <th>Qty delivered</th>
+                    <th>Completion %</th>
+                    <th>Order date</th>
+                    <th>Expected</th>
+                    <th>Actual</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="td-code">PO-2025-047</td>
+                    <td>Customer A</td>
+                    <td>DN150 K9</td>
+                    <td>480</td>
+                    <td>452</td>
+                    <td class="col-amb">94.2%</td>
+                    <td>2025-01-15</td>
+                    <td>2025-02-15</td>
+                    <td>2025-02-12</td>
+                    <td><span class="badge green">On time</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-code">PO-2025-046</td>
+                    <td>Customer B</td>
+                    <td>DN200 K10</td>
+                    <td>320</td>
+                    <td>320</td>
+                    <td class="col-grn">100%</td>
+                    <td>2025-01-10</td>
+                    <td>2025-02-10</td>
+                    <td>2025-02-09</td>
+                    <td><span class="badge green">On time</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-code">PO-2025-045</td>
+                    <td>Customer C</td>
+                    <td>DN80 K12</td>
+                    <td>600</td>
+                    <td>580</td>
+                    <td class="col-amb">96.7%</td>
+                    <td>2025-01-08</td>
+                    <td>2025-02-08</td>
+                    <td>2025-02-14</td>
+                    <td><span class="badge red">Late</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-customer-prod">
+        <div class="info-box">Customer production report — filtered by customer, showing all orders, delivery notes, and
+          quality summary per customer.</div>
+        <div class="card">
+          <div class="card-hdr"><span class="card-title">Production by customer</span></div>
+          <div class="card-body pad0">
+            <div class="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Total orders</th>
+                    <th>Total pcs</th>
+                    <th>Total weight (t)</th>
+                    <th>Accepted</th>
+                    <th>Rejected</th>
+                    <th>RFT %</th>
+                    <th>Pending delivery</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="td-bold">Customer A</td>
+                    <td>12</td>
+                    <td>1,240</td>
+                    <td>154.8</td>
+                    <td class="col-grn">1,180</td>
+                    <td class="col-red">60</td>
+                    <td class="col-grn">95.2%</td>
+                    <td class="col-amb">45 pcs</td>
+                  </tr>
+                  <tr>
+                    <td class="td-bold">Customer B</td>
+                    <td>8</td>
+                    <td>960</td>
+                    <td>192.4</td>
+                    <td class="col-grn">894</td>
+                    <td class="col-red">66</td>
+                    <td class="col-amb">93.1%</td>
+                    <td class="col-grn">0 pcs</td>
+                  </tr>
+                  <tr>
+                    <td class="td-bold">Customer C</td>
+                    <td>15</td>
+                    <td>2,100</td>
+                    <td>415.2</td>
+                    <td class="col-grn">2,010</td>
+                    <td class="col-red">90</td>
+                    <td class="col-grn">95.7%</td>
+                    <td class="col-amb">120 pcs</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-delivery">
+        <div class="card">
+          <div class="card-hdr"><span class="card-title">Delivery report</span></div>
+          <div class="card-body pad0">
+            <div class="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>DN #</th>
+                    <th>Order #</th>
+                    <th>Customer</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Weight (t)</th>
+                    <th>Dispatch date</th>
+                    <th>Received date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="td-code">DN-2025-142</td>
+                    <td class="td-code">PO-2025-047</td>
+                    <td>Customer A</td>
+                    <td>DN150 K9</td>
+                    <td>240</td>
+                    <td>29.9</td>
+                    <td>2025-02-10</td>
+                    <td>2025-02-12</td>
+                    <td><span class="badge green">Delivered</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-code">DN-2025-141</td>
+                    <td class="td-code">PO-2025-046</td>
+                    <td>Customer B</td>
+                    <td>DN200 K10</td>
+                    <td>320</td>
+                    <td>63.4</td>
+                    <td>2025-02-09</td>
+                    <td>2025-02-11</td>
+                    <td><span class="badge green">Delivered</span></td>
+                  </tr>
+                  <tr>
+                    <td class="td-code">DN-2025-140</td>
+                    <td class="td-code">PO-2025-045</td>
+                    <td>Customer C</td>
+                    <td>DN80 K12</td>
+                    <td>580</td>
+                    <td>46.4</td>
+                    <td>2025-02-14</td>
+                    <td>—</td>
+                    <td><span class="badge teal">In transit</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-defect">
+        <div class="kpi-grid">
+          <div class="kpi red">
+            <div class="kpi-label">Total defects</div>
+            <div class="kpi-val">154<span class="kpi-unit">pcs</span></div>
+            <div class="kpi-delta down">▼ -12%</div>
+          </div>
+          <div class="kpi amber">
+            <div class="kpi-label">Crack defects</div>
+            <div class="kpi-val">48<span class="kpi-unit">pcs</span></div>
+          </div>
+          <div class="kpi amber">
+            <div class="kpi-label">Porosity defects</div>
+            <div class="kpi-val">36<span class="kpi-unit">pcs</span></div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Surface defects</div>
+            <div class="kpi-val">42<span class="kpi-unit">pcs</span></div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Dimension defects</div>
+            <div class="kpi-val">28<span class="kpi-unit">pcs</span></div>
+          </div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-box">
+            <div class="chart-title">Defect Pareto by type</div><canvas id="ch-defect-pareto"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-title">Defects by stage</div><canvas id="ch-defect-stage"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-mech-stat">
+        <div class="kpi-grid">
+          <div class="kpi green">
+            <div class="kpi-label">Avg σ (KgF/mm²)</div>
+            <div class="kpi-val">44.2</div>
+            <div class="kpi-delta up">▲ above 42.5 target</div>
+          </div>
+          <div class="kpi green">
+            <div class="kpi-label">Avg E (%)</div>
+            <div class="kpi-val">22.8</div>
+            <div class="kpi-delta up">▲ above 10% min</div>
+          </div>
+          <div class="kpi blue">
+            <div class="kpi-label">Tests conducted</div>
+            <div class="kpi-val">214</div>
+          </div>
+          <div class="kpi red">
+            <div class="kpi-label">Failed tests</div>
+            <div class="kpi-val">8<span class="kpi-unit">tests</span></div>
+          </div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-box">
+            <div class="chart-title">σ distribution (KgF/mm²)</div><canvas id="ch-sigma"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-title">E% distribution</div><canvas id="ch-elong"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-stage-perf">
+        <div class="info-box">Stage performance report — showing yield, cycle time, and quality rates per stage
+          (Casting, Annealing, Finishing, Zinc Coating, Cement Lining).</div>
+      </div>
+      <div class="page" id="page-machine-perf">
+        <div class="info-box">Machine performance — OEE, availability, quality rate per machine. Data sourced from
+          production_stages table filtered by machine_id.</div>
+      </div>
+      <div class="page" id="page-mold-perf">
+        <div class="info-box">Mold performance — pipe count, rejection rate, and wear tracking per mold ID.</div>
+      </div>
+      <div class="page" id="page-weight-saving">
+        <div class="info-box">Weight saving report — nominal vs actual weight per product, line, shift. Shows saving in
+          kg, ton and %.</div>
+      </div>
+      <div class="page" id="page-annealing">
+        <div class="info-box">Annealing hourly report — pipes processed per hour per furnace, with temperature and
+          decision data.</div>
+      </div>
+      <div class="page" id="page-mgmt-dash">
+        <div class="report-header" style="margin-bottom:14px">
+          <div>
+            <h2>Management Dashboard</h2>
+            <div class="meta">Weekly summary — auto-refreshed</div>
+          </div>
+          <button class="tbtn" style="color:#fff;border-color:rgba(255,255,255,.3)">↓ Export PDF</button>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi green">
+            <div class="kpi-label">Total produced (week)</div>
+            <div class="kpi-val">1,248<span class="kpi-unit">pcs</span></div>
+            <div class="kpi-delta up">▲ +6.2%</div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" style="width:80%;background:var(--green)"></div>
+            </div>
+          </div>
+          <div class="kpi blue">
+            <div class="kpi-label">Orders in progress</div>
+            <div class="kpi-val">18<span class="kpi-unit">orders</span></div>
+            <div class="kpi-delta neutral">— stable</div>
+          </div>
+          <div class="kpi teal">
+            <div class="kpi-label">Acceptance rate</div>
+            <div class="kpi-val">94.8<span class="kpi-unit">%</span></div>
+            <div class="kpi-delta down">▼ -0.8%</div>
+          </div>
+          <div class="kpi amber">
+            <div class="kpi-label">Rejection rate</div>
+            <div class="kpi-val">3.2<span class="kpi-unit">%</span></div>
+            <div class="kpi-delta up">▲ +0.4%</div>
+          </div>
+          <div class="kpi navy">
+            <div class="kpi-label">RFT rate</div>
+            <div class="kpi-val">91.4<span class="kpi-unit">%</span></div>
+            <div class="kpi-delta up">▲ +1.1%</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Weight saving</div>
+            <div class="kpi-val">46<span class="kpi-unit">ton</span></div>
+            <div class="kpi-delta up">▲ +3t</div>
+          </div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-box">
+            <div class="chart-title">Weekly production vs target <span class="chart-sub">pcs/day</span></div><canvas
+              id="ch-mgmt-week"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-title">Quality KPIs trend <span class="chart-sub">%</span></div><canvas
+              id="ch-mgmt-qual"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end content -->
+  </div><!-- end main -->
+
+  <script>
+    // ── DATA ──
+    const REP_DATA = [
+      {
+        code: 'P1002-4-131032026', dn: 'DN150', cls: 'K9', nom: 124.5, act: 121.2,
+        cast: { acc: 112, hold: 4, rej: 5, tot: 121, pct: 92.6 }, ann: { acc: 109, hold: 3, rej: 3, tot: 115, pct: 94.8 }, fin: { acc: 107, hold: 2, rej: 2, tot: 111, pct: 96.4 }
+      },
+      {
+        code: 'P1001-2-131032026', dn: 'DN150', cls: 'K9', nom: 98.3, act: 96.1,
+        cast: { acc: 91, hold: 2, rej: 3, tot: 96, pct: 94.8 }, ann: { acc: 89, hold: 3, rej: 2, tot: 94, pct: 94.7 }, fin: { acc: 88, hold: 2, rej: 1, tot: 91, pct: 96.7 }
+      },
+      {
+        code: 'P1000-3-131032026', dn: 'DN200', cls: 'K10', nom: 210.7, act: 205.4,
+        cast: { acc: 198, hold: 3, rej: 4, tot: 205, pct: 96.6 }, ann: { acc: 194, hold: 4, rej: 7, tot: 205, pct: 94.6 }, fin: { acc: 191, hold: 2, rej: 3, tot: 196, pct: 97.4 }
+      },
+      {
+        code: 'P101-1-230032026', dn: 'DN80', cls: 'K12', nom: 76.2, act: 74.8,
+        cast: { acc: 70, hold: 2, rej: 2, tot: 74, pct: 94.6 }, ann: { acc: 69, hold: 2, rej: 1, tot: 72, pct: 95.8 }, fin: { acc: 68, hold: 1, rej: 1, tot: 70, pct: 97.1 }
+      },
+      {
+        code: 'P102-2-240032026', dn: 'DN250', cls: 'C25', nom: 155.0, act: 151.3,
+        cast: { acc: 144, hold: 4, rej: 3, tot: 151, pct: 95.4 }, ann: { acc: 141, hold: 4, rej: 6, tot: 151, pct: 93.4 }, fin: { acc: 140, hold: 3, rej: 2, tot: 145, pct: 96.6 }
+      },
+    ];
+
+    const FIELDS = [
+      { n: 'pipe_code', l: 'Pipe code', t: 'dim' }, { n: 'product_code', l: 'Product code', t: 'dim' },
+      { n: 'dn_size', l: 'DN size', t: 'dim' }, { n: 'class', l: 'Class', t: 'dim' },
+      { n: 'line', l: 'Line', t: 'dim' }, { n: 'stage', l: 'Stage', t: 'dim' },
+      { n: 'shift', l: 'Shift', t: 'dim' }, { n: 'customer', l: 'Customer', t: 'dim' },
+      { n: 'ladle_id', l: 'Ladle ID', t: 'dim' }, { n: 'furnace', l: 'Furnace', t: 'dim' },
+      { n: 'production_date', l: 'Production date', t: 'time' },
+      { n: 'actual_weight', l: 'Actual weight', t: 'meas' }, { n: 'nominal_weight', l: 'Nominal weight', t: 'meas' },
+      { n: 'saving_weight', l: 'Saving weight', t: 'meas' }, { n: 'acceptance_pct', l: 'Acceptance %', t: 'meas' },
+      { n: 'rejection_pct', l: 'Rejection %', t: 'meas' }, { n: 'pieces_count', l: 'Pieces count', t: 'meas' },
+      { n: 'cast_acc_pct', l: 'Cast accept %', t: 'meas' }, { n: 'ann_acc_pct', l: 'Anneal accept %', t: 'meas' },
+    ];
+
+    const PV_DATA = {
+      'Line 1': {
+        'Casting': { actual_weight: 124.5, saving_weight: 3.3, acceptance_pct: 96.2, pieces_count: 48 },
+        'Annealing': { actual_weight: 118.2, saving_weight: 2.1, acceptance_pct: 91.5, pieces_count: 45 },
+        'Finishing': { actual_weight: 115.4, saving_weight: 1.8, acceptance_pct: 94.1, pieces_count: 44 }
+      },
+      'Line 2': {
+        'Casting': { actual_weight: 98.7, saving_weight: 1.8, acceptance_pct: 94.1, pieces_count: 38 },
+        'Annealing': { actual_weight: 94.2, saving_weight: 2.4, acceptance_pct: 88.3, pieces_count: 35 },
+        'Finishing': { actual_weight: 92.1, saving_weight: 1.2, acceptance_pct: 92.4, pieces_count: 34 }
+      },
+      'Line 3': {
+        'Casting': { actual_weight: 210.4, saving_weight: 5.3, acceptance_pct: 97.8, pieces_count: 82 },
+        'Annealing': { actual_weight: 204.1, saving_weight: 4.9, acceptance_pct: 93.2, pieces_count: 79 },
+        'Finishing': { actual_weight: 201.8, saving_weight: 3.1, acceptance_pct: 95.4, pieces_count: 77 }
+      },
+    };
+
+    // ── NAV ──
+    const PAGE_META = {
+      'prod-summary': ['Production Summary', 'Reports › Production'],
+      'order-perf': ['Order Performance', 'Reports › Production'],
+      'customer-prod': ['Customer Production', 'Reports › Production'],
+      'delivery': ['Delivery Report', 'Reports › Production'],
+      'rft': ['RFT Report', 'Reports › Quality'],
+      'defect': ['Defect Analysis', 'Reports › Quality'],
+      'heat-trace': ['Heat / Ladle Traceability', 'Reports › Quality'],
+      'mech-stat': ['Mechanical Statistical', 'Reports › Quality'],
+      'stage-perf': ['Stage Performance', 'Reports › Performance'],
+      'machine-perf': ['Machine Performance', 'Reports › Performance'],
+      'mold-perf': ['Mold Performance', 'Reports › Performance'],
+      'weight-saving': ['Weight Saving', 'Reports › Performance'],
+      'annealing': ['Annealing Hourly', 'Reports › Performance'],
+      'mgmt-dash': ['Management Dashboard', 'Management'],
+      'report-builder': ['Report Builder', 'Advanced Tools'],
+      'pivot': ['Pivot Mode', 'Advanced Tools'],
+      'kpi-builder': ['KPI Builder', 'Advanced Tools'],
+      'dash-builder': ['Dashboard Builder', 'Advanced Tools'],
+      'query-mgr': ['Query Manager', 'Advanced Tools'],
+    };
+
+    function nav(id) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+      const pg = document.getElementById('page-' + id);
+      if (pg) pg.classList.add('active');
+      document.querySelectorAll('.sb-item').forEach(b => {
+        if (b.getAttribute('onclick') === `nav('${id}')`) b.classList.add('active');
+      });
+      const meta = PAGE_META[id] || [id, ''];
+      document.getElementById('tb-title').textContent = meta[0];
+      document.getElementById('tb-crumb').innerHTML = meta[1].split('›').map(s => `<span>${s.trim()}</span>`).join('<span>›</span>');
+    }
+
+    // ── TOGGLES ──
+    function setToggle(groupId, btn) {
+      document.querySelectorAll(`#${groupId} .toggle-btn`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+    function rbToggle(groupId, chip) {
+      document.querySelectorAll(`#${groupId} .param-chip`).forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      chip.querySelector('.chk').textContent = '';
+      document.querySelectorAll(`#${groupId} .param-chip.active .chk`).forEach(c => { c.textContent = '✓' });
+      updateRBTitle();
+    }
+    function rbToggleMulti(groupId, chip) {
+      chip.classList.toggle('active');
+      const chk = chip.querySelector('.chk');
+      chk.textContent = chip.classList.contains('active') ? '✓' : '';
+      updateRBTitle();
+    }
+    function updateRBTitle() {
+      const m = document.querySelector('#rb-measure .param-chip.active');
+      const b = document.querySelector('#rb-basis .param-chip.active');
+      const stages = [...document.querySelectorAll('#rb-stages .param-chip.active')].map(c => c.dataset.v);
+      const mLbl = m ? m.dataset.v : 'pcs';
+      const bLbl = b ? b.dataset.v : 'standard';
+      document.getElementById('rb-title').textContent = `Output — ${mLbl} | ${bLbl} | ${stages.join(', ') || 'no stages'}`;
+    }
+
+    // ── FILTER PANEL TOGGLE ──
+    function toggleFP(id) {
+      const b = document.getElementById(id);
+      const arr = document.getElementById(id + '-arr');
+      b.classList.toggle('open');
+      arr.classList.toggle('open', b.classList.contains('open'));
+    }
+    function resetFilters(btn) { }
+
+    // ── PRODUCTION SUMMARY TABLE ──
+    function buildProdSummary() {
+      const tbody = document.getElementById('ps-tbody');
+      tbody.innerHTML = REP_DATA.map(r => {
+        const sav = (r.nom - r.act).toFixed(1);
+        function lbl(p) { return p >= 95 ? '<span class="badge green">Excellent</span>' : p >= 90 ? '<span class="badge amber">Normal</span>' : '<span class="badge red">Attention</span>' }
+        function cc(p) { return p >= 95 ? 'col-grn' : p >= 90 ? 'col-amb' : 'col-red' }
+        return `<tr>
+      <td class="td-code">${r.code}</td><td>${r.dn}</td><td>${r.cls}</td>
+      <td>${r.nom}</td><td>${r.act}</td><td class="col-blu">${sav}</td>
+      <td>${r.cast.acc}</td><td>${r.cast.hold}</td><td class="col-red">${r.cast.rej}</td>
+      <td class="td-bold">${r.cast.tot}</td><td class="${cc(r.cast.pct)}">${r.cast.pct}%</td>
+      <td>${r.ann.acc}</td><td>${r.ann.hold}</td><td class="col-red">${r.ann.rej}</td>
+      <td class="td-bold">${r.ann.tot}</td><td class="${cc(r.ann.pct)}">${r.ann.pct}%</td>
+      <td>${r.fin.acc}</td><td>${r.fin.hold}</td><td class="col-red">${r.fin.rej}</td>
+      <td class="td-bold">${r.fin.tot}</td><td class="${cc(r.fin.pct)}">${r.fin.pct}%</td>
+    </tr>`;
+      }).join('');
+    }
+
+    // ── REPORT BUILDER TABLE ──
+    function buildRBReport() {
+      const tbody = document.getElementById('rb-tbody');
+      const allPcts = [];
+      let totN = 0, totA = 0, totR = 0, totS = 0;
+      tbody.innerHTML = REP_DATA.map(r => {
+        const sav = (r.nom - r.act).toFixed(1);
+        const avgPct = ((r.cast.pct + r.ann.pct + r.fin.pct) / 3).toFixed(1);
+        allPcts.push(r.cast.pct, r.ann.pct, r.fin.pct);
+        totN += r.nom; totA += r.cast.acc + r.ann.acc + r.fin.acc;
+        totR += r.cast.rej + r.ann.rej + r.fin.rej; totS += r.nom - r.act;
+        function lbl(p) { return p >= 95 ? '<span class="badge green">Excellent</span>' : p >= 90 ? '<span class="badge amber">Normal</span>' : '<span class="badge red">Attention</span>' }
+        function cc(p) { return p >= 95 ? 'col-grn' : p >= 90 ? 'col-amb' : 'col-red' }
+        return `<tr>
+      <td class="td-code">${r.code}</td><td>${r.dn}</td><td>${r.cls}</td>
+      <td>${r.nom}</td><td>${r.act}</td><td class="col-blu">${sav}</td>
+      <td>${r.cast.acc}</td><td>${r.cast.hold}</td><td>${r.cast.rej}</td>
+      <td>${r.cast.tot}</td><td class="${cc(r.cast.pct)}">${r.cast.pct}%</td><td>${lbl(r.cast.pct)}</td>
+      <td>${r.ann.acc}</td><td>${r.ann.hold}</td><td>${r.ann.rej}</td>
+      <td>${r.ann.tot}</td><td class="${cc(r.ann.pct)}">${r.ann.pct}%</td><td>${lbl(r.ann.pct)}</td>
+      <td>${r.fin.acc}</td><td>${r.fin.hold}</td><td>${r.fin.rej}</td>
+      <td>${r.fin.tot}</td><td class="${cc(r.fin.pct)}">${r.fin.pct}%</td><td>${lbl(r.fin.pct)}</td>
+    </tr>`;
+      }).join('');
+      const avg = (allPcts.reduce((a, b) => a + b, 0) / allPcts.length);
+      const max = Math.max(...allPcts); const min = Math.min(...allPcts);
+      const std = Math.sqrt(allPcts.reduce((a, b) => a + (b - avg) ** 2, 0) / allPcts.length);
+      document.getElementById('sum-total').innerHTML = `<div class="val">${totN.toFixed(0)}</div><div class="lbl">Total nom.</div>`;
+      document.getElementById('sum-acc').innerHTML = `<div class="val">${totA}</div><div class="lbl">Total acc</div>`;
+      document.getElementById('sum-rej').innerHTML = `<div class="val">${totR}</div><div class="lbl">Total rej</div>`;
+      document.getElementById('sum-avg').innerHTML = `<div class="val">${avg.toFixed(1)}%</div><div class="lbl">Avg acc %</div>`;
+      document.getElementById('sum-max').innerHTML = `<div class="val">${max}%</div><div class="lbl">Max acc %</div>`;
+      document.getElementById('sum-min').innerHTML = `<div class="val">${min}%</div><div class="lbl">Min acc %</div>`;
+      document.getElementById('sum-std').innerHTML = `<div class="val">${std.toFixed(2)}</div><div class="lbl">Std dev</div>`;
+      document.getElementById('sum-save').innerHTML = `<div class="val">${totS.toFixed(1)}kg</div><div class="lbl">Total saving</div>`;
+      updateRBTitle();
+    }
+
+    // ── CHARTS ──
+    function initCharts() {
+      const co = { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } };
+      // daily production
+      try { new Chart(document.getElementById('ch-daily'), { type: 'bar', data: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], datasets: [{ data: [182, 204, 198, 215, 188, 172, 89], backgroundColor: '#1a56db', borderRadius: 5 }] }, options: { ...co } }) } catch (e) { }
+      // DN acceptance
+      try { new Chart(document.getElementById('ch-dn'), { type: 'bar', data: { labels: ['DN80', 'DN100', 'DN150', 'DN200', 'DN250', 'DN300'], datasets: [{ label: 'Acc', data: [97, 95, 93, 92, 96, 94], backgroundColor: '#057a55', borderRadius: 4 }, { label: 'Rej', data: [2, 3, 5, 6, 3, 5], backgroundColor: '#c81e1e', borderRadius: 4 }] }, options: { ...co, plugins: { legend: { display: true, labels: { font: { size: 10 } } } }, scales: { x: { stacked: false } } } }) } catch (e) { }
+      // by line
+      try { new Chart(document.getElementById('ch-line'), { type: 'doughnut', data: { labels: ['Line 1', 'Line 2', 'Line 3'], datasets: [{ data: [1620, 1480, 1721], backgroundColor: ['#1a56db', '#0891b2', '#057a55'], borderWidth: 3, borderColor: '#fff' }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } } }) } catch (e) { }
+      // stage yield
+      try { new Chart(document.getElementById('ch-yield'), { type: 'bar', data: { labels: ['Casting', 'Annealing', 'Finishing', 'Zinc Coat', 'Cement'], datasets: [{ label: 'Accept %', data: [95.1, 93.8, 96.4, 98.2, 97.8], backgroundColor: ['#1a56db', '#0891b2', '#057a55', '#b45309', '#374151'], borderRadius: 5 }] }, options: { ...co, scales: { y: { min: 85, max: 100, ticks: { callback: v => v + '%' } } } } }) } catch (e) { }
+      // RFT
+      try { new Chart(document.getElementById('ch-rft-trend'), { type: 'line', data: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], datasets: [{ data: [89, 90, 91, 91.4, 92, 91.8], borderColor: '#057a55', backgroundColor: 'rgba(5,122,85,.1)', fill: true, tension: .4, pointBackgroundColor: '#057a55', pointRadius: 4 }] }, options: { ...co, scales: { y: { min: 85, max: 100, ticks: { callback: v => v + '%' } } } } }) } catch (e) { }
+      try { new Chart(document.getElementById('ch-rft-pareto'), { type: 'bar', data: { labels: ['Porosity', 'Cracks', 'Surface', 'Dimension', 'Other'], datasets: [{ data: [36, 48, 42, 28, 12], backgroundColor: ['#c81e1e', '#b45309', '#0891b2', '#1a56db', '#6b7280'], borderRadius: 4 }] }, options: { ...co } }) } catch (e) { }
+      // defects
+      try { new Chart(document.getElementById('ch-defect-pareto'), { type: 'bar', data: { labels: ['Cracks', 'Surface', 'Porosity', 'Dimension', 'Other'], datasets: [{ data: [48, 42, 36, 28, 12], backgroundColor: '#c81e1e', borderRadius: 4 }] }, options: { ...co } }) } catch (e) { }
+      try { new Chart(document.getElementById('ch-defect-stage'), { type: 'bar', data: { labels: ['Casting', 'Annealing', 'Finishing', 'Zinc', 'Cement'], datasets: [{ data: [62, 38, 28, 14, 12], backgroundColor: ['#c81e1e', '#b45309', '#0891b2', '#1a56db', '#374151'], borderRadius: 4 }] }, options: { ...co } }) } catch (e) { }
+      // mechanical
+      try { new Chart(document.getElementById('ch-sigma'), { type: 'bar', data: { labels: ['42-43', '43-44', '44-45', '45-46', '46-47', '47+'], datasets: [{ data: [8, 24, 48, 62, 42, 30], backgroundColor: '#0891b2', borderRadius: 4 }] }, options: { ...co } }) } catch (e) { }
+      try { new Chart(document.getElementById('ch-elong'), { type: 'bar', data: { labels: ['10-15', '15-20', '20-25', '25-30', '30+'], datasets: [{ data: [12, 42, 68, 52, 40], backgroundColor: '#057a55', borderRadius: 4 }] }, options: { ...co } }) } catch (e) { }
+      // mgmt
+      try { new Chart(document.getElementById('ch-mgmt-week'), { type: 'line', data: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], datasets: [{ label: 'Actual', data: [172, 198, 204, 215, 188, 182, 89], borderColor: '#1a56db', backgroundColor: 'rgba(26,86,219,.08)', fill: true, tension: .4, pointRadius: 4 }, { label: 'Target', data: [200, 200, 200, 200, 200, 200, 100], borderColor: '#e5e7eb', borderDash: [4, 4], pointRadius: 0, fill: false }] }, options: { ...co, plugins: { legend: { display: true, labels: { font: { size: 10 } } } } } }) } catch (e) { }
+      try { new Chart(document.getElementById('ch-mgmt-qual'), { type: 'line', data: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], datasets: [{ label: 'Acceptance%', data: [94, 95.2, 94.8, 94.1, 95.8, 96, 93], borderColor: '#057a55', tension: .4, pointRadius: 3 }, { label: 'RFT%', data: [90, 91.4, 91, 90.8, 92, 92.4, 89], borderColor: '#0891b2', tension: .4, pointRadius: 3 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: true, labels: { font: { size: 10 } } } }, scales: { y: { min: 85, max: 100, ticks: { callback: v => v + '%' } } } } }) } catch (e) { }
+    }
+
+    // ── PIVOT ──
+    const pvZ = { rows: [], cols: [], vals: [] };
+    let pvAgg = 'SUM', pvDF = null;
+    function dotCls(t) { return t === 'dim' ? 'dot-dim' : t === 'time' ? 'dot-time' : 'dot-meas' }
+    function initPvFields() {
+      const el = document.getElementById('pv-fields');
+      el.innerHTML = FIELDS.map(f => `<div class="pv-field-item" draggable="true" data-n="${f.n}"><span style="display:flex;align-items:center;gap:6px"><span class="pv-dot ${dotCls(f.t)}"></span>${f.l}</span><span style="color:var(--gray400);font-size:10px">⠿</span></div>`).join('');
+      document.querySelectorAll('.pv-field-item').forEach(el2 => {
+        el2.addEventListener('dragstart', e => { pvDF = FIELDS.find(f => f.n === el2.dataset.n); el2.classList.add('dragging'); e.dataTransfer.setData('text', el2.dataset.n) });
+        el2.addEventListener('dragend', () => el2.classList.remove('dragging'));
+      });
+    }
+    function pvOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('over') }
+    function pvLeave(id) { document.getElementById(id).classList.remove('over') }
+    function pvDrop(e, z) { e.preventDefault(); pvLeave('zone-' + z); if (!pvDF) return; if (!pvZ[z].find(x => x.n === pvDF.n)) pvZ[z].push({ ...pvDF }); pvRenderChips() }
+    function pvRenderChips() {
+      ['rows', 'cols', 'vals'].forEach(z => {
+        const el = document.getElementById('zone-' + z + '-c');
+        if (!pvZ[z].length) { el.innerHTML = '<div class="pv-empty">drag fields here</div>'; return }
+        el.innerHTML = pvZ[z].map(f => `<span class="pv-chip"><span class="pv-dot ${dotCls(f.t)}" style="width:6px;height:6px"></span>${f.l}<span class="x" onclick="pvRm('${z}','${f.n}')">✕</span></span>`).join('');
+      });
+    }
+    function pvRm(z, n) { pvZ[z] = pvZ[z].filter(f => f.n !== n); pvRenderChips() }
+    function setPvAgg(a) { pvAgg = a; document.querySelectorAll('#pv-agg .agg-chip').forEach(c => c.classList.toggle('active', c.textContent.toUpperCase() === a)) }
+    function buildPivot() {
+      const vf = pvZ.vals[0]?.n || 'actual_weight';
+      const rt = document.getElementById('pv-rt').checked;
+      const ct = document.getElementById('pv-ct').checked;
+      const hm = document.getElementById('pv-hm').checked;
+      const pct = document.getElementById('pv-pct').checked;
+      const rks = Object.keys(PV_DATA), cks = Object.keys(PV_DATA[rks[0]]);
+      const all = rks.flatMap(r => cks.map(c => PV_DATA[r][c][vf] || 0));
+      const mn = Math.min(...all), mx = Math.max(...all), gs = all.reduce((a, b) => a + b, 0);
+      function hc(v) { if (!hm) return ''; const p = (v - mn) / (mx - mn); return p > .66 ? 'heat-hi' : p < .33 ? 'heat-lo' : 'heat-md' }
+      const rl = pvZ.rows[0] ? FIELDS.find(f => f.n === pvZ.rows[0].n)?.l : 'Row';
+      let h = `<table class="pv-tbl" style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr>`;
+      h += `<th class="row-h" style="padding:8px 12px;border:1px solid var(--gray200)">${rl}</th>`;
+      cks.forEach(c => { h += `<th class="col-h" style="padding:8px 12px;border:1px solid var(--gray200)">${c}</th>` });
+      if (rt) h += `<th class="col-h" style="padding:8px 12px;border:1px solid var(--gray200)">Total</th>`;
+      if (pct) h += `<th class="col-h" style="padding:8px 12px;border:1px solid var(--gray200)">% total</th>`;
+      h += `</tr></thead><tbody>`;
+      const ct2 = {}; cks.forEach(c => { ct2[c] = 0 }); let gd = 0;
+      rks.forEach(r => {
+        let rt2 = 0; h += `<tr><td class="row-k" style="padding:8px 12px;border:1px solid var(--gray200)">${r}</td>`;
+        cks.forEach(c => { const v = +(PV_DATA[r][c][vf] || 0).toFixed(2); rt2 += v; ct2[c] += v; gd += v; h += `<td class="${hc(v)}" style="padding:8px 12px;border:1px solid var(--gray200);text-align:right">${v}</td>` });
+        if (rt) h += `<td class="grand" style="padding:8px 12px;border:1px solid var(--gray200);text-align:right">${rt2.toFixed(2)}</td>`;
+        if (pct) h += `<td style="padding:8px 12px;border:1px solid var(--gray200);text-align:right;color:var(--gray500)">${gs > 0 ? (rt2 / gs * 100).toFixed(1) + '%' : '—'}</td>`;
+        h += `</tr>`;
+      });
+      if (ct) {
+        h += `<tr><td class="grand" style="padding:8px 12px;border:1px solid var(--gray200)">Grand total</td>`;
+        cks.forEach(c => { h += `<td class="grand" style="padding:8px 12px;border:1px solid var(--gray200);text-align:right">${ct2[c].toFixed(2)}</td>` });
+        if (rt) h += `<td class="grand" style="padding:8px 12px;border:1px solid var(--gray200);text-align:right;color:var(--blue)">${gd.toFixed(2)}</td>`;
+        if (pct) h += `<td class="grand" style="padding:8px 12px;border:1px solid var(--gray200);text-align:right">100%</td>`;
+        h += `</tr>`;
+      }
+      h += `</tbody></table>`;
+      document.getElementById('pv-out').innerHTML = h;
+    }
+    function exportPivotCSV() {
+      const tbl = document.querySelector('#pv-out table'); if (!tbl) { alert('Build pivot first'); return }
+      const rows = [...tbl.querySelectorAll('tr')].map(r => [...r.querySelectorAll('th,td')].map(c => '"' + c.innerText.trim() + '"').join(','));
+      const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(rows.join('\n')); a.download = 'pivot.csv'; a.click();
+    }
+
+    // ── DASHBOARD BUILDER ──
+    const WIDGETS = [
+      { id: 'kpi-acc', l: 'Acceptance KPI', i: '✓', s: 'gauge metric' },
+      { id: 'kpi-rej', l: 'Rejection KPI', i: '✕', s: 'gauge metric' },
+      { id: 'kpi-save', l: 'Weight Saving', i: '↓', s: 'ton metric' },
+      { id: 'kpi-rft', l: 'RFT Rate', i: '◈', s: '% metric' },
+      { id: 'ch-bar', l: 'Bar chart', i: '▦', s: 'by line/stage' },
+      { id: 'ch-trend', l: 'Trend line', i: '∿', s: 'over time' },
+      { id: 'ch-donut', l: 'Donut chart', i: '◎', s: 'quality split' },
+      { id: 'top-pipes', l: 'Top pipes table', i: '≡', s: 'ranked by acceptance' },
+      { id: 'chem-spec', l: 'Chem. spec card', i: '⚗', s: 'ladle elements' },
+      { id: 'mech-res', l: 'Mech. test result', i: '⚙', s: 'σ & E values' },
+    ];
+    let addedW = new Set();
+    function initWidgets() {
+      document.getElementById('widget-palette').innerHTML = WIDGETS.map(w => `<div class="widget-tile" id="wt-${w.id}" onclick="addWidget('${w.id}')"><div class="wt-icon">${w.i}</div><div class="wt-label">${w.l}</div><div class="wt-sub">${w.s}</div></div>`).join('');
+    }
+    function addWidget(id) {
+      if (addedW.has(id)) return; addedW.add(id);
+      const w = WIDGETS.find(x => x.id === id);
+      const cv = document.getElementById('dash-canvas');
+      const ph = cv.querySelector('[style*="Click widgets"]'); if (ph) ph.remove();
+      const d = document.createElement('div'); d.className = 'dash-widget'; d.id = 'dw-' + id;
+      d.innerHTML = `<button class="dw-close" onclick="rmWidget('${id}')">✕</button><div class="dw-title">${w.l}</div>${getWContent(id)}`;
+      cv.appendChild(d); document.getElementById('wt-' + id).classList.add('added');
+      if (['ch-bar', 'ch-trend', 'ch-donut'].includes(id)) setTimeout(() => initWChart(id), 60);
+    }
+    function getWContent(id) {
+      if (id === 'kpi-acc') return `<div style="text-align:center;padding:6px 0"><div style="font-size:34px;font-weight:700;color:var(--green)">94.8%</div><div style="font-size:11px;color:var(--gray500);margin-top:4px">Overall acceptance rate</div><span class="badge green" style="margin-top:8px;display:inline-block">▲ Above target</span></div>`;
+      if (id === 'kpi-rej') return `<div style="text-align:center;padding:6px 0"><div style="font-size:34px;font-weight:700;color:var(--red)">3.2%</div><div style="font-size:11px;color:var(--gray500);margin-top:4px">Overall rejection rate</div><span class="badge amber" style="margin-top:8px;display:inline-block">Monitor</span></div>`;
+      if (id === 'kpi-save') return `<div style="text-align:center;padding:6px 0"><div style="font-size:34px;font-weight:700;color:var(--blue)">186t</div><div style="font-size:11px;color:var(--gray500);margin-top:4px">Total weight saving</div><span class="badge green" style="margin-top:8px;display:inline-block">▲ +2.6%</span></div>`;
+      if (id === 'kpi-rft') return `<div style="text-align:center;padding:6px 0"><div style="font-size:34px;font-weight:700;color:var(--teal)">91.4%</div><div style="font-size:11px;color:var(--gray500);margin-top:4px">Right First Time rate</div><span class="badge green" style="margin-top:8px;display:inline-block">▲ On track</span></div>`;
+      if (id === 'top-pipes') return `<table style="width:100%;font-size:11px"><thead><tr><th style="padding:4px 6px;background:var(--gray50);border-bottom:1px solid var(--gray200)">Pipe code</th><th style="padding:4px 6px;background:var(--gray50);border-bottom:1px solid var(--gray200)">DN</th><th style="padding:4px 6px;background:var(--gray50);border-bottom:1px solid var(--gray200)">Acc%</th></tr></thead><tbody><tr><td class="td-code" style="padding:4px 6px">P1000-3-...</td><td style="padding:4px 6px">DN200</td><td class="col-grn" style="padding:4px 6px">96.6%</td></tr><tr><td class="td-code" style="padding:4px 6px">P102-2-...</td><td style="padding:4px 6px">DN250</td><td class="col-grn" style="padding:4px 6px">95.4%</td></tr><tr><td class="td-code" style="padding:4px 6px">P1001-2-...</td><td style="padding:4px 6px">DN150</td><td class="col-amb" style="padding:4px 6px">94.8%</td></tr></tbody></table>`;
+      if (id === 'chem-spec') return `<div style="font-size:11px;line-height:1.8"><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px"><span><strong>C:</strong> <span class="col-grn">3.52</span></span><span><strong>Si:</strong> <span class="col-grn">2.18</span></span><span><strong>Mg:</strong> <span class="col-grn">0.048</span></span><span><strong>Cu:</strong> <span class="col-grn">0.04</span></span><span><strong>S:</strong> <span class="col-grn">0.008</span></span><span><strong>P:</strong> <span class="col-grn">0.031</span></span></div><div style="margin-top:8px"><span class="badge green">Decision: Accepted</span></div></div>`;
+      if (id === 'mech-res') return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center"><div style="background:var(--green-lt);border-radius:var(--r);padding:10px"><div style="font-size:20px;font-weight:700;color:var(--green)">43.05</div><div style="font-size:10px;color:var(--green2)">σ KgF/mm² (≥42.50)</div></div><div style="background:var(--green-lt);border-radius:var(--r);padding:10px"><div style="font-size:20px;font-weight:700;color:var(--green)">20.4%</div><div style="font-size:10px;color:var(--green2)">E% (≥10%)</div></div></div>`;
+      return `<canvas id="dwc-${id}" style="max-height:150px"></canvas>`;
+    }
+    function initWChart(id) {
+      const el = document.getElementById('dwc-' + id); if (!el) return;
+      const co = { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } };
+      if (id === 'ch-bar') new Chart(el, { type: 'bar', data: { labels: ['L1', 'L2', 'L3'], datasets: [{ data: [94.8, 90.7, 95.5], backgroundColor: ['#1a56db', '#0891b2', '#057a55'], borderRadius: 5 }] }, options: { ...co, scales: { y: { min: 85, max: 100 } } } });
+      if (id === 'ch-trend') new Chart(el, { type: 'line', data: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], datasets: [{ data: [92, 93, 94, 94.8, 95, 94.5], borderColor: '#1a56db', backgroundColor: 'rgba(26,86,219,.08)', fill: true, tension: .4 }] }, options: co });
+      if (id === 'ch-donut') new Chart(el, { type: 'doughnut', data: { labels: ['Accepted', 'Hold', 'Rejected'], datasets: [{ data: [94.8, 2.0, 3.2], backgroundColor: ['#057a55', '#b45309', '#c81e1e'], borderWidth: 2, borderColor: '#fff' }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } } });
+    }
+    function rmWidget(id) { addedW.delete(id); document.getElementById('dw-' + id)?.remove(); document.getElementById('wt-' + id)?.classList.remove('added'); if (!addedW.size) document.getElementById('dash-canvas').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--gray400);font-style:italic">Click widgets from the palette to add to dashboard</div>'; }
+    function clearDash() { [...addedW].forEach(id => rmWidget(id)) }
+    function applyDashCols() { const c = document.getElementById('dash-cols').value; document.getElementById('dash-canvas').style.gridTemplateColumns = `repeat(${c},1fr)` }
+
+    // ── QUERY MANAGER ──
+    const DB_TABLES = [
+      { n: 'production_pipes', l: 'Production Pipes', cols: ['pipe_code', 'ladle_id', 'product_code', 'dn_size', 'class', 'line', 'shift', 'status', 'actual_weight', 'nominal_weight', 'saving_weight', 'production_date'] },
+      { n: 'production_orders', l: 'Production Orders', cols: ['order_id', 'order_number', 'customer', 'product_code', 'target_qty', 'start_date', 'end_date', 'status', 'priority'] },
+      { n: 'chemical_analysis', l: 'Chemical Analysis', cols: ['analysis_id', 'ladle_id', 'furnace', 'test_date', 'c_carbon', 'si_silicon', 'mg_magnesium', 'cu_copper', 'cr_chromium', 's_sulfur', 'mn_manganese', 'p_phosphorus', 'pb_lead', 'al_aluminum', 'ce', 'mne', 'mge', 'decision'] },
+      { n: 'mechanical_tests', l: 'Mechanical Tests', cols: ['test_id', 'pipe_code', 'test_date', 'diameter', 'ladle_id', 'thickness', 'd1', 'd2', 'd3', 'f_kgf', 'lf_mm', 'sigma', 'elongation', 'pct_nd', 'pct_f', 'nc', 'carbides', 'hardness', 'decision'] },
+      { n: 'delivery_notes', l: 'Delivery Notes', cols: ['dn_id', 'dn_number', 'order_id', 'customer', 'qty', 'weight', 'dispatch_date', 'received_date', 'status'] },
+      { n: 'defect_records', l: 'Defect Records', cols: ['defect_id', 'pipe_code', 'stage', 'defect_type', 'defect_cause', 'severity', 'decision', 'notes'] },
+    ];
+    let activeTable = 'production_pipes';
+    function initQM() {
+      const el = document.getElementById('qm-tables');
+      el.innerHTML = DB_TABLES.map(t => `<div style="border:1px solid var(--gray200);border-radius:var(--r);margin-bottom:6px;overflow:hidden"><div style="padding:7px 10px;background:var(--gray50);cursor:pointer;font-size:12px;font-weight:700;color:var(--gray800);display:flex;align-items:center;justify-content:space-between" onclick="selectTable('${t.n}')"><span>${t.l}</span><span style="font-size:10px;color:var(--gray400)">${t.cols.length} cols</span></div><div id="tbl-cols-${t.n}" style="display:none;padding:6px 10px;max-height:120px;overflow-y:auto">${t.cols.map(c => `<div style="font-size:11px;color:var(--gray600);padding:2px 0;font-family:var(--mono)">${c}</div>`).join('')}</div></div>`).join('');
+      const cs = document.getElementById('qm-col-sel');
+      const defs = ['pipe_code', 'dn_size', 'class', 'actual_weight', 'saving_weight', 'acceptance_pct'];
+      cs.innerHTML = FIELDS.map(f => `<label><input type="checkbox" ${defs.includes(f.n) ? 'checked' : ''} value="${f.n}" onchange="updateSQL()"> ${f.l}</label>`).join('');
+      addQBRow(); addQBRow(); updateSQL();
+    }
+    function selectTable(n) {
+      activeTable = n;
+      DB_TABLES.forEach(t => { const el = document.getElementById('tbl-cols-' + t.n); if (el) el.style.display = t.n === n ? 'block' : 'none' });
+      updateSQL();
+    }
+    let qbLogic = 'AND', qbRows = [], qbRid = 0;
+    function addQBRow() {
+      const id = 'qr' + qbRid++;
+      const d = document.createElement('div'); d.className = 'qb-row'; d.id = id;
+      d.innerHTML = `<select class="f-select" onchange="updateSQL()">${FIELDS.map(f => `<option value="${f.n}">${f.l}</option>`).join('')}</select><select class="f-select" id="${id}-op" onchange="updateSQL()"><option>=</option><option>!=</option><option>&gt;</option><option>&lt;</option><option>&gt;=</option><option>&lt;=</option><option>LIKE</option><option>IN</option><option>BETWEEN</option><option>IS NULL</option></select><input type="text" class="f-input" id="${id}-val" placeholder="value..." oninput="updateSQL()"><button class="rm-btn" onclick="rmQBRow('${id}')">✕</button>`;
+      document.getElementById('qb-rows-wrap').appendChild(d); qbRows.push(id); updateSQL();
+    }
+    function rmQBRow(id) { document.getElementById(id)?.remove(); qbRows = qbRows.filter(r => r !== id); updateSQL() }
+    function setLogic(l) { qbLogic = l; document.getElementById('lt-and').classList.toggle('active', l === 'AND'); document.getElementById('lt-or').classList.toggle('active', l === 'OR'); updateSQL() }
+    function updateSQL() {
+      const cols = []; document.querySelectorAll('#qm-col-sel input:checked').forEach(c => cols.push(c.value));
+      const sel = cols.length ? cols.join(',\n  ') : '*';
+      const conds = [];
+      qbRows.forEach(id => {
+        const row = document.getElementById(id); if (!row) return;
+        const s = row.querySelector('select'); const op = document.getElementById(id + '-op'); const v = document.getElementById(id + '-val');
+        if (!s || !op) return;
+        const fn = s.value; const fo = FIELDS.find(f => f.n === fn); const im = fo?.t === 'meas';
+        const ov = op.value;
+        if (ov === 'IS NULL') { conds.push(`  ${fn} IS NULL`); return }
+        if (!v || !v.value.trim()) return;
+        const vv = v.value.trim();
+        let vd;
+        if (ov === 'IN') vd = `(${vv.split(',').map(x => im ? x.trim() : `'${x.trim()}'`).join(', ')})`;
+        else if (ov === 'BETWEEN') { const p = vv.split(','); vd = im ? `${(p[0] || '').trim()} AND ${(p[1] || '').trim()}` : `'${(p[0] || '').trim()}' AND '${(p[1] || '').trim()}'` }
+        else if (ov === 'LIKE') vd = `'%${vv}%'`;
+        else vd = im ? vv : `'${vv}'`;
+        conds.push(`  ${fn} ${ov} ${vd}`);
+      });
+      const grp = document.getElementById('qb-grp')?.value;
+      const ord = document.getElementById('qb-ord')?.value;
+      const dir = document.getElementById('qb-dir')?.value || 'DESC';
+      const lim = document.getElementById('qb-lim')?.value || 1000;
+      let sql = `<span class="kw">SELECT</span>\n  ${sel}\n<span class="kw">FROM</span>  ${activeTable}`;
+      if (conds.length) { const sep = `\n  <span class="op3">${qbLogic}</span> `; sql += `\n<span class="kw">WHERE</span>\n${conds.map((c, i) => i === 0 ? c : sep + c.trimStart()).join('\n')}` }
+      if (grp) sql += `\n<span class="kw">GROUP BY</span>  ${grp}`;
+      if (ord) sql += `\n<span class="kw">ORDER BY</span>  ${ord} <span class="op3">${dir}</span>`;
+      sql += `\n<span class="fn3">LIMIT</span>   <span class="str2">${lim}</span>`;
+      if (conds.length) sql += `\n<span class="cmt3">-- ${conds.length} condition(s) applied | logic: ${qbLogic}</span>`;
+      document.getElementById('sql-out').innerHTML = sql;
+      document.getElementById('est-rows').textContent = `est. rows: ${conds.length ? Math.max(10, Math.floor(800 / Math.max(1, conds.length))) : '>1000'}`;
+    }
+    function copySQL() {
+      navigator.clipboard.writeText(document.getElementById('sql-out').innerText).then(() => { const m = document.getElementById('copied-lbl'); m.classList.add('show'); setTimeout(() => m.classList.remove('show'), 2000) }).catch(() => { });
+    }
+
+    // ── MISC ──
+    function exportCSV() { exportRepCSV() }
+    function exportRepCSV() {
+      const rows = [['Pipe Code', 'DN', 'Class', 'Nom.', 'Act.', 'Saving', 'Cast Acc', 'Cast Hold', 'Cast Rej', 'Cast %', 'Ann Acc', 'Ann %', 'Fin Acc', 'Fin %']];
+      REP_DATA.forEach(r => { rows.push([r.code, r.dn, r.cls, r.nom, r.act, (r.nom - r.act).toFixed(1), r.cast.acc, r.cast.hold, r.cast.rej, r.cast.pct + '%', r.ann.acc, r.ann.pct + '%', r.fin.acc, r.fin.pct + '%']) });
+      const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(rows.map(r => r.join(',')).join('\n')); a.download = 'pq_report.csv'; a.click();
+    }
+    function refreshPage() { buildProdSummary(); buildRBReport(); document.querySelector('.topbar-meta') && (document.querySelector('.topbar-meta').textContent = 'Refreshed ' + new Date().toLocaleTimeString()) }
+
+    // ── INIT ──
+    buildProdSummary();
+    buildRBReport();
+    initCharts();
+    initPvFields();
+    initWidgets();
+    initQM();
+    // init param chip checks
+    document.querySelectorAll('.param-chip.active .chk').forEach(c => { c.textContent = '✓' });
+  </script>
+</body>
+
+</html>

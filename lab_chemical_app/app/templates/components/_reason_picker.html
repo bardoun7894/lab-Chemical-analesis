@@ -1,0 +1,22 @@
+{#
+  Quick-pick reason dropdown. Inserts a managed reason (Settings > Reason Types)
+  into a free-text target field WITHOUT clearing it — additive only, so it never
+  fights the auto-decide JS that also writes to the same field.
+
+  Usage: {{ reason_picker('reasonField') }}
+  Renders nothing when no active reasons are configured.
+#}
+{% macro reason_picker(target_id) %}
+{% if reason_choices %}
+<div class="mb-2">
+    <select class="form-select form-select-sm reason-picker" data-target="{{ target_id }}"
+            aria-label="{{ 'أسباب جاهزة' if current_locale == 'ar' else 'Quick reasons' }}">
+        <option value="">{{ '— إدراج سبب جاهز —' if current_locale == 'ar' else '— Insert a saved reason —' }}</option>
+        {% for name_en, name_ar in reason_choices %}
+        {% set label = name_ar if current_locale == 'ar' else name_en %}
+        <option value="{{ label }}">{{ label }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
+{% endmacro %}

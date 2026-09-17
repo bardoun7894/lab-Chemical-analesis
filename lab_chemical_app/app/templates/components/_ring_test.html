@@ -1,0 +1,103 @@
+{# Ring test — TA ring-deflection block on the Cutting stage.
+
+   A ring cut from the pipe is squeezed under a known force and the outside
+   diameter is measured before and after; the sheet turns the two diameters
+   into a deflection percentage:
+
+       Difference in OD = Initial OD - Final OD      mm
+       % Deflection     = Difference / Initial OD    x 100
+
+   Both derived rows are recomputed server-side at save time; the live figures
+   here are only so the operator sees the result without leaving the popup.
+
+   Callers pass:
+     stage_name - the stage the inputs post under (Cutting)
+     rp         - stage.ring_profile, or {}
+     is_ar      - locale flag
+#}
+{% macro ring_grid(stage_name, rp, is_ar) %}
+{% set rp = rp or {} %}
+<div class="table-responsive">
+    <table class="table table-sm table-bordered mb-0 align-middle bg-white ring-test-table" style="max-width: 460px;">
+        <tbody>
+            {% for key, label_en, label_ar, unit in [
+                ('force', 'force', 'القوة', 'KN'),
+                ('od_initial', 'Initial OD', 'القطر الخارجي الابتدائي', 'mm'),
+                ('od_final', 'Final OD', 'القطر الخارجي النهائي', 'mm')] %}
+            {% set val = rp.get(key) %}
+            <tr>
+                <th class="table-secondary fw-normal" style="min-width: 150px;">{{ label_ar if is_ar else label_en }}</th>
+                <td style="min-width: 130px;">
+                    <input type="number" name="stage_{{ stage_name }}_ring_{{ key }}"
+                           class="form-control form-control-sm text-center ring-in"
+                           step="0.01" min="0" data-k="{{ key }}"
+                           value="{{ val if val is not none else '' }}">
+                </td>
+                <td class="text-muted small" style="width: 55px;">{{ unit }}</td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <th class="table-secondary fw-normal">{{ 'الفرق في القطر الخارجي' if is_ar else 'Difference in OD' }}</th>
+                <td class="table-warning text-center">
+                    <span class="ring-diff fw-bold text-primary">{{ rp.od_diff if rp.od_diff is not none else '' }}</span>
+                </td>
+                <td class="text-muted small">mm</td>
+            </tr>
+            <tr>
+                <th class="table-secondary fw-normal">{{ '% الانحراف' if is_ar else '% Deflection' }}</th>
+                <td class="table-warning text-center">
+                    <span class="ring-defl fw-bold text-primary fs-5">{{ rp.deflection if rp.deflection is not none else '' }}</span>
+                </td>
+                <td class="text-muted small">%</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div class="small text-muted mt-2">
+    <i class="bi bi-info-circle"></i>
+    {{ 'اختبار الحلقة: الفرق = القطر الابتدائي − القطر النهائي، ونسبة الانحراف = الفرق ÷ القطر الابتدائي × 100.'
+       if is_ar
+       else 'Ring test: Difference = Initial OD − Final OD; % Deflection = Difference / Initial OD × 100.' }}
+</div>
+{% endmacro %}
+
+
+{# Live result as the operator types. Emitted once per page and bound with a
+   delegated listener, so it covers a table swapped in later (the Stage Console
+   replaces the whole pane on every pipe change) without rebinding. #}
+{% macro ring_script() %}
+<script>
+(function () {
+    if (window.__ringTestBound) { return; }
+    window.__ringTestBound = true;
+
+    function num(table, k) {
+        var el = table.querySelector('.ring-in[data-k="' + k + '"]');
+        if (!el || el.value === '') { return null; }
+        var v = parseFloat(el.value);
+        return isNaN(v) ? null : v;
+    }
+
+    function recalc(table) {
+        var diffOut = table.querySelector('.ring-diff');
+        var deflOut = table.querySelector('.ring-defl');
+        var initial = num(table, 'od_initial'), final = num(table, 'od_final');
+        if (initial === null || final === null) {
+            if (diffOut) { diffOut.textContent = ''; }
+            if (deflOut) { deflOut.textContent = ''; }
+            return;
+        }
+        var diff = initial - final;
+        if (diffOut) { diffOut.textContent = diff.toFixed(2); }
+        if (deflOut) { deflOut.textContent = initial ? (diff / initial * 100).toFixed(2) : ''; }
+    }
+
+    document.addEventListener('input', function (ev) {
+        var el = ev.target;
+        if (!el.classList || !el.classList.contains('ring-in')) { return; }
+        var table = el.closest('.ring-test-table');
+        if (table) { recalc(table); }
+    });
+})();
+</script>
+{% endmacro %}

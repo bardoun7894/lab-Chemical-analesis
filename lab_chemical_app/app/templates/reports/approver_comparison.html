@@ -1,0 +1,135 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+{% set ar = current_locale == 'ar' %}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body py-2">
+                <h6 class="text-muted small mb-0">{{ 'المعتمدون' if ar else 'Approvers' }}</h6>
+                <h4 class="mb-0">{{ data.summary.approvers }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-secondary">
+            <div class="card-body py-2">
+                <h6 class="text-muted small mb-0">{{ 'المواسير' if ar else 'Pipes' }}</h6>
+                <h4 class="mb-0">{{ data.summary.pipes }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger">
+            <div class="card-body py-2">
+                <h6 class="text-muted small mb-0">{{ 'الأعلى رفضًا' if ar else 'Highest reject rate' }}</h6>
+                <h4 class="mb-0 text-danger">
+                    {% if data.summary.strictest %}
+                        {{ data.summary.strictest }}
+                        <small class="text-muted">{{ '%.1f'|format(data.summary.strictest_rate) }}%</small>
+                    {% else %}<span class="text-muted">—</span>{% endif %}
+                </h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        {# Attribution coverage, stated up front: a comparison built on a third
+           of the pipes is a different claim from one built on all of them. #}
+        <div class="card border-warning">
+            <div class="card-body py-2">
+                <h6 class="text-muted small mb-0">{{ 'نسبة الإسناد' if ar else 'Attributed' }}</h6>
+                <h4 class="mb-0">{{ data.coverage.pct }}%
+                    <small class="text-muted">{{ data.coverage.with_approver }}/{{ data.coverage.total_pipes }}</small>
+                </h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white py-2">
+        <strong>{{ 'مقارنة المعتمدين' if ar else 'Approvers compared' }}</strong>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>{{ 'المعتمد' if ar else 'Approver' }}</th>
+                    <th class="text-end">{{ 'المواسير' if ar else 'Pipes' }}</th>
+                    <th class="text-end">{{ 'مقبول' if ar else 'Accepted' }}</th>
+                    <th class="text-end">{{ 'مرفوض' if ar else 'Rejected' }}</th>
+                    <th class="text-end">{{ 'معلق' if ar else 'Pending' }}</th>
+                    <th class="text-end">{{ 'نسبة القبول' if ar else 'Accept %' }}</th>
+                    <th class="text-end">{{ 'نسبة الرفض' if ar else 'Reject %' }}</th>
+                    <th class="text-end">{{ 'مواسير بعيوب' if ar else 'Defect pipes' }}</th>
+                    <th class="text-end">{{ 'نسبة العيوب' if ar else 'Defect %' }}</th>
+                    <th>{{ 'من' if ar else 'From' }}</th>
+                    <th>{{ 'إلى' if ar else 'To' }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.approver_rows %}
+                <tr>
+                    <td><strong>{{ r.approver }}</strong></td>
+                    <td class="text-end">{{ r.total }}</td>
+                    <td class="text-end text-success">{{ r.accepted }}</td>
+                    <td class="text-end text-danger">{{ r.rejected }}</td>
+                    <td class="text-end text-muted">{{ r.pending }}</td>
+                    <td class="text-end">
+                        {% if r.accept_rate is not none %}{{ '%.1f'|format(r.accept_rate) }}%
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if r.reject_rate is not none %}
+                        <span class="badge bg-{{ 'danger' if r.reject_rate > 7 else ('warning text-dark' if r.reject_rate > 4 else 'success') }}">
+                            {{ '%.1f'|format(r.reject_rate) }}%
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-end">{{ r.defect_pipes }}</td>
+                    <td class="text-end">{{ '%.1f'|format(r.defect_rate) }}%</td>
+                    <td><small>{{ r.first_date }}</small></td>
+                    <td><small>{{ r.last_date }}</small></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="11" class="text-center text-muted py-4">
+                    {{ 'لا توجد بيانات للفلاتر المختارة' if ar else 'No data for the selected filters' }}
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if data.dn_codes %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-2">
+        <strong>{{ 'المعتمد × القطر' if ar else 'Approver x DN' }}</strong>
+        <small class="text-muted">{{ 'عدد المواسير' if ar else 'pipe count' }}</small>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-bordered table-sm mb-0 text-center">
+            <thead class="table-light">
+                <tr>
+                    <th class="text-start">{{ 'المعتمد' if ar else 'Approver' }}</th>
+                    {% for dn in data.dn_codes %}<th>{{ dn }}</th>{% endfor %}
+                    <th>{{ 'الإجمالي' if ar else 'Total' }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.approver_rows %}
+                <tr>
+                    <td class="text-start"><strong>{{ r.approver }}</strong></td>
+                    {% for dn in data.dn_codes %}
+                    <td>{% if r.by_dn.get(dn) %}{{ r.by_dn[dn] }}{% else %}<span class="text-muted">·</span>{% endif %}</td>
+                    {% endfor %}
+                    <td><strong>{{ r.total }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

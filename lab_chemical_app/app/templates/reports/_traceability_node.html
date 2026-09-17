@@ -1,0 +1,117 @@
+{# Inspector panel for one canvas node: verdict, who/when, readings, trail. #}
+{% set is_ar = current_locale == 'ar' %}
+<div class="trace-inspector">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="trace-dot state-{{ d.state }}"></span>
+        <h6 class="mb-0">{{ d.title }}</h6>
+    </div>
+
+    {% if d.diagnosis %}
+    {# What is wrong, why, and the way out. This is the whole point of
+       clicking a node: not "it is red" but "here is the fix". #}
+    <div class="trace-diag sev-{{ d.diagnosis.severity }}">
+        <div class="trace-diag-what">
+            <i class="bi bi-exclamation-octagon-fill"></i>
+            {{ d.diagnosis.what_ar if is_ar else d.diagnosis.what_en }}
+        </div>
+        {% if d.diagnosis.why %}
+        <ul class="trace-diag-why">
+            {% for w in d.diagnosis.why %}<li>{{ w }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if d.diagnosis.actions %}
+        <div class="trace-diag-actions">
+            {% for a in d.diagnosis.actions %}
+            <a class="btn btn-sm {{ 'btn-primary' if a.primary else 'btn-outline-secondary' }}"
+               href="{{ a.url }}">
+                {{ a.label_ar if is_ar else a.label_en }}
+                <i class="bi bi-arrow-right-short"></i>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <table class="table table-sm mb-3">
+        <tr>
+            <th class="text-muted">{{ 'القرار' if is_ar else 'Decision' }}</th>
+            <td>{{ d.decision or '—' }}</td>
+        </tr>
+        <tr>
+            <th class="text-muted">{{ 'بواسطة' if is_ar else 'By' }}</th>
+            <td>{{ d.who or ('غير مسجل' if is_ar else 'not recorded') }}</td>
+        </tr>
+        <tr>
+            <th class="text-muted">{{ 'التاريخ' if is_ar else 'When' }}</th>
+            <td>{{ d.when or '—' }}</td>
+        </tr>
+        {% if d.reason %}
+        <tr>
+            <th class="text-muted">{{ 'السبب' if is_ar else 'Reason' }}</th>
+            <td>{{ d.reason }}</td>
+        </tr>
+        {% endif %}
+    </table>
+
+    {% if d.measurements %}
+    <div class="fw-bold small mb-1">{{ 'القياسات' if is_ar else 'Measurements' }}</div>
+    <table class="table table-sm table-bordered mb-3">
+        {% for m in d.measurements %}
+        <tr class="{{ 'table-danger' if m.ok == false }}">
+            <td>{{ m.label }}</td>
+            <td class="text-end">{{ m.value }}</td>
+            <td class="text-center">
+                {% if m.ok == true %}<i class="bi bi-check-lg text-success"></i>
+                {% elif m.ok == false %}<i class="bi bi-x-lg text-danger"></i>
+                {% elif m.note %}<span class="small text-muted">{{ m.note }}</span>
+                {% else %}—{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if d.history %}
+    <div class="fw-bold small mb-1">{{ 'سجل التغييرات' if is_ar else 'Change history' }}</div>
+    <div class="trace-history small mb-3">
+        {% for h in d.history[:15] %}
+        <div class="border-start border-2 ps-2 mb-2">
+            <div>
+                <strong>{{ h.action }}</strong>
+                {% if h.field %}· {{ h.field }}{% endif %}
+                {% if h.old or h.new %}
+                : <span class="text-muted">{{ h.old or '∅' }}</span> ← {{ h.new or '∅' }}
+                {% endif %}
+            </div>
+            <div class="text-muted">
+                {{ h.who or ('غير مسجل' if is_ar else 'not recorded') }}
+                {% if h.when %}· {{ h.when }}{% endif %}
+                {% if h.reason %}· {{ h.reason }}{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if d.options %}
+    <div class="fw-bold small mb-1">{{ 'المسارات الممكنة' if is_ar else 'Routes available' }}</div>
+    <ul class="trace-options small mb-3">
+        {% for o in d.options %}
+        <li class="{{ 'taken' if o.taken }}">
+            {% if o.taken %}<i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+            {{ o.label }}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if d.link %}
+    <a class="btn btn-sm btn-outline-primary"
+       href="{{ url_for(d.link[0], id=d.link[1]) }}">
+        <i class="bi bi-box-arrow-up-right"></i>
+        {{ 'فتح السجل' if is_ar else 'Open record' }}
+    </a>
+    {% endif %}
+</div>

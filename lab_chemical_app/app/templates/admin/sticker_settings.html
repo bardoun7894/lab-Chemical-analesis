@@ -199,6 +199,73 @@
                     </div>
                 </div>
 
+                <!-- Data Fields -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-check"></i>
+                            {{ 'حقول البيانات' if current_locale == 'ar' else 'Data Fields' }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            {{ 'اختر الحقول التي تظهر في شبكة بيانات الملصق' if current_locale == 'ar' else 'Choose which fields appear in the sticker data grid' }}
+                        </p>
+                        {% set sf = sticker_settings.show_fields or {} %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" name="field_pipe_no" id="fieldPipeNo"
+                                           {{ 'checked' if sf.pipe_no != false }}>
+                                    <label class="form-check-label" for="fieldPipeNo">{{ 'رقم الأنبوب' if current_locale == 'ar' else 'Pipe No.' }}</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" name="field_pipe_code" id="fieldPipeCode"
+                                           {{ 'checked' if sf.pipe_code != false }}>
+                                    <label class="form-check-label" for="fieldPipeCode">{{ 'كود الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" name="field_diameter" id="fieldDiameter"
+                                           {{ 'checked' if sf.diameter != false }}>
+                                    <label class="form-check-label" for="fieldDiameter">{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" name="field_class" id="fieldClass"
+                                           {{ 'checked' if sf.class != false }}>
+                                    <label class="form-check-label" for="fieldClass">{{ 'الصنف' if current_locale == 'ar' else 'Class' }}</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" name="field_production" id="fieldProduction"
+                                           {{ 'checked' if sf.production != false }}>
+                                    <label class="form-check-label" for="fieldProduction">{{ 'أمر الإنتاج' if current_locale == 'ar' else 'Production Order' }}</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" name="field_sales_order" id="fieldSalesOrder"
+                                           {{ 'checked' if sf.sales_order != false }}>
+                                    <label class="form-check-label" for="fieldSalesOrder">{{ 'أمر البيع' if current_locale == 'ar' else 'Sales Order' }}</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" name="field_customer" id="fieldCustomer"
+                                           {{ 'checked' if sf.customer != false }}>
+                                    <label class="form-check-label" for="fieldCustomer">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" name="field_application" id="fieldApplication"
+                                           {{ 'checked' if sf.application != false }}>
+                                    <label class="form-check-label" for="fieldApplication">{{ 'المواصفة (ISO / EN)' if current_locale == 'ar' else 'Application (ISO / EN)' }}</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" name="field_decision" id="fieldDecision"
+                                           {{ 'checked' if sf.decision != false }}>
+                                    <label class="form-check-label" for="fieldDecision">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Layout Options -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-secondary text-white">
@@ -214,6 +281,14 @@
                             <label class="form-check-label" for="showLogo">
                                 {{ 'عرض الشعار' if current_locale == 'ar' else 'Show Company Logo' }}
                             </label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'نوع الكود' if current_locale == 'ar' else 'Code Type' }}</label>
+                            <select name="code_type" class="form-select">
+                                <option value="qr" {{ 'selected' if (sticker_settings.code_type or 'qr') == 'qr' }}>QR Code</option>
+                                <option value="data_matrix" {{ 'selected' if sticker_settings.code_type == 'data_matrix' }}>Data Matrix</option>
+                            </select>
+                            <small class="text-muted">{{ 'اختر رمزاً واحداً ليظهر على الاستيكر' if current_locale == 'ar' else 'Choose one code to print on the sticker.' }}</small>
                         </div>
                         <div class="form-check mb-3">
                             <input type="checkbox" class="form-check-input" name="show_recycle" id="showRecycle"
@@ -235,6 +310,47 @@
                             <label class="form-check-label" for="showWebsite">
                                 {{ 'عرض الموقع الإلكتروني' if current_locale == 'ar' else 'Show Website' }}
                             </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" name="show_barcode" id="showBarcode"
+                                   {{ 'checked' if sticker_settings.show_barcode != false }}>
+                            <label class="form-check-label" for="showBarcode">
+                                {{ 'عرض باركود الصنف (يسار)' if current_locale == 'ar' else 'Show product barcode (left)' }}
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" name="show_warehouse_barcode" id="showWarehouseBarcode"
+                                   {{ 'checked' if sticker_settings.show_warehouse_barcode != false }}>
+                            <label class="form-check-label" for="showWarehouseBarcode">
+                                {{ 'عرض باركود المخزن (يمين)' if current_locale == 'ar' else 'Show warehouse barcode (right)' }}
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" name="show_title" id="showTitle"
+                                   {{ 'checked' if sticker_settings.show_title != false }}>
+                            <label class="form-check-label" for="showTitle">
+                                {{ 'عرض العنوان' if current_locale == 'ar' else 'Show Title' }}
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" name="show_product_code" id="showProductCode"
+                                   {{ 'checked' if sticker_settings.show_product_code != false }}>
+                            <label class="form-check-label" for="showProductCode">
+                                {{ 'عرض كود المنتج' if current_locale == 'ar' else 'Show Product Code' }}
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" name="show_description" id="showDescription"
+                                   {{ 'checked' if sticker_settings.show_description != false }}>
+                            <label class="form-check-label" for="showDescription">
+                                {{ 'عرض الوصف' if current_locale == 'ar' else 'Show Description' }}
+                            </label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'عنوان الملصق' if current_locale == 'ar' else 'Sticker Title' }}</label>
+                            <input type="text" class="form-control" name="title_text"
+                                   value="{{ sticker_settings.title_text if sticker_settings.title_text is defined else 'DIP' }}"
+                                   placeholder="DIP">
                         </div>
                         <hr>
                         <div class="mb-3">
@@ -403,6 +519,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('showRecycle').checked = true;
             document.getElementById('showQR').checked = true;
             document.getElementById('showWebsite').checked = true;
+            document.getElementById('showWarehouseBarcode').checked = true;
 
             // Reset DPI
             document.querySelector('select[name="dpi"]').value = 300;

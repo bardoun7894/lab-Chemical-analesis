@@ -1,0 +1,43 @@
+description: "Code review pipeline: inspect → report with structured verdict"
+maxTransitions: 4
+
+phases:
+  - id: review
+    thinking: high
+    tools:
+      - read
+      - bash
+      - grep
+      - find
+      - ls
+      - module_report
+      - read_symbol
+      - lens_diagnostics
+      - lsp_diagnostics
+      - ast_grep_search
+    output:
+      type: structured
+      status:
+        enum: [APPROVED, CHANGES_REQUESTED, NEEDS_INFO]
+        description: "APPROVED when code is clean; CHANGES_REQUESTED when issues found; NEEDS_INFO when context is missing."
+      report: "Detailed review report with file:line references."
+      data:
+        fields:
+          severity:
+            type: string
+            enum: [P0, P1, P2, P3]
+            description: "Highest severity issue found (P0 = critical, P3 = nit)."
+          issueCount:
+            type: integer
+            description: "Total actionable issues found."
+    prompt: |
+      Review target:
+      {{input}}
+
+      Perform a thorough code review:
+      1. Use module_report and read_symbol to understand structure
+      2. Run lens_diagnostics and lsp_diagnostics to surface real issues
+      3. Use ast_grep_search for pattern-based checks (anti-patterns, security)
+      4. Check for: correctness, edge cases, security, performance, consistency
+      5. Cite every issue with file:line and severity (P0-P3)
+      6. Suggest concrete fixes, not vague advice

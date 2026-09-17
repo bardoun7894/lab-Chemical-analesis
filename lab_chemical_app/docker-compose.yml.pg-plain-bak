@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lab-chemical-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lab_chemical
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: 6b038b388e28fa779e9c8cc402f77b2694e0c61e3258dca5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab -d lab_chemical"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - lab-network
+
+  lab-chemical:
+    build: .
+    container_name: lab-chemical-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "9999:8000"
+    volumes:
+      - ./lab_chemical.db:/app/lab_chemical.db
+      - ./.env:/app/.env
+      - ./app/data:/app/app/data
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql+psycopg2://lab:6b038b388e28fa779e9c8cc402f77b2694e0c61e3258dca5@lab-chemical-pg:5432/lab_chemical
+      # Do NOT hardcode API keys here. ai_service reads os.environ first and
+      # only falls back to app/data/app_settings.json, so a stale key set here
+      # silently overrides whatever the operator configured in Admin Settings.
+      # Configure keys through /admin/settings, or via the mounted .env file.
+    networks:
+      - lab-network
+
+volumes:
+  pgdata:
+
+networks:
+  lab-network:
+    driver: bridge

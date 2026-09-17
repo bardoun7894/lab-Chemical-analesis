@@ -1,0 +1,57 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+<div class="d-flex gap-2 mb-3">
+    <span class="text-muted small align-self-center">Metric:</span>
+    <a href="{{ data.metric_links['count'] }}"
+       class="btn btn-sm {{ 'btn-primary' if data.metric == 'count' else 'btn-outline-secondary' }}">Defect count</a>
+    <a href="{{ data.metric_links['pct'] }}"
+       class="btn btn-sm {{ 'btn-primary' if data.metric == 'pct' else 'btn-outline-secondary' }}">Defect % of pipes</a>
+</div>
+
+{% if not data.cells %}
+<div class="alert alert-info">No pipes with both DN and class in this filter range.</div>
+{% else %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-bordered mb-0 text-center">
+            <thead>
+                <tr><th class="text-start">DN \ Class</th>
+                    {% for c in data.classes %}<th>{{ c }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for dn in data.dns %}
+                <tr>
+                    <th class="text-start">DN{{ dn }}</th>
+                    {% for c in data.classes %}
+                    {% set cell = data.cells.get((dn, c)) %}
+                    {% if cell is none %}
+                    <td class="text-muted" style="background:#f8f9fa">·</td>
+                    {% else %}
+                    {% set ratio = (cell.value / data.max) if data.max else 0 %}
+                    <td style="background: rgba(220, 53, 69, {{ (ratio * 0.75) | round(2) }});
+                               color: {{ '#fff' if ratio > 0.55 else '#212529' }}">
+                        {% if data.metric == 'count' %}
+                        {{ cell.defects }}
+                        {% else %}
+                        {{ cell.value }}%
+                        {% endif %}
+                        <div style="font-size:0.72em;opacity:0.8">{{ cell.pipes }} pipes</div>
+                    </td>
+                    {% endif %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer text-muted small">
+        · = no pipes in that DN/class (not zero defects). Color scale is relative
+        to the worst cell ({{ data.max }}{{ '%' if data.metric == 'pct' }}).
+        {% if data.metric == 'pct' %}% can exceed 100 — a pipe can carry defects
+        at several stages.{% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

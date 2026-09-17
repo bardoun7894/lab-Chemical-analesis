@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'إدارة معاملات المنتج' if current_locale == 'ar' else 'Product Parameters' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-sliders"></i>
+            {{ 'إدارة معاملات المنتج' if current_locale == 'ar' else 'Product Parameter Management' }}
+        </h2>
+        <div>
+            <a href="{{ url_for('admin.add_product_parameter') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i>
+                {{ 'إضافة معامل' if current_locale == 'ar' else 'Add Parameter' }}
+            </a>
+            <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabs for param types -->
+    <ul class="nav nav-tabs mb-4">
+        {% for pt in param_types %}
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if selected_type == pt }}" href="{{ url_for('admin.product_parameters', type=pt) }}">
+                {{ param_type_labels[pt][1] if current_locale != 'ar' else param_type_labels[pt][0] }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Parameters Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ 'الرمز' if current_locale == 'ar' else 'Code' }}</th>
+                            <th>{{ 'الاسم (إنجليزي)' if current_locale == 'ar' else 'Name EN' }}</th>
+                            <th>{{ 'الاسم (عربي)' if current_locale == 'ar' else 'Name AR' }}</th>
+                            <th>{{ 'الترتيب' if current_locale == 'ar' else 'Sort Order' }}</th>
+                            <th>{{ 'الحالة' if current_locale == 'ar' else 'Active' }}</th>
+                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for param in parameters %}
+                        <tr>
+                            <td><code>{{ param.code }}</code></td>
+                            <td>{{ param.name_en or '-' }}</td>
+                            <td>{{ param.name_ar or '-' }}</td>
+                            <td>{{ param.sort_order }}</td>
+                            <td>
+                                {% if param.is_active %}
+                                <span class="badge bg-success">{{ 'نشط' if current_locale == 'ar' else 'Active' }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ 'غير نشط' if current_locale == 'ar' else 'Inactive' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if can('admin', 'product_parameters_edit') %}<a href="{{ url_for('admin.edit_product_parameter', id=param.id) }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>{% endif %}
+                                    {% if can('admin', 'product_parameters_delete') %}<form method="POST" action="{{ url_for('admin.delete_product_parameter', id=param.id) }}"
+                                          onsubmit="return confirm('{{ 'هل أنت متأكد من الحذف؟' if current_locale == 'ar' else 'Are you sure you want to delete?' }}');" style="display: inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        {% if can('admin', 'product_parameters_delete') %}<button type="submit" class="btn btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>{% endif %}
+                                    </form>{% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if not parameters %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-3">{{ 'لا توجد معاملات' if current_locale == 'ar' else 'No parameters found' }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

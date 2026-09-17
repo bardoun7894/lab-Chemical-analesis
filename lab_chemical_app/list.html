@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+
+{% block title %}Mechanical Tests{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>
+                        <i class="bi bi-gear"></i>
+                        {{ 'الاختبارات الميكانيكية' if current_locale == 'ar' else 'Mechanical Tests' }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        {{ 'قائمة جميع الاختبارات الميكانيكية' if current_locale == 'ar' else 'List of all mechanical tests' }}
+                    </p>
+                </div>
+                <a href="{{ url_for('mechanical.add') }}" class="btn btn-warning">
+                    <i class="bi bi-plus-circle"></i>
+                    {{ 'إضافة اختبار' if current_locale == 'ar' else 'Add Test' }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'من تاريخ' if current_locale == 'ar' else 'From Date' }}</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'إلى تاريخ' if current_locale == 'ar' else 'To Date' }}</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</label>
+                    <select name="diameter" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        <option value="300" {{ 'selected' if selected_diameter == 300 }}>DN300</option>
+                        <option value="400" {{ 'selected' if selected_diameter == 400 }}>DN400</option>
+                        <option value="500" {{ 'selected' if selected_diameter == 500 }}>DN500</option>
+                        <option value="600" {{ 'selected' if selected_diameter == 600 }}>DN600</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</label>
+                    <select name="decision" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        <option value="ACCEPT" {{ 'selected' if selected_decision == 'ACCEPT' }}>Accept</option>
+                        <option value="REJECT" {{ 'selected' if selected_decision == 'REJECT' }}>Reject</option>
+                        <option value="HOLD" {{ 'selected' if selected_decision == 'HOLD' }}>Hold</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'تجميع حسب' if current_locale == 'ar' else 'Group by' }}</label>
+                    <select name="group_by" class="form-select">
+                        <option value="">{{ 'بدون' if current_locale == 'ar' else '(none)' }}</option>
+                        <option value="diameter" {{ 'selected' if group_by == 'diameter' }}>{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</option>
+                        <option value="decision" {{ 'selected' if group_by == 'decision' }}>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</option>
+                        <option value="shift" {{ 'selected' if group_by == 'shift' }}>{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</option>
+                        <option value="status" {{ 'selected' if group_by == 'status' }}>{{ 'الحالة' if current_locale == 'ar' else 'Status' }}</option>
+                        <option value="test_date" {{ 'selected' if group_by == 'test_date' }}>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</option>
+                    </select>
+                </div>
+
+                {% set adv_open = filters.code or filters.pipe_code or filters.ladle_id or filters.shift or filters.status or filters.tester_name
+                    or filters.tensile_mpa_min or filters.tensile_mpa_max or filters.elongation_min or filters.elongation_max
+                    or filters.hardness_min or filters.hardness_max or filters.nodularity_percent_min or filters.nodularity_percent_max %}
+
+                <!-- Advanced filter panel -->
+                <div class="col-12">
+                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#advancedFilter"
+                            aria-expanded="{{ 'true' if adv_open else 'false' }}">
+                        <i class="bi bi-sliders"></i>
+                        {{ 'فلتر متقدم' if current_locale == 'ar' else 'Advanced Filter' }}
+                    </button>
+                </div>
+                <div class="col-12 collapse {{ 'show' if adv_open }}" id="advancedFilter">
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'الكود' if current_locale == 'ar' else 'Code' }}</label>
+                            <input type="text" name="code" class="form-control" value="{{ filters.code or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'كود الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}</label>
+                            <input type="text" name="pipe_code" class="form-control" value="{{ filters.pipe_code or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</label>
+                            <input type="text" name="ladle_id" class="form-control" value="{{ filters.ladle_id or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'الفاحص' if current_locale == 'ar' else 'Tester' }}</label>
+                            <input type="text" name="tester_name" class="form-control" value="{{ filters.tester_name or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</label>
+                            <select name="shift" class="form-select">
+                                <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                                <option value="1" {{ 'selected' if filters.shift == 1 }}>1</option>
+                                <option value="2" {{ 'selected' if filters.shift == 2 }}>2</option>
+                                <option value="3" {{ 'selected' if filters.shift == 3 }}>3</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'الحالة' if current_locale == 'ar' else 'Status' }}</label>
+                            <select name="status" class="form-select">
+                                <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                                <option value="ACTIVE" {{ 'selected' if filters.status == 'ACTIVE' }}>ACTIVE</option>
+                                <option value="SUPERSEDED" {{ 'selected' if filters.status == 'SUPERSEDED' }}>SUPERSEDED</option>
+                            </select>
+                        </div>
+                        {% for fld, lbl, step in [
+                            ('tensile_mpa', ('قوة الشد' if current_locale == 'ar' else 'Tensile (MPa)'), '0.1'),
+                            ('elongation', ('الاستطالة' if current_locale == 'ar' else 'Elongation'), '0.1'),
+                            ('hardness', ('الصلادة' if current_locale == 'ar' else 'Hardness'), '1'),
+                            ('nodularity_percent', ('النودولارية' if current_locale == 'ar' else 'Nodularity'), '0.1')
+                        ] %}
+                        <div class="col-md-3">
+                            <label class="form-label">{{ lbl }} {{ 'مدى' if current_locale == 'ar' else 'range' }}</label>
+                            <div class="input-group">
+                                <input type="number" step="{{ step }}" name="{{ fld }}_min" class="form-control" placeholder="min" value="{{ filters[fld ~ '_min'] or '' }}">
+                                <input type="number" step="{{ step }}" name="{{ fld }}_max" class="form-control" placeholder="max" value="{{ filters[fld ~ '_max'] or '' }}">
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i>
+                        {{ 'بحث' if current_locale == 'ar' else 'Search' }}
+                    </button>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{{ url_for('mechanical.list') }}" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-x-circle"></i>
+                        {{ 'مسح' if current_locale == 'ar' else 'Clear' }}
+                    </a>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{{ url_for('mechanical.export_excel') }}?{{ request.query_string.decode() }}" class="btn btn-outline-success w-100">
+                        <i class="bi bi-file-earmark-excel"></i>
+                        {{ 'تصدير' if current_locale == 'ar' else 'Export' }}
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                            <th>{{ 'كود الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}</th>
+                            <th>{{ 'القطر' if current_locale == 'ar' else 'DN' }}</th>
+                            <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
+                            <th>{{ 'قوة الشد' if current_locale == 'ar' else 'Tensile' }}</th>
+                            <th>{{ 'الاستطالة' if current_locale == 'ar' else 'Elongation' }}</th>
+                            <th>{{ 'الصلادة' if current_locale == 'ar' else 'Hardness' }}</th>
+                            <th>{{ 'النودولارية' if current_locale == 'ar' else 'Nodularity' }}</th>
+                            <th>{{ 'القرار' if current_locale == 'ar' else 'Decision' }}</th>
+                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    {% macro render_test_row(test) %}
+                        <tr>
+                            <td>{{ test.test_date }}</td>
+                            <td><strong>{{ test.pipe_code or test.code or '-' }}</strong></td>
+                            <td>DN{{ test.diameter or '?' }}</td>
+                            <td><small class="text-muted">{{ test.ladle_id or '-' }}</small></td>
+                            <td>{{ '%.1f'|format(test.tensile_mpa or (test.tensile_strength * 9.8 if test.tensile_strength else 0)) if test.tensile_strength or test.tensile_mpa else '-' }} MPa</td>
+                            <td>{{ '%.1f'|format(test.elongation) if test.elongation else '-' }}%</td>
+                            <td>{{ '%.0f'|format(test.hardness) if test.hardness else '-' }} HB</td>
+                            <td>{{ '%.1f'|format(test.nodularity_percent) if test.nodularity_percent else '-' }}%</td>
+                            <td>
+                                {% if test.decision == 'ACCEPT' %}
+                                <span class="badge bg-success">{{ test.decision }}</span>
+                                {% elif test.decision == 'REJECT' %}
+                                <span class="badge bg-danger">{{ test.decision }}</span>
+                                {% elif test.decision == 'HOLD' %}
+                                <span class="badge bg-warning text-dark">{{ test.decision }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ test.decision or '-' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('mechanical.detail', id=test.id) }}" class="btn btn-outline-info" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('mechanical.edit', id=test.id) }}" class="btn btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endmacro %}
+                    <tbody>
+                        {% if grouped is not none %}
+                            {% for group_label, group_rows in grouped %}
+                            <tr class="table-secondary fw-bold">
+                                <td colspan="10">{{ group_label }} <span class="badge bg-dark">{{ group_rows|length }}</span></td>
+                            </tr>
+                            {% for test in group_rows %}
+                                {{ render_test_row(test) }}
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="10" class="text-center py-4 text-muted">
+                                    {{ 'لا توجد نتائج' if current_locale == 'ar' else 'No results found' }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            {% for test in tests %}
+                                {{ render_test_row(test) }}
+                            {% else %}
+                            <tr>
+                                <td colspan="10" class="text-center py-4 text-muted">
+                                    {{ 'لا توجد نتائج' if current_locale == 'ar' else 'No results found' }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if total > 0 %}
+        {% if grouped is not none %}
+        <div class="card-footer bg-white">
+            <small class="text-muted">
+                {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ total }}
+                {{ 'اختبار' if current_locale == 'ar' else 'tests' }}
+            </small>
+        </div>
+        {% elif tests and tests.pages > 0 %}
+        {% set base_args = request.args.to_dict() %}
+        {% set _ = base_args.pop('page', None) %}
+        {% set _ = base_args.pop('per_page', None) %}
+        <div class="card-footer bg-white">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <small class="text-muted">
+                    {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ tests.total }}
+                    {{ 'اختبار' if current_locale == 'ar' else 'tests' }}
+                    {% if tests.pages > 1 %}
+                    &middot;
+                    {{ 'صفحة' if current_locale == 'ar' else 'Page' }}
+                    {{ tests.page }} / {{ tests.pages }}
+                    {% endif %}
+                </small>
+
+                {% if tests.pages > 1 %}
+                <nav aria-label="{{ 'ترقيم الصفحات' if current_locale == 'ar' else 'Pagination' }}">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item {{ 'disabled' if not tests.has_prev }}">
+                            <a class="page-link"
+                               href="{{ url_for('mechanical.list', page=tests.prev_num, per_page=per_page, **base_args) }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% for p in tests.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+                            {% if p %}
+                            <li class="page-item {{ 'active' if p == tests.page }}">
+                                <a class="page-link"
+                                   href="{{ url_for('mechanical.list', page=p, per_page=per_page, **base_args) }}">{{ p }}</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        <li class="page-item {{ 'disabled' if not tests.has_next }}">
+                            <a class="page-link"
+                               href="{{ url_for('mechanical.list', page=tests.next_num, per_page=per_page, **base_args) }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                {% endif %}
+
+                <div class="d-flex align-items-center gap-1">
+                    <small class="text-muted">{{ 'لكل صفحة' if current_locale == 'ar' else 'Per page' }}</small>
+                    <select class="form-select form-select-sm" style="width: auto;"
+                            onchange="window.location.href = this.value;">
+                        {% for opt in per_page_options %}
+                        <option value="{{ url_for('mechanical.list', page=1, per_page=opt, **base_args) }}"
+                                {{ 'selected' if opt == per_page }}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card-footer bg-white">
+            <small class="text-muted">
+                {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ total }}
+                {{ 'اختبار' if current_locale == 'ar' else 'tests' }}
+            </small>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

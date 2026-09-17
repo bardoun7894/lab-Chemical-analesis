@@ -1,0 +1,41 @@
+okf/
+
+# Local isolated development worktrees
+.worktrees/
+
+# Local DB backups produced by /admin/settings/backups — never commit
+app/data/backups/
+
+# The SQLite database is per-install runtime state, never source. It was
+# tracked between 1f235fb (2026-02-04) and 2026-08-18; while tracked, the
+# 2026-08-17 deploy shipped the dev DB over production and wiped it
+# (187 pipes -> 59). Keep it out of git so a deploy can never do that again.
+lab_chemical.db
+lab_chemical.db-wal
+lab_chemical.db-shm
+lab_chemical.db.bak*
+lab_chemical.db.broken*
+
+# Per-install runtime config written through /admin/settings. app_settings.json
+# also holds live API keys, so it must never be committed. Ship defaults via
+# app/data/app_settings.example.json instead. element_rules.json and
+# mechanical_rules.json stay tracked — those are shipped spec defaults.
+app/data/app_settings.json
+app/data/kpis.json
+app/data/dashboards.json
+
+# macOS
+.DS_Store
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments — never commit, 100+ MB
+.venv/
+venv/
+
+# KB session transcripts — raw JSONL files may capture pasted secrets
+# (API keys, passwords). Ingested content lives in knowledge/ which IS tracked.
+ai-knowledge-base/raw/sessions/

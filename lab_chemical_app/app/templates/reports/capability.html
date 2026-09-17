@@ -1,0 +1,184 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block filters %}
+<div class="col-md-3">
+    <label class="form-label small">Characteristic</label>
+    <select name="characteristic" class="form-select form-select-sm">
+        {% for key, (label, _f) in data.characteristics.items() %}
+        <option value="{{ key }}" {{ 'selected' if data.characteristic == key }}
+                {{ 'disabled' if key in data.unavailable }}>
+            {{ label }}{{ ' (no limits)' if key in data.unavailable }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+<div class="col-md-2">
+    <label class="form-label small">From date</label>
+    <input type="date" name="date_from" class="form-control form-control-sm"
+           value="{{ data.filters.date_from or '' }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">To date</label>
+    <input type="date" name="date_to" class="form-control form-control-sm"
+           value="{{ data.filters.date_to or '' }}">
+</div>
+<div class="col-md-2">
+    <label class="form-label small">DN</label>
+    <select name="diameter" class="form-select form-select-sm">
+        <option value="">All</option>
+        {% for dn in [80, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200] %}
+        <option value="{{ dn }}" {{ 'selected' if data.filters.diameter == dn }}>DN{{ dn }}</option>
+        {% endfor %}
+    </select>
+</div>
+<div class="col-md-2">
+    <label class="form-label small">Order</label>
+    <select name="production_order_id" class="form-select form-select-sm">
+        <option value="">All</option>
+        {% for o in orders %}
+        <option value="{{ o.id }}" {{ 'selected' if data.filters.production_order_id == o.id }}>
+            {{ o.order_number }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+{% endblock %}
+
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{% if data.series.truncated %}
+<div class="alert alert-warning py-2">
+    Series truncated to the first {{ data.series.cap }} of {{ data.series.total }} points.
+</div>
+{% endif %}
+
+{% if data.spec is none %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No spec limits configured for
+    <strong>{{ data.characteristics[data.characteristic][0] }}</strong> — capability
+    indices are unavailable (never fabricated).
+    {% if data.limit_note %}
+    <div class="mt-1"><strong>{{ data.limit_note }}</strong></div>
+    {% endif %}
+</div>
+{% elif data.indices is none %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> Insufficient or zero-variation data — at least
+    2 varying points are required for capability indices.
+</div>
+{% else %}
+
+{% if data.indices.low_confidence %}
+<div class="alert alert-warning py-2">
+    <i class="bi bi-exclamation-triangle"></i>
+    Low confidence (n = {{ data.indices.n }} &lt; 30) — interpret indices with care.
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="text-muted small">Spec limits ({{ data.spec.source }})</div>
+            <div class="fs-5">
+                {% if data.spec.lsl is not none %}LSL {{ '%.3f'|format(data.spec.lsl) }}{% endif %}
+                {% if not data.spec.one_sided %} — USL {{ '%.3f'|format(data.spec.usl) }}
+                {% elif data.spec.usl is not none %}USL {{ '%.3f'|format(data.spec.usl) }}{% endif %}
+                {{ '(one-sided)' if data.spec.one_sided }}
+            </div>
+        </div></div>
+    </div>
+    {% for label, key in [('Cp', 'cp'), ('Cpk', 'cpk'), ('Pp', 'pp'), ('Ppk', 'ppk')] %}
+    <div class="col-md-2">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="text-muted small">{{ label }}</div>
+            <div class="fs-4 fw-bold {{ 'text-success' if data.indices[key] and data.indices[key] >= 1.33 else 'text-warning' }}">
+                {{ '%.3f'|format(data.indices[key]) if data.indices[key] is not none else '—' }}
+            </div>
+        </div></div>
+    </div>
+    {% endfor %}
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body text-center">
+            <div class="text-muted small">Sigma level / DPMO</div>
+            <div class="fs-5">{{ '%.2f'|format(data.indices.sigma_level) }}σ ·
+                {{ '%.0f'|format(data.indices.dpmo) }} DPMO</div>
+            <div class="text-muted small">n = {{ data.indices.n }} ·
+                σ within {{ '%.4f'|format(data.indices.sigma_within) }} ·
+                σ overall {{ '%.4f'|format(data.indices.sigma_overall) }}</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header"><h6 class="mb-0">Distribution vs spec limits</h6></div>
+    <div class="card-body"><canvas id="capChart" height="80"></canvas></div>
+</div>
+
+<script>
+(function () {
+    const hist = {{ data.histogram | tojson }};
+    const lsl = {{ data.spec.lsl if data.spec.lsl is not none else 'null' }};
+    const usl = {{ data.spec.usl if data.spec.usl is not none else 'null' }};
+    const centers = [];
+    for (let i = 0; i < hist.counts.length; i++) {
+        centers.push((hist.edges[i] + hist.edges[i + 1]) / 2);
+    }
+    const specLines = {
+        id: 'specLines',
+        afterDatasetsDraw(chart) {
+            const {ctx, chartArea, scales} = chart;
+            if (!chartArea) return;
+            ctx.save();
+            ctx.strokeStyle = '#dc3545';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            [[lsl, 'LSL'], [usl, 'USL']].forEach(([v, label]) => {
+                if (v === null) return;
+                const x = scales.x.getPixelForValue(v);
+                ctx.beginPath();
+                ctx.moveTo(x, chartArea.top);
+                ctx.lineTo(x, chartArea.bottom);
+                ctx.stroke();
+                ctx.fillStyle = '#dc3545';
+                ctx.fillText(label, x + 4, chartArea.top + 10);
+            });
+            ctx.restore();
+        }
+    };
+    new Chart(document.getElementById('capChart'), {
+        type: 'bar',
+        data: {
+            labels: centers,
+            datasets: [{
+                label: 'Frequency',
+                data: hist.counts.map((c, i) => ({x: centers[i], y: c})),
+                backgroundColor: '#0d6efd',
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { type: 'linear', title: { display: true, text: 'Value' } },
+                y: { beginAtZero: true, title: { display: true, text: 'Count' } }
+            }
+        },
+        plugins: [specLines]
+    });
+})();
+</script>
+{% endif %}
+
+{% if data.unavailable %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header"><h6 class="mb-0">Characteristics without spec limits</h6></div>
+    <div class="card-body small text-muted">
+        {{ data.unavailable | length }} characteristics have no stored
+        limits and are excluded from capability reporting:
+        {{ data.unavailable | join(', ') }}.
+        Configure limits in element rules to enable them.
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -148,7 +148,7 @@ function addElement() {
         return;
     }
 
-    fetch('/admin/api/element-rules/add', {
+    fetch(window.APP_ROOT + '/admin/api/element-rules/add', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -180,7 +180,7 @@ function deleteElement(element) {
         return;
     }
 
-    fetch('/admin/api/element-rules/' + element, {
+    fetch(window.APP_ROOT + '/admin/api/element-rules/' + element, {
         method: 'DELETE',
         headers: {
             'X-CSRFToken': '{{ csrf_token() }}'

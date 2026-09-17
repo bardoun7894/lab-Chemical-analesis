@@ -1,0 +1,42 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+<div class="alert alert-info">Based on {{ data.tests }} active mechanical tests in the selected date range.</div>
+
+<div class="row g-3">
+    {% for property, stat in data.stats.items() %}
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header"><strong>{{ property|replace('_', ' ')|capitalize }}</strong></div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr><td>Total</td><td class="text-end">{{ stat.total }}</td></tr>
+                    <tr><td>Average</td><td class="text-end"><strong>{{ stat.avg }}</strong></td></tr>
+                    <tr><td>Max</td><td class="text-end text-success">{{ stat.max }}</td></tr>
+                    <tr><td>Min</td><td class="text-end text-danger">{{ stat.min }}</td></tr>
+                    <tr><td>Std Dev</td><td class="text-end">{{ stat.std }}</td></tr>
+                    <tr><td>Count</td><td class="text-end">{{ stat.count }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if data.histogram %}
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-header">Tensile Strength (MPa) Distribution</div>
+    <div class="card-body">
+        {% for bucket in data.histogram %}
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <div style="width: 120px" class="small text-muted">{{ bucket.range }}</div>
+            <div class="flex-grow-1 bg-light">
+                <div class="bg-primary" style="width: {{ (bucket.count / data.tests * 100)|round }}%; height: 20px;"></div>
+            </div>
+            <div style="width: 60px" class="text-end">{{ bucket.count }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

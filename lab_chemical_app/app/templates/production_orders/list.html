@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% from 'components/table_tools.html' import table_tools %}
 
 {% block title %}{{ 'أوامر الإنتاج' if current_locale == 'ar' else 'Production Orders' }}{% endblock %}
 
@@ -41,12 +42,73 @@
                         <option value="cancelled" {{ 'selected' if status == 'cancelled' }}>{{ 'ملغي' if current_locale == 'ar' else 'Cancelled' }}</option>
                     </select>
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</label>
+                    <input type="text" name="customer" class="form-control"
+                           placeholder="{{ 'اسم أو كود العميل...' if current_locale == 'ar' else 'Customer name or code...' }}"
+                           value="{{ customer }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'رقم أمر البيع' if current_locale == 'ar' else 'Sales Number' }}</label>
+                    <input type="text" name="sales_number" class="form-control"
+                           value="{{ sales_number }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'رقم أمر الإنتاج' if current_locale == 'ar' else 'Production Order' }}</label>
+                    <input type="text" name="order_number" class="form-control"
+                           value="{{ order_number }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'المنتج' if current_locale == 'ar' else 'Product' }}</label>
+                    <select name="product_id" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        {% for p in product_options %}
+                        <option value="{{ p.id }}" {{ 'selected' if product_id|string == p.id|string }}>{{ p.product_code }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'من تاريخ' if current_locale == 'ar' else 'Date From' }}</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ 'إلى تاريخ' if current_locale == 'ar' else 'Date To' }}</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</label>
+                    <select name="diameter" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        {% for d in diameter_options %}
+                        <option value="{{ d }}" {{ 'selected' if diameter|string == d|string }}>DN{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'الفئة' if current_locale == 'ar' else 'Class' }}</label>
+                    <select name="pipe_class" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        {% for c in pipe_class_options %}
+                        <option value="{{ c }}" {{ 'selected' if pipe_class == c }}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'الأولوية' if current_locale == 'ar' else 'Priority' }}</label>
+                    <select name="priority" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        <option value="low" {{ 'selected' if priority == 'low' }}>{{ 'منخفض' if current_locale == 'ar' else 'Low' }}</option>
+                        <option value="normal" {{ 'selected' if priority == 'normal' }}>{{ 'عادي' if current_locale == 'ar' else 'Normal' }}</option>
+                        <option value="high" {{ 'selected' if priority == 'high' }}>{{ 'عالي' if current_locale == 'ar' else 'High' }}</option>
+                        <option value="urgent" {{ 'selected' if priority == 'urgent' }}>{{ 'عاجل' if current_locale == 'ar' else 'Urgent' }}</option>
+                    </select>
+                </div>
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-outline-primary w-100">
                         <i class="bi bi-search"></i> {{ 'بحث' if current_locale == 'ar' else 'Search' }}
                     </button>
                 </div>
-                {% if search or status %}
+                {% if search or status or customer or sales_number or order_number or product_id or date_from or date_to or diameter or pipe_class or priority %}
                 <div class="col-md-2">
                     <a href="{{ url_for('production_orders.index') }}" class="btn btn-outline-secondary w-100">
                         <i class="bi bi-x-lg"></i> {{ 'مسح' if current_locale == 'ar' else 'Clear' }}
@@ -59,36 +121,39 @@
 
     <!-- Orders Table -->
     <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-end align-items-center">
+            {{ table_tools('orders', export_url=url_for('production_orders.export_excel'), columns=picker_columns) }}
+        </div>
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0" data-table-tools="orders" data-row-select>
                 <thead class="table-light">
                     <tr>
-                        <th>{{ 'رقم الأمر' if current_locale == 'ar' else 'Order #' }}</th>
-                        <th>{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</th>
-                        <th>{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</th>
-                        <th>{{ 'الكمية' if current_locale == 'ar' else 'Quantity' }}</th>
-                        <th>{{ 'التقدم' if current_locale == 'ar' else 'Progress' }}</th>
-                        <th>{{ 'الحالة' if current_locale == 'ar' else 'Status' }}</th>
-                        <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
-                        <th>{{ 'الإجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                        <th data-col="order_no">{{ 'رقم الأمر' if current_locale == 'ar' else 'Order #' }}</th>
+                        <th data-col="customer">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</th>
+                        <th data-col="diameter">{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</th>
+                        <th data-col="quantity">{{ 'الكمية' if current_locale == 'ar' else 'Quantity' }}</th>
+                        <th data-col="progress">{{ 'التقدم' if current_locale == 'ar' else 'Progress' }}</th>
+                        <th data-col="status">{{ 'الحالة' if current_locale == 'ar' else 'Status' }}</th>
+                        <th data-col="date">{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                        <th data-col="actions" data-col-label="{{ 'الإجراءات' if current_locale == 'ar' else 'Actions' }}">{{ 'الإجراءات' if current_locale == 'ar' else 'Actions' }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for order in orders.items %}
-                    <tr>
-                        <td>
+                    <tr data-row-id="{{ order.id }}">
+                        <td data-col="order_no">
                             <a href="{{ url_for('production_orders.view', id=order.id) }}" class="fw-bold text-decoration-none">
                                 {{ order.order_number }}
                             </a>
                         </td>
-                        <td>{{ order.customer_name or '-' }}</td>
-                        <td>DN{{ order.diameter }} {{ order.pipe_class or '' }}</td>
-                        <td>
+                        <td data-col="customer">{{ order.customer_name or '-' }}</td>
+                        <td data-col="diameter">DN{{ order.diameter }} {{ order.pipe_class or '' }}</td>
+                        <td data-col="quantity">
                             <span class="badge bg-secondary">{{ order.produced_quantity }}</span>
                             /
                             <span>{{ order.target_quantity }}</span>
                         </td>
-                        <td>
+                        <td data-col="progress">
                             <div class="progress" style="width: 100px; height: 20px;">
                                 <div class="progress-bar {{ 'bg-success' if order.progress_percentage >= 100 else 'bg-primary' }}"
                                      role="progressbar"
@@ -100,7 +165,7 @@
                                 </div>
                             </div>
                         </td>
-                        <td>
+                        <td data-col="status">
                             {% if order.status == 'pending' %}
                                 <span class="badge bg-warning text-dark">{{ 'قيد الانتظار' if current_locale == 'ar' else 'Pending' }}</span>
                             {% elif order.status == 'in_progress' %}
@@ -111,8 +176,8 @@
                                 <span class="badge bg-danger">{{ 'ملغي' if current_locale == 'ar' else 'Cancelled' }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ order.order_date.strftime('%Y-%m-%d') if order.order_date else '-' }}</td>
-                        <td>
+                        <td data-col="date">{{ order.order_date.strftime('%Y-%m-%d') if order.order_date else '-' }}</td>
+                        <td data-col="actions">
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ url_for('production_orders.view', id=order.id) }}" class="btn btn-outline-info" title="View">
                                     <i class="bi bi-eye"></i>
@@ -145,7 +210,7 @@
                 <ul class="pagination justify-content-center mb-0">
                     {% if orders.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('production_orders.index', page=orders.prev_num, status=status, search=search) }}">
+                        <a class="page-link" href="{{ url_for('production_orders.index', page=orders.prev_num, status=status, search=search, customer=customer, sales_number=sales_number, order_number=order_number, product_id=product_id, date_from=date_from, date_to=date_to, diameter=diameter, pipe_class=pipe_class, priority=priority) }}">
                             &laquo; {{ 'السابق' if current_locale == 'ar' else 'Previous' }}
                         </a>
                     </li>
@@ -154,7 +219,7 @@
                     {% for p in orders.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                         {% if p %}
                             <li class="page-item {{ 'active' if p == orders.page }}">
-                                <a class="page-link" href="{{ url_for('production_orders.index', page=p, status=status, search=search) }}">{{ p }}</a>
+                                <a class="page-link" href="{{ url_for('production_orders.index', page=p, status=status, search=search, customer=customer, sales_number=sales_number, order_number=order_number, product_id=product_id, date_from=date_from, date_to=date_to, diameter=diameter, pipe_class=pipe_class, priority=priority) }}">{{ p }}</a>
                             </li>
                         {% else %}
                             <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -163,7 +228,7 @@
 
                     {% if orders.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('production_orders.index', page=orders.next_num, status=status, search=search) }}">
+                        <a class="page-link" href="{{ url_for('production_orders.index', page=orders.next_num, status=status, search=search, customer=customer, sales_number=sales_number, order_number=order_number, product_id=product_id, date_from=date_from, date_to=date_to, diameter=diameter, pipe_class=pipe_class, priority=priority) }}">
                             {{ 'التالي' if current_locale == 'ar' else 'Next' }} &raquo;
                         </a>
                     </li>

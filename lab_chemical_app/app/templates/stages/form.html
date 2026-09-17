@@ -1,4 +1,10 @@
 {% extends 'base.html' %}
+{% import 'components/_standard_dims.html' as std_dims with context %}
+{% import 'components/_standard_row.html' as std_row with context %}
+{% import 'components/_lining_points.html' as lining with context %}
+{% import 'components/_zinc_mass.html' as zinc_mass with context %}
+{% import 'components/_ring_test.html' as ring_test with context %}
+{% import 'components/_multi_select.html' as multi with context %}
 
 {% block title %}{{ 'Edit' if pipe else 'Register' }} Pipe{% endblock %}
 
@@ -21,11 +27,61 @@
                     <li class="breadcrumb-item active">{{ 'Edit' if pipe else 'Register' }}</li>
                 </ol>
             </nav>
+            {% if pipe %}
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small">{{ 'حالة الأنبوب:' if current_locale == 'ar' else 'Pipe Status:' }}</span>
+                {% set ld = pipe.lab_decision or 'N/A' %}
+                {% set ld_color = 'success' if ld == 'ACCEPT' else ('danger' if ld in ('REJECT', 'BLOCKED') else ('warning' if ld == 'HOLD' else ('info' if ld == 'WAITING' else ('primary' if ld == 'FROZEN' else 'secondary')))) %}
+                <span class="badge bg-{{ ld_color }}">Lab: {{ ld }}</span>
+                {% set fd = pipe.final_decision_value %}
+                {% if fd %}
+                {% set fd_color = 'success' if fd == 'ACCEPT' else ('danger' if fd == 'REJECT' else 'warning') %}
+                <span class="badge bg-{{ fd_color }}">Final: {{ fd }}</span>
+                {% else %}
+                <span class="badge bg-secondary">Final: —</span>
+                {% endif %}
+                {% if pipe.mechanical_test_role %}
+                <span class="badge bg-dark">Role: {{ pipe.mechanical_test_role }}{% if pipe.mechanical_test_role in ('FIRST', 'LAST') %} ⭐{% endif %}</span>
+                {% endif %}
+                {% if pipe.ladle_id %}
+                <a href="{{ url_for('chemical.detail', id=pipe.chemical_analysis.id) if pipe.chemical_analysis else '#' }}" class="badge bg-primary text-decoration-none">
+                    <i class="bi bi-link-45deg"></i> Ladle: {{ pipe.ladle_id }}
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
     </div>
 
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- OCR Upload Card -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
+                <h6 class="mb-0"><i class="bi bi-camera"></i> {{ 'خيار 2: رفع صورة للتعبئة التلقائية' if current_locale == 'ar' else 'Option 2: Upload image to auto-fill' }}</h6>
+                <span class="badge bg-light text-primary">AI Vision OCR</span>
+            </div>
+            <div class="card-body py-2">
+                <div class="row align-items-center g-2">
+                    <div class="col-md-6">
+                        <input type="file" id="pipeOcrInput" class="form-control form-control-sm" accept="image/*" capture="environment">
+                        <small class="text-muted">{{ 'صور بطاقة الماسورة أو ورقة البيانات — يتم استخراج كل القيم تلقائياً' if current_locale == 'ar' else 'Photograph pipe label or data sheet — all values extracted automatically' }}</small>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-primary btn-sm w-100" id="pipeOcrBtn" disabled>
+                            <i class="bi bi-cpu"></i> {{ 'استخراج' if current_locale == 'ar' else 'Extract' }}
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <div id="pipeOcrStatus" style="display:none;">
+                            <div class="spinner-border spinner-border-sm text-primary" id="pipeOcrSpinner" style="display:none;"></div>
+                            <small id="pipeOcrMsg" class="text-muted"></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="row">
             <!-- Left Column - Basic Info -->
@@ -49,7 +105,12 @@
                                     {{ 'selected' if (pipe and pipe.production_order_id == order.id) or (selected_order_id == order.id) }}
                                     data-diameter="{{ order.diameter }}"
                                     data-type="{{ order.pipe_class }}"
-                                    data-ladles="{{ order_ladles|map(attribute='ladle_id')|list|join(',') }}">
+                                    data-ladles="{{ order_ladles|map(attribute='ladle_id')|list|join(',') }}"
+                                    data-product-id="{{ order.product_id }}"
+                                    {# the spec the run is built to: the
+                                       product's figures for the standard this
+                                       order picked, not the order's own copy #}
+                                    data-app='{{ order.effective_application()|tojson }}'>
                                     {{ order.order_number }} - {{ order.customer_name or 'No Customer' }}
                                     ({{ order.produced_quantity }}/{{ order.target_quantity }})
                                 </option>
@@ -58,6 +119,26 @@
                             <small class="text-muted">
                                 {{ 'اختر أمر الإنتاج لربط الأنبوب به' if current_locale == 'ar' else 'Select a production order to link this pipe to' }}
                             </small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'المنتج' if current_locale == 'ar' else 'Product' }}</label>
+                            <select name="product_id" class="form-select" id="productSelect">
+                                <option value="">-- {{ 'اختر المنتج' if current_locale == 'ar' else 'Select Product' }} --</option>
+                                {% for prod in products %}
+                                {% set prod_dn = product_dn_map.get(prod.id) or '' %}
+                                {% set prod_class = prod.class_param.code if prod.class_param else '' %}
+                                {% set prod_weight = prod.weight_kg or '' %}
+                                <option value="{{ prod.id }}" {{ 'selected' if pipe and pipe.product_id == prod.id }}
+                                    data-dn="{{ prod_dn }}"
+                                    data-class="{{ prod_class }}"
+                                    data-weight="{{ prod_weight }}"
+                                    data-desc="{{ prod.description_en or '' }}"
+                                    data-zinc="{{ prod.zinc_type_param.name_en if prod.zinc_type_param else '' }}"
+                                    data-intent="{{ prod.intent_use_param.name_en if prod.intent_use_param else '' }}">
+                                    {{ prod.product_code }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -71,21 +152,10 @@
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">{{ 'كود الأنبوب' if current_locale == 'ar' else 'No. Code' }} *</label>
-                                <input type="text" name="no_code" id="noCodeInput" class="form-control" required
-                                       placeholder="N8739" value="{{ pipe.no_code if pipe else '' }}">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">{{ 'ترتيب الأنبوب' if current_locale == 'ar' else 'Pipe Order' }}</label>
-                                <input type="number" name="arrange_pipe" class="form-control" id="pipeOrderInput"
-                                       min="1" max="20" placeholder="1-20"
-                                       value="{{ pipe.arrange_pipe if pipe else 1 }}">
-                                <small class="text-muted">{{ '1-20' }}</small>
-                            </div>
-                            <div class="col-md-4">
+                            <!-- Row 1: Ladle ID (top — select first) -->
+                            <div class="col-12">
                                 <label class="form-label">{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</label>
-                                <select name="ladle_id" class="form-select" id="ladleIdSelect">
+                                <select name="ladle_id" class="form-select" id="ladleIdSelect" required>
                                     <option value="">-- {{ 'اختر معرف المغرفة' if current_locale == 'ar' else 'Select Ladle ID' }} --</option>
                                     {% for ladle in latest_ladles %}
                                     <option value="{{ ladle.ladle_id }}"
@@ -95,69 +165,118 @@
                                     </option>
                                     {% endfor %}
                                 </select>
-                                <small class="text-muted">{{ 'آخر 4 تحليلات كيميائية' if current_locale == 'ar' else "Latest 4 chemical analyses" }}</small>
-                                <div id="ladleInfo" class="mt-1" style="display: none;">
-                                    <span class="badge" id="ladleDecision"></span>
-                                </div>
+                                <small class="text-muted">{{ 'آخر 10 تحليلات كيميائية' if current_locale == 'ar' else 'Latest 10 chemical analyses' }}</small>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">{{ 'القطر' if current_locale == 'ar' else 'Diameter (DN)' }} *</label>
-                                <select name="diameter" class="form-select" required>
-                                    <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
-                                    <option value="300" {{ 'selected' if pipe and pipe.diameter == 300 }}>DN300</option>
-                                    <option value="400" {{ 'selected' if pipe and pipe.diameter == 400 }}>DN400</option>
-                                    <option value="500" {{ 'selected' if pipe and pipe.diameter == 500 }}>DN500</option>
-                                    <option value="600" {{ 'selected' if pipe and pipe.diameter == 600 }}>DN600</option>
-                                    <option value="700" {{ 'selected' if pipe and pipe.diameter == 700 }}>DN700</option>
-                                    <option value="800" {{ 'selected' if pipe and pipe.diameter == 800 }}>DN800</option>
-                                </select>
+
+                            <!-- Row 2: Identification + Date -->
+                            <div class="col-md-4">
+                                <label class="form-label">{{ 'كود الأنبوب' if current_locale == 'ar' else 'No. Code' }} *</label>
+                                <input type="text" name="no_code" id="noCodeInput" class="form-control" required
+                                       pattern="[A-Za-z][0-9]{4}" maxlength="5"
+                                       style="text-transform: uppercase"
+                                       title="{{ 'حرف واحد متبوعاً بأربعة أرقام (مثال: N8739)' if current_locale == 'ar' else 'One letter followed by four digits (e.g. N8739)' }}"
+                                       placeholder="N8739" value="{{ pipe.no_code if pipe else '' }}">
+                                <small class="text-muted">{{ 'حرف + 4 أرقام' if current_locale == 'ar' else '1 letter + 4 digits' }}</small>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">{{ 'الصنف' if current_locale == 'ar' else 'Class' }}</label>
-                                <select name="pipe_class" class="form-select">
-                                    <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
-                                    <option value="K9" {{ 'selected' if pipe and pipe.pipe_class == 'K9' }}>K9</option>
-                                    <option value="C25" {{ 'selected' if pipe and pipe.pipe_class == 'C25' }}>C25</option>
-                                    <option value="C40" {{ 'selected' if pipe and pipe.pipe_class == 'C40' }}>C40</option>
-                                    <option value="Fittings" {{ 'selected' if pipe and pipe.pipe_class == 'Fittings' }}>Fittings</option>
-                                </select>
+                            <div class="col-md-2">
+                                <label class="form-label">{{ 'ترتيب الأنبوب' if current_locale == 'ar' else 'Pipe Order' }}</label>
+                                <input type="number" name="arrange_pipe" class="form-control" id="pipeOrderInput"
+                                       min="1" max="20" placeholder="1-20"
+                                       value="{{ pipe.arrange_pipe if pipe else 1 }}">
+                                <!-- "1" while the order is still the server-suggested value; flipped to
+                                     "0" the moment the operator types their own. Lets the server bump a
+                                     raced/stale auto number silently instead of warning about it. -->
+                                <input type="hidden" name="arrange_pipe_auto" id="pipeOrderAuto"
+                                       value="{{ '0' if pipe else '1' }}">
+                                <small class="text-muted">{{ '1-20' }}</small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">{{ 'تاريخ الإنتاج' if current_locale == 'ar' else 'Production Date' }} *</label>
                                 <input type="date" name="production_date" class="form-control" required
                                        value="{{ pipe.production_date if pipe else today }}">
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</label>
-                                <select name="shift" class="form-select">
+
+                            <!-- Row 3: Specifications -->
+                            <div class="col-md-4">
+                                <label class="form-label">{{ 'القطر' if current_locale == 'ar' else 'Diameter (DN)' }} *</label>
+                                <select name="diameter" id="diameterSelect" class="form-select" required>
                                     <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
-                                    <option value="1" {{ 'selected' if pipe and pipe.shift == 1 }}>1 - Morning</option>
-                                    <option value="2" {{ 'selected' if pipe and pipe.shift == 2 }}>2 - Afternoon</option>
-                                    <option value="3" {{ 'selected' if pipe and pipe.shift == 3 }}>3 - Night</option>
+                                    {% for dn in dn_sizes %}
+                                    <option value="{{ dn }}" {{ 'selected' if pipe and pipe.diameter == dn }}>DN{{ dn }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
+                            <div class="col-md-4">
+                                <label class="form-label">{{ 'الصنف' if current_locale == 'ar' else 'Class' }}</label>
+                                <select name="pipe_class" class="form-select">
+                                    <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
+                                    {% for cls in pipe_classes %}
+                                    <option value="{{ cls }}" {{ 'selected' if pipe and pipe.pipe_class == cls }}>{{ cls }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">{{ 'رقم القالب' if current_locale == 'ar' else 'Mold Number' }}</label>
+                                <select name="mold_number" id="moldSelect" class="form-select"
+                                        data-selected="{{ pipe.mold_number if pipe else '' }}">
+                                    <option value="">-- {{ 'اختر القطر أولاً' if current_locale == 'ar' else 'Select diameter first' }} --</option>
+                                    {% for mold in molds %}
+                                    <option value="{{ mold.mold_number }}"
+                                            data-dn="{{ mold.diameter or '' }}"
+                                            {{ 'selected' if pipe and pipe.mold_number == mold.mold_number }}>
+                                        {{ mold.mold_number }}{% if mold.diameter %} (DN{{ mold.diameter }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">
+                                    {{ 'القوالب تتم تصفيتها تلقائياً حسب القطر' if current_locale == 'ar' else 'Molds filter automatically by diameter' }}
+                                </small>
+                            </div>
+
+                            <!-- Row 3: 2×2 Thickness Grid -->
+                            <div class="col-12 mb-1">
+                                <hr class="my-1">
+                                <small class="text-muted fw-bold">{{ 'السمك (mm)' if current_locale == 'ar' else 'Thickness (mm)' }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">{{ 'سمك المقبس 1' if current_locale == 'ar' else 'Socket Thickness 1' }}</label>
+                                <input type="number" name="thickness" class="form-control"
+                                       step="0.001" min="0" value="{{ pipe.thickness if pipe else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">{{ 'سمك المقبس 2' if current_locale == 'ar' else 'Socket Thickness 2' }}</label>
+                                <input type="number" name="thickness_socket_2" class="form-control"
+                                       step="0.001" min="0" value="{{ pipe.thickness_socket_2 if pipe else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">{{ 'سمك الطرف 1' if current_locale == 'ar' else 'Spigot Thickness 1' }}</label>
+                                <input type="number" name="thickness_spigot" class="form-control"
+                                       step="0.001" min="0" value="{{ pipe.thickness_spigot if pipe and pipe.thickness_spigot else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">{{ 'سمك الطرف 2' if current_locale == 'ar' else 'Spigot Thickness 2' }}</label>
+                                <input type="number" name="thickness_spigot_2" class="form-control"
+                                       step="0.001" min="0" value="{{ pipe.thickness_spigot_2 if pipe else '' }}">
+                            </div>
+
+                            <!-- Row 4: Measurements -->
                             <div class="col-md-6">
                                 <label class="form-label">{{ 'الوزن الفعلي (كجم)' if current_locale == 'ar' else 'Actual Weight (kg)' }}</label>
                                 <input type="number" name="actual_weight" class="form-control"
                                        step="0.1" min="0" value="{{ pipe.actual_weight if pipe else '' }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">{{ 'السُمك' if current_locale == 'ar' else 'Thickness' }}</label>
-                                <input type="number" name="thickness" class="form-control"
-                                       step="0.001" min="0" value="{{ pipe.thickness if pipe else '' }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">{{ 'رقم القالب' if current_locale == 'ar' else 'Mold Number' }}</label>
-                                <select name="mold_number" class="form-select">
-                                    <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
-                                    <option value="1462" {{ 'selected' if pipe and pipe.mold_number == '1462' }}>1462</option>
-                                    <option value="1465" {{ 'selected' if pipe and pipe.mold_number == '1465' }}>1465</option>
-                                    <option value="1467" {{ 'selected' if pipe and pipe.mold_number == '1467' }}>1467</option>
-                                    <option value="1468" {{ 'selected' if pipe and pipe.mold_number == '1468' }}>1468</option>
-                                    <option value="H157" {{ 'selected' if pipe and pipe.mold_number == 'H157' }}>H157</option>
-                                    <option value="T157" {{ 'selected' if pipe and pipe.mold_number == 'T157' }}>T157</option>
+                                <label class="form-label">{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</label>
+                                <select name="shift" class="form-select" id="shiftSelect">
+                                    <option value="">-- {{ 'تلقائي' if current_locale == 'ar' else 'Auto' }} --</option>
+                                    <option value="1" {{ 'selected' if pipe and pipe.shift == 1 }}>1 - Morning (8:00 - 4:00)</option>
+                                    <option value="2" {{ 'selected' if pipe and pipe.shift == 2 }}>2 - Afternoon (4:00 - 12:00)</option>
+                                    <option value="3" {{ 'selected' if pipe and pipe.shift == 3 }}>3 - Night (12:00 - 8:00)</option>
                                 </select>
+                                <small class="text-muted" id="shiftHint">{{ 'الوردية تحدد تلقائياً حسب الوقت' if current_locale == 'ar' else 'Shift auto-determined by time' }}</small>
                             </div>
+
+
                         </div>
                     </div>
                 </div>
@@ -181,8 +300,74 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">{{ 'مهندس الوردية' if current_locale == 'ar' else 'Shift Engineer' }}</label>
-                            <input type="text" name="shift_engineer" class="form-control"
-                                   value="{{ pipe.shift_engineer if pipe else '' }}">
+                            <select name="shift_engineer" class="form-select">
+                                <option value="">-- {{ 'اختر' if current_locale == 'ar' else 'Select' }} --</option>
+                                {% for u in shift_engineers %}
+                                <option value="{{ u.full_name or u.username }}"
+                                        {{ 'selected' if pipe and pipe.shift_engineer == (u.full_name or u.username) }}>
+                                    {{ u.full_name or u.username }} ({{ u.role }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Specifications -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-box-seam"></i>
+                            {{ 'مواصفات المنتج' if current_locale == 'ar' else 'Product Specifications' }}
+                        </h5>
+                    </div>
+                    <div class="card-body" id="productSpecsCard">
+                        <div class="row g-3">
+                            {# The product comes off the order unless the pipe
+                               names one itself — see Pipe.effective_product. #}
+                            {% set cur_prod = pipe.effective_product() if pipe else none %}
+                            {% set cur_desc = cur_prod.description_en if cur_prod else '' %}
+                            <div class="col-md-6">
+                                <label class="form-label">{{ 'نوع الزنك' if current_locale == 'ar' else 'Zinc Type' }}</label>
+                                <input type="text" class="form-control form-control-sm" id="pipeFieldZinc"
+                                       value="{{ cur_prod.zinc_type_param.name_en if cur_prod and cur_prod.zinc_type_param else '' }}" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ 'الاستخدام المقصود' if current_locale == 'ar' else 'Intended Use' }}</label>
+                                <input type="text" class="form-control form-control-sm" id="pipeFieldIntent"
+                                       value="{{ cur_prod.intent_use_param.name_en if cur_prod and cur_prod.intent_use_param else '' }}" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ 'التشطيب الداخلي' if current_locale == 'ar' else 'Internal Finish' }}</label>
+                                {# The product names both finishes outright; they were
+                                   left blank here and only ever filled by the JS that
+                                   picks them out of the description on a product change. #}
+                                <input type="text" class="form-control form-control-sm" id="pipeFieldInternal"
+                                       value="{{ cur_prod.internal_finish_param.name_en if cur_prod and cur_prod.internal_finish_param else '' }}" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ 'التشطيب الخارجي' if current_locale == 'ar' else 'External Finish' }}</label>
+                                <input type="text" class="form-control form-control-sm" id="pipeFieldExternal"
+                                       value="{{ cur_prod.external_finish_param.name_en if cur_prod and cur_prod.external_finish_param else '' }}" readonly>
+                            </div>
+                            {# Application standards ticked on the linked order —
+                               Sewage (ISO 8179 / EN 598), Water (ISO 2531 /
+                               EN 545), AWWA. Read-only mirror: the ticks are
+                               owned by the order form. Rendered server-side for
+                               the linked order and refreshed by JS from the
+                               option's data-app when the operator picks a
+                               different order without reloading. #}
+                            <div class="col-12">
+                                <label class="form-label">{{ 'الاستخدام والمواصفة' if current_locale == 'ar' else 'Application / Standard' }}</label>
+                                <div id="pipeFieldStandards" class="border rounded px-2 py-2 bg-light">
+                                    {% set std_labels = pipe.production_order.standard_labels() if pipe and pipe.production_order else [] %}
+                                    {% if std_labels %}
+                                    {% for label in std_labels %}<span class="badge bg-primary me-1">{{ label }}</span>{% endfor %}
+                                    {% else %}
+                                    <span class="text-muted small">{{ 'لم تحدد مواصفة' if current_locale == 'ar' else 'No standard ticked' }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -198,7 +383,7 @@
                 </h5>
             </div>
             <div class="card-body">
-                {% set stage_names = ['Melting Ladle', 'CCM', 'Annealing', 'Lab', 'Zinc', 'Cutting', 'Hydrotest', 'Cement', 'Coating', 'Finish'] %}
+                {% set stage_names = production_stages %}
                 {% set stage_map = {} %}
                 {% if pipe %}
                     {% for stage in pipe.stages %}
@@ -228,7 +413,24 @@
                             <tr>
                                 <td><strong>{{ stage_name }}</strong></td>
                                 <td>
-                                    {% if machines %}
+                                    {% if stage_name == 'Finish' %}
+                                    <input type="text" name="stage_{{ stage_name }}_bundle_number" class="form-control form-control-sm"
+                                           value="{{ stage.bundle_number if stage and stage.bundle_number else '' }}"
+                                           placeholder="Bundle ID">
+                                    {# Warehouse barcode — posts unprefixed because the column is on
+                                       Pipe, not on this stage row. The scanner's terminating Enter is
+                                       swallowed by the handler at the foot of this file, so a scan
+                                       never submits a half-filled form. #}
+                                    <input type="text" name="finish_barcode" class="form-control form-control-sm mt-1 finish-barcode-in"
+                                           inputmode="numeric" autocomplete="off"
+                                           value="{{ pipe.warehouse_barcode if pipe and pipe.warehouse_barcode else '' }}"
+                                           title="{{ 'باركود المخزن' if current_locale == 'ar' else 'Warehouse barcode' }}"
+                                           placeholder="{{ 'باركود المخزن' if current_locale == 'ar' else 'Warehouse barcode' }}">
+                                    {% elif stage_name == 'Delivery' %}
+                                    <input type="date" name="stage_Delivery_date" class="form-control form-control-sm"
+                                           value="{{ stage.delivery_date if stage and stage.delivery_date else '' }}"
+                                           title="Delivery Date">
+                                    {% elif machines %}
                                     <select name="stage_{{ stage_name }}_machine_id" class="form-select form-select-sm">
                                         <option value="">-</option>
                                         {% for machine in machines %}
@@ -250,21 +452,53 @@
                                         </option>
                                         {% endfor %}
                                     </select>
+                                    {% if stage_name == 'Delivery' %}
+                                    <input type="text" name="stage_Delivery_sales_order" class="form-control form-control-sm mt-1"
+                                           value="{{ stage.sales_order if stage and stage.sales_order else '' }}"
+                                           placeholder="Sales Order">
+                                    {% endif %}
                                 </td>
                                 <td>
-                                    {% if stage_name == 'Annealing' %}
-                                    <!-- Date and Time for Annealing -->
+                                    {% if stage_name == 'Delivery' %}
+                                    <div class="d-flex gap-1">
+                                        <input type="text" name="stage_Delivery_customer" class="form-control form-control-sm"
+                                               value="{{ stage.delivery_customer if stage and stage.delivery_customer else '' }}"
+                                               placeholder="Customer" style="width:55%">
+                                        <input type="text" name="stage_Delivery_receipt" class="form-control form-control-sm"
+                                               value="{{ stage.delivery_receipt if stage and stage.delivery_receipt else '' }}"
+                                               placeholder="Receipt" style="width:45%">
+                                    </div>
+                                    {% elif stage_name == 'Annealing' %}
+                                    <!-- Annealing date/time stay EMPTY until the operator enters
+                                         them — a pre-filled value made every new pipe look like it
+                                         had already entered Annealing (DrAlaa 2026-08-10). The
+                                         batch number is server-generated once a row is saved. -->
                                     <div class="row g-1">
                                         <div class="col-7">
                                             <input type="date" name="stage_{{ stage_name }}_date" class="form-control form-control-sm"
                                                    value="{{ stage.stage_date if stage and stage.stage_date else '' }}"
-                                                   title="{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}">
+                                                   title="{{ 'يُترك فارغاً حتى دخول الماسورة مرحلة التلدين' if current_locale == 'ar' else 'Leave empty until the pipe enters Annealing' }}">
                                         </div>
                                         <div class="col-5">
                                             <input type="time" name="stage_{{ stage_name }}_time" class="form-control form-control-sm"
-                                                   value="{{ stage.stage_time if stage and stage.stage_time else '' }}"
-                                                   title="{{ 'الوقت' if current_locale == 'ar' else 'Time' }}">
+                                                   value="{{ stage.stage_time.strftime('%H:%M') if stage and stage.stage_time else '' }}"
+                                                   title="{{ 'يُترك فارغاً حتى دخول الماسورة مرحلة التلدين' if current_locale == 'ar' else 'Leave empty until the pipe enters Annealing' }}">
                                         </div>
+                                        <div class="col-12 mt-1">
+                                            <input type="text" name="stage_Annealing_batch_number" class="form-control form-control-sm"
+                                                   value="{{ stage.bundle_number if stage and stage.bundle_number else '' }}"
+                                                   placeholder="{{ 'تلقائي' if current_locale == 'ar' else 'Auto' }}" readonly
+                                                   title="{{ 'رقم التشغيلة يُنشأ تلقائياً عند الحفظ' if current_locale == 'ar' else 'Batch number is generated automatically on save' }}">
+                                        </div>
+                                    </div>
+                                    {% elif stage_name == ccm_stage %}
+                                    <!-- Casting temperature for CCM (optional) -->
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" name="stage_{{ stage_name }}_temperature" class="form-control form-control-sm"
+                                               step="1" min="0" placeholder="{{ 'الحرارة' if current_locale == 'ar' else 'Temperature' }}"
+                                               value="{{ stage.temperature if stage and stage.temperature is not none else '' }}"
+                                               title="{{ 'حرارة الصب' if current_locale == 'ar' else 'Casting temperature' }}">
+                                        <span class="input-group-text">°C</span>
                                     </div>
                                     {% elif stage_name == 'Finish' %}
                                     <!-- Length for Finish -->
@@ -276,28 +510,124 @@
                                         <span class="input-group-text">m</span>
                                     </div>
                                     {% else %}
-                                    <span class="text-muted">-</span>
+                                    <!-- Generic measurement — any stage can capture a value (dynamic, optional).
+                                         Stages listed in PipeStage.MEASUREMENT_UNITS get the unit shown next to
+                                         the box and the reading named in the placeholder; the rest keep the
+                                         plain box. -->
+                                    {% set unit_spec = measurement_units.get(stage_name) %}
+                                    {% if unit_spec %}
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" name="stage_{{ stage_name }}_measurement" class="form-control form-control-sm"
+                                               step="any" min="0"
+                                               placeholder="{{ unit_spec[2] if current_locale == 'ar' else unit_spec[1] }}"
+                                               value="{{ stage.measurement_value if stage and stage.measurement_value is not none else '' }}"
+                                               title="{{ unit_spec[2] if current_locale == 'ar' else unit_spec[1] }} ({{ unit_spec[0] }})">
+                                        <span class="input-group-text">{{ unit_spec[0] }}</span>
+                                    </div>
+                                    {% else %}
+                                    <input type="number" name="stage_{{ stage_name }}_measurement" class="form-control form-control-sm"
+                                           step="any" min="0"
+                                           value="{{ stage.measurement_value if stage and stage.measurement_value is not none else '' }}"
+                                           title="{{ 'القياس' if current_locale == 'ar' else 'Measurement' }}">
+                                    {% endif %}
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <select name="stage_{{ stage_name }}_defect_type" class="form-select form-select-sm">
-                                        <option value="">{{ 'لا يوجد' if current_locale == 'ar' else 'None' }}</option>
-                                        {% for defect_en, defect_ar in defects %}
-                                        <option value="{{ defect_en }}" {{ 'selected' if stage and stage.defect_type == defect_en }}>
-                                            {{ defect_en }}
-                                        </option>
-                                        {% endfor %}
-                                    </select>
+                                    {# Multi-pick: one stage can carry several defects. Stored
+                                       comma-joined in the same column the single select used. #}
+                                    {{ multi.multi_select(
+                                        'stage_' ~ stage_name ~ '_defect_type',
+                                        defects,
+                                        stage.defect_type if stage else '',
+                                        'لا يوجد' if current_locale == 'ar' else 'None') }}
                                 </td>
                                 <td>
-                                    <input type="text" name="stage_{{ stage_name }}_defect_reason" class="form-control form-control-sm"
-                                           value="{{ stage.defect_reason if stage and stage.defect_reason else '' }}"
-                                           placeholder="{{ 'سبب العيب' if current_locale == 'ar' else 'Defect Reason' }}">
+                                    {# Dropdown fed by Settings > Defect Reasons. A saved value
+                                       that is no longer in the list is kept as an extra option
+                                       so existing data is never lost. #}
+                                    {% set current_reason = stage.defect_reason if stage and stage.defect_reason else '' %}
+                                    {% set stage_reasons = defect_reasons_by_stage.get(stage_name, []) %}
+                                    {{ multi.multi_select(
+                                        'stage_' ~ stage_name ~ '_defect_reason',
+                                        stage_reasons,
+                                        current_reason,
+                                        'لا يوجد' if current_locale == 'ar' else 'None',
+                                        value_ar=(current_locale == 'ar'),
+                                        label_ar=(current_locale == 'ar')) }}
                                 </td>
                                 <td>
                                     <input type="text" name="stage_{{ stage_name }}_notes" class="form-control form-control-sm"
                                            value="{{ stage.notes if stage and stage.notes else '' }}"
                                            placeholder="{{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}">
+                                    {% if stage_name == coating_stage %}
+                                    {# Coloured only once something has been measured. The
+                                       band arrives from the order's spec on its own, so it
+                                       colours nothing — it only earns the tooltip. #}
+                                    {% set tp_state = stage.lining_popup_state() if stage else 'empty' %}
+                                    {% set has_tp = tp_state == 'data' %}
+                                    <button type="button" class="btn btn-{{ 'success' if has_tp else 'outline-secondary' }} btn-sm mt-1 w-100"
+                                            id="coatingModalBtn"
+                                            title="{{ ('الاستاندرد متسجل، القرايات لسه' if current_locale == 'ar' else 'Standard set, no readings yet') if tp_state == 'standard' }}"
+                                            data-bs-toggle="modal" data-bs-target="#coatingThicknessModal">
+                                        <i class="bi bi-rulers"></i>
+                                        {{ 'السماكة' if current_locale == 'ar' else 'Thickness' }}
+                                        <i class="bi bi-check2 {{ '' if has_tp else 'd-none' }}" id="coatingModalCheck"></i>
+                                    </button>
+                                    {% elif stage_name == cutting_stage %}
+                                    {% set has_rp = stage and stage.ring_profile %}
+                                    <button type="button" class="btn btn-{{ 'success' if has_rp else 'outline-secondary' }} btn-sm mt-1 w-100"
+                                            data-bs-toggle="modal" data-bs-target="#ringTestModal">
+                                        <i class="bi bi-circle"></i>
+                                        {{ 'اختبار الحلقة' if current_locale == 'ar' else 'Ring' }}
+                                        {% if has_rp %}<i class="bi bi-check2"></i>{% endif %}
+                                    </button>
+                                    {% elif stage_name == ccm_stage %}
+                                    {% set dp_state = stage.dimension_popup_state() if stage else 'empty' %}
+                                    {% set has_dp = dp_state == 'data' %}
+                                    <button type="button" class="btn btn-{{ 'success' if has_dp else 'outline-secondary' }} btn-sm mt-1 w-100"
+                                            id="ccmModalBtn"
+                                            title="{{ ('الاستاندرد متسجل، القرايات لسه' if current_locale == 'ar' else 'Standard set, no readings yet') if dp_state == 'standard' }}"
+                                            data-bs-toggle="modal" data-bs-target="#ccmDimensionModal">
+                                        <i class="bi bi-rulers"></i>
+                                        {{ 'الأبعاد' if current_locale == 'ar' else 'Dimensions' }}
+                                        <i class="bi bi-check2 {{ '' if has_dp else 'd-none' }}" id="ccmModalCheck"></i>
+                                    </button>
+                                    {% elif stage_name == annealing_stage %}
+                                    {% set has_ov = stage and stage.ovality_profile %}
+                                    <button type="button" class="btn btn-{{ 'success' if has_ov else 'outline-secondary' }} btn-sm mt-1 w-100"
+                                            data-bs-toggle="modal" data-bs-target="#ovalityModal">
+                                        <i class="bi bi-rulers"></i>
+                                        {{ 'الأوفاليتي' if current_locale == 'ar' else 'Ovality' }}
+                                        {% if has_ov %}<i class="bi bi-check2"></i>{% endif %}
+                                    </button>
+                                    {% elif stage_name == zinc_stage %}
+                                    {% set has_zp = stage and stage.zinc_profile %}
+                                    {# Zinc mass popup + a direct printer icon, so the sheet is one
+                                       click away without having to open the popup first. #}
+                                    <div class="btn-group w-100 mt-1">
+                                        <button type="button" class="btn btn-{{ 'success' if has_zp else 'outline-secondary' }} btn-sm"
+                                                data-bs-toggle="modal" data-bs-target="#zincMassModal">
+                                            <i class="bi bi-droplet-half"></i>
+                                            {{ 'وزن الزنك' if current_locale == 'ar' else 'Zinc mass' }}
+                                            {% if has_zp %}<i class="bi bi-check2"></i>{% endif %}
+                                        </button>
+                                        {% if pipe %}
+                                        <a href="{{ url_for('stages.zinc_sheet', id=pipe.id) }}" target="_blank"
+                                           class="btn btn-danger btn-sm flex-grow-0"
+                                           title="{{ 'طباعة شهادة وزن الزنك' if current_locale == 'ar' else 'Print zinc mass sheet' }}">
+                                            <i class="bi bi-printer-fill"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                    {% elif stage_name == 'Finish' %}
+                                    {% set has_vp = stage and stage.visual_profile %}
+                                    <button type="button" class="btn btn-{{ 'success' if has_vp else 'outline-secondary' }} btn-sm mt-1 w-100"
+                                            data-bs-toggle="modal" data-bs-target="#finishVisualModal">
+                                        <i class="bi bi-eye"></i>
+                                        {{ 'الفحص البصري' if current_locale == 'ar' else 'Visual' }}
+                                        {% if has_vp %}<i class="bi bi-check2"></i>{% endif %}
+                                    </button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -312,7 +642,528 @@
             </div>
         </div>
 
+        {# The band the popups judge against: whatever the stage has already
+           saved, else the product's figures for the standard this pipe's order
+           was built to. Registering a new pipe has no order yet, so the option's
+           data-app fills these in the browser instead; editing one does, and
+           waiting for a change event the operator never fires would leave the
+           readings unjudged. Same fallback as the Stage Console. #}
+        {% set order_layers = (pipe.production_order.effective_application().get('layers', {})
+                               if pipe and pipe.production_order else {}) %}
+
+        <!-- Coating thickness popup — Cement + Coating at meters 1-6 -->
+        {% set coat_stage_obj = stage_map.get(coating_stage) %}
+        {% set tp = coat_stage_obj.thickness_profile if coat_stage_obj and coat_stage_obj.thickness_profile else none %}
+        <div class="modal fade" id="coatingThicknessModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-rulers"></i>
+                            {{ 'سماكة الأسمنت والكوتنج' if current_locale == 'ar' else 'Cement & Coating thickness' }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        {# Cement is measured X/Y at the socket and the spigot; coating
+                           is measured once at each metre of the 6 m pipe. Two different
+                           measurements, two different grids. #}
+                        {% set cem_spec = order_layers.get('cement', {}) %}
+                        {% set cem_std = (tp.get('cement_std') if tp else none) if (tp and tp.get('cement_std') is not none) else cem_spec.get('nominal') %}
+                        {% set cem_min = (tp.get('cement_std_min') if tp else none) if (tp and tp.get('cement_std_min') is not none) else cem_spec.get('min') %}
+                        {% set cem_max = (tp.get('cement_std_max') if tp else none) if (tp and tp.get('cement_std_max') is not none) else cem_spec.get('max') %}
+                        <h6 class="mb-2">{{ 'سماكة الأسمنت' if current_locale == 'ar' else 'Cement Thickness' }}</h6>
+                        {{ lining.lining_grid(coating_stage, 'cement',
+                                              'سماكة الأسمنت' if current_locale == 'ar' else 'Cement Thickness',
+                                              cem_min, cem_std, cem_max,
+                                              tp.get('cement_points') if tp else {},
+                                              tp.get('cement_avg') if tp else none, current_locale == 'ar') }}
+                        {{ lining.lining_grid_script() }}
+                        <hr>
+                        <h6 class="mb-2">{{ 'سماكة الكوتنج عند كل متر (ماسورة 6 متر)' if current_locale == 'ar' else 'Coating thickness at each meter (6m pipe)' }}</h6>
+                        <table class="table table-sm table-bordered mb-0 text-center align-middle bg-white" id="coatingThickTable">
+                            <thead>
+                                <tr class="table-secondary">
+                                    <th style="width: 90px;"></th>
+                                    <th style="width: 70px;">Min</th>
+                                    <th style="width: 70px;">Nominal</th>
+                                    <th style="width: 70px;">Max</th>
+                                    {% for m in range(1, 7) %}<th>{{ m }}</th>{% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for layer, layer_ar in [('coating', 'الكوتنج')] %}
+                                {% set vals = tp.get(layer) if tp else none %}
+                                {% set spec = order_layers.get(layer, {}) %}
+                                {% set saved_std = (tp.get(layer ~ '_std') if tp else none) if (tp and tp.get(layer ~ '_std') is not none) else spec.get('nominal') %}
+                                {% set saved_std_min = (tp.get(layer ~ '_std_min') if tp else none) if (tp and tp.get(layer ~ '_std_min') is not none) else spec.get('min') %}
+                                {% set saved_std_max = (tp.get(layer ~ '_std_max') if tp else none) if (tp and tp.get(layer ~ '_std_max') is not none) else spec.get('max') %}
+                                <tr>
+                                    <td class="fw-bold text-start">{{ layer_ar if current_locale == 'ar' else layer|capitalize }}</td>
+                                    {% set unit = 'μ' if layer == 'coating' else 'mm' %}
+                                    <td class="table-light">
+                                        <input type="number" name="stage_{{ coating_stage }}_thick_{{ layer }}_std_min"
+                                               class="form-control form-control-sm text-center" step="0.01" min="0"
+                                               placeholder="{{ unit }}"
+                                               value="{{ saved_std_min if saved_std_min is not none else '' }}">
+                                    </td>
+                                    <td class="table-light">
+                                        <input type="number" name="stage_{{ coating_stage }}_thick_{{ layer }}_std"
+                                               class="form-control form-control-sm text-center fw-bold coat-std-input" step="0.01" min="0"
+                                               data-layer="{{ layer }}" placeholder="{{ unit }}"
+                                               value="{{ saved_std if saved_std is not none else '' }}">
+                                    </td>
+                                    <td class="table-light">
+                                        <input type="number" name="stage_{{ coating_stage }}_thick_{{ layer }}_std_max"
+                                               class="form-control form-control-sm text-center" step="0.01" min="0"
+                                               placeholder="{{ unit }}"
+                                               value="{{ saved_std_max if saved_std_max is not none else '' }}">
+                                    </td>
+                                    {% for m in range(1, 7) %}
+                                    <td>
+                                        <input type="number" name="stage_{{ coating_stage }}_thick_{{ layer }}_{{ m }}"
+                                               class="form-control form-control-sm text-center std-cmp-input" step="0.01" min="0"
+                                               data-cmp="{{ layer }}" data-col="{{ m - 1 }}"
+                                               data-nominal="{{ saved_std if saved_std is not none else '' }}"
+                                               data-lsl="{{ saved_std_min if saved_std_min is not none else '' }}"
+                                               data-usl="{{ saved_std_max if saved_std_max is not none else '' }}"
+                                               value="{{ vals[m - 1] if vals and vals|length >= m and vals[m - 1] is not none else '' }}">
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-start">{{ 'الفرق' if current_locale == 'ar' else 'Deviation' }}</td>
+                                    <td class="table-light"></td>
+                                    <td class="table-light"></td>
+                                    <td class="table-light"></td>
+                                    {% for m in range(1, 7) %}
+                                    <td class="fw-bold std-cmp-diff" data-cmp="{{ layer }}" data-col="{{ m - 1 }}"></td>
+                                    {% endfor %}
+                                </tr>
+                                {{ std_row.spec_note(10, 'stage_' ~ coating_stage ~ '_thick_' ~ layer, layer_ar if current_locale == 'ar' else layer|capitalize,
+                                                     saved_std, saved_std_min, saved_std_max,
+                                                     current_locale == 'ar') }}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                            <i class="bi bi-check2"></i> {{ 'تم' if current_locale == 'ar' else 'Done' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        {# The coating grid's own band feeds its Deviation row. Only coating
+           uses std-cmp-input now; cement's grid computes its own. #}
+        <script>
+        (function() {
+            var table = document.getElementById('coatingThickTable');
+            if (!table) return;
+            table.querySelectorAll('.coat-std-input').forEach(function(stdInput) {
+                stdInput.addEventListener('input', function() {
+                    var layer = stdInput.dataset.layer;
+                    var val = stdInput.value;
+                    table.querySelectorAll('.std-cmp-input[data-cmp="' + layer + '"]').forEach(function(inp) {
+                        inp.dataset.nominal = val;
+                    });
+                    if (window.refreshStandardComparisons) window.refreshStandardComparisons(table);
+                });
+            });
+            function pushLimits(input) {
+                var m = (input.name || '').match(/thick_(coating)_std_(min|max)$/);
+                if (!m) return;
+                var layer = m[1];
+                var attr = m[2] === 'min' ? 'lsl' : 'usl';
+                table.querySelectorAll('.std-cmp-input[data-cmp="' + layer + '"]').forEach(function(inp) {
+                    inp.dataset[attr] = input.value;
+                });
+                if (window.refreshStandardComparisons) window.refreshStandardComparisons(table);
+            }
+            table.querySelectorAll('input[name$="_std_min"], input[name$="_std_max"]').forEach(function(inp) {
+                inp.addEventListener('input', function() { pushLimits(inp); });
+            });
+        })();
+        </script>
+
+        <!-- CCM dimensions popup — thickness (7 positions x 3 readings) & diameter (ovality grid) -->
+        {% set ccm_stage_obj = stage_map.get(ccm_stage) %}
+        {% set dp = ccm_stage_obj.dimension_profile if ccm_stage_obj and ccm_stage_obj.dimension_profile else none %}
+        {% set dp_thick = dp.get('thickness', {}) if dp else {} %}
+        {# Normalised {position: [r1, r2, r3]} — handles both the current
+           "positions" shape and the legacy flat 21-cell row. #}
+        {% set dp_thick_matrix = thickness_matrix(dp) if dp else {} %}
+        {% set wall_spec = order_layers.get('thickness', {}) %}
+        {% set dp_thick_std = (dp_thick.get('standard') if dp_thick else none) if (dp_thick and dp_thick.get('standard') is not none) else wall_spec.get('nominal') %}
+        {% set ccm_ovp = dp.get('ovality', {}).get('points', {}) if dp else {} %}
+        <div class="modal fade" id="ccmDimensionModal" tabindex="-1">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-rulers"></i>
+                            {{ 'أبعاد الماسورة — السماكة (7 مواضع × 3 قرايات) والقطر' if current_locale == 'ar' else 'Pipe dimensions — thickness (7 positions x 3 readings) & diameter' }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        {# Wall thickness: 7 positions along the 6 m pipe, 3 readings at each. #}
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-bordered mb-0 text-center align-middle bg-white" id="ccmThickTable">
+                                <thead>
+                                    <tr class="table-secondary">
+                                        <th style="min-width: 90px;">{{ 'السماكة (مم)' if current_locale == 'ar' else 'Thickness (mm)' }}</th>
+                                        {% for pos in thickness_positions %}<th>{{ pos }}</th>{% endfor %}
+                                        <th class="table-info" style="min-width: 70px;">{{ 'المتوسط' if current_locale == 'ar' else 'Avg' }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ccmThickBody">
+                                    {% set dp_thick_min = (dp_thick.get('standard_min') if dp_thick else none) if (dp_thick and dp_thick.get('standard_min') is not none) else wall_spec.get('min') %}
+                                    {% set dp_thick_max = (dp_thick.get('standard_max') if dp_thick else none) if (dp_thick and dp_thick.get('standard_max') is not none) else wall_spec.get('max') %}
+                                    <tr class="table-light">
+                                        <td class="fw-bold text-start">{{ 'الاستاندرد' if current_locale == 'ar' else 'Standard' }}</td>
+                                        <td colspan="{{ thickness_positions | length }}">
+                                            <div class="d-flex gap-2 justify-content-center align-items-center">
+                                                <div class="text-center">
+                                                    <small class="d-block text-muted">Min</small>
+                                                    <input type="number" name="stage_{{ ccm_stage }}_dim_thick_std_min"
+                                                           class="form-control form-control-sm text-center" step="0.01" min="0"
+                                                           style="max-width: 90px;" id="ccmThickStdMinInput" placeholder="mm"
+                                                           value="{{ dp_thick_min if dp_thick_min is not none else '' }}">
+                                                </div>
+                                                <div class="text-center">
+                                                    <small class="d-block text-muted fw-bold">Nominal</small>
+                                                    <input type="number" name="stage_{{ ccm_stage }}_dim_thick_std"
+                                                           class="form-control form-control-sm text-center fw-bold" step="0.01" min="0"
+                                                           style="max-width: 90px;" id="ccmThickStdInput" placeholder="mm"
+                                                           value="{{ dp_thick_std if dp_thick_std is not none else '' }}">
+                                                </div>
+                                                <div class="text-center">
+                                                    <small class="d-block text-muted">Max</small>
+                                                    <input type="number" name="stage_{{ ccm_stage }}_dim_thick_std_max"
+                                                           class="form-control form-control-sm text-center" step="0.01" min="0"
+                                                           style="max-width: 90px;" id="ccmThickStdMaxInput" placeholder="mm"
+                                                           value="{{ dp_thick_max if dp_thick_max is not none else '' }}">
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="table-info"></td>
+                                    </tr>
+                                    {{ std_row.spec_note(thickness_positions | length + 2, 'stage_' ~ ccm_stage ~ '_dim_thick',
+                                                         'سماكة الجدار' if current_locale == 'ar' else 'Wall thickness',
+                                                         dp_thick_std, dp_thick_min, dp_thick_max,
+                                                         current_locale == 'ar') }}
+                                    {% for r in range(1, thickness_readings + 1) %}
+                                    <tr>
+                                        <td class="fw-bold text-start">{{ ('قراية ' ~ r) if current_locale == 'ar' else ('Reading ' ~ r) }}</td>
+                                        {% for pos in thickness_positions %}
+                                        {% set vals = dp_thick_matrix.get(pos) %}
+                                        <td>
+                                            <input type="number" name="stage_{{ ccm_stage }}_dim_thick_p{{ loop.index }}_{{ r }}"
+                                                   class="form-control form-control-sm text-center px-1 ccm-thick std-cmp-input" step="0.01" min="0" style="min-width: 58px;"
+                                                   data-pos="{{ loop.index }}"
+                                                   data-cmp="S1" data-col="{{ loop.index0 }}"
+                                                   data-nominal="{{ dp_thick_std if dp_thick_std is not none else '' }}"
+                                                   data-lsl="{{ dp_thick_min if dp_thick_min is not none else '' }}"
+                                                   data-usl="{{ dp_thick_max if dp_thick_max is not none else '' }}"
+                                                   value="{{ vals[r - 1] if vals and vals|length >= r and vals[r - 1] is not none else '' }}">
+                                        </td>
+                                        {% endfor %}
+                                        <td class="table-info fw-bold ccm-thick-row-avg" data-row="{{ r }}"></td>
+                                    </tr>
+                                    {% endfor %}
+                                    <tr>
+                                        <td class="fw-bold text-start">{{ 'الفرق' if current_locale == 'ar' else 'Deviation' }}</td>
+                                        {% for pos in thickness_positions %}
+                                        <td class="fw-bold std-cmp-diff" data-cmp="S1" data-col="{{ loop.index0 }}"></td>
+                                        {% endfor %}
+                                        <td></td>
+                                    </tr>
+                                    <tr class="table-info">
+                                        <td class="fw-bold text-start">{{ 'المتوسط' if current_locale == 'ar' else 'Avg' }}</td>
+                                        {% for pos in thickness_positions %}
+                                        <td class="fw-bold ccm-thick-col-avg" data-pos="{{ loop.index }}"></td>
+                                        {% endfor %}
+                                        <td class="fw-bold ccm-thick-grand"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold text-start">{{ 'الانحراف المعياري' if current_locale == 'ar' else 'Std dev' }}</td>
+                                        {% for pos in thickness_positions %}
+                                        <td class="ccm-thick-col-sd" data-pos="{{ loop.index }}"></td>
+                                        {% endfor %}
+                                        <td class="fw-bold ccm-thick-grand-sd"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <hr>
+                        <h6 class="mb-2">{{ 'القطر والأوفاليتي' if current_locale == 'ar' else 'Diameter & Ovality' }} <span class="badge bg-secondary ovg-dn-badge{{ ' d-none' if not (pipe and pipe.diameter) }}">{{ 'DN' ~ pipe.diameter if pipe and pipe.diameter else '' }}</span></h6>
+                        {% set ccm_ov_points = ovality_columns_for(pipe.diameter if pipe else none, {'points': ccm_ovp}) %}
+                        <div class="ovg-dn-wrap" data-stage="{{ ccm_stage }}" data-dn="{{ pipe.diameter if pipe and pipe.diameter else '' }}">
+                        {{ std_dims.ovality_standard_grid(
+                            ccm_stage,
+                            pipe.diameter if pipe else none,
+                            dimension_standard_for_dn(pipe.diameter) if pipe and pipe.diameter else {},
+                            ccm_ov_points,
+                            ccm_ovp,
+                            current_locale == 'ar') }}
+                        </div>
+                        {{ std_dims.ovality_standard_grid_script() }}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                            <i class="bi bi-check2"></i> {{ 'تم' if current_locale == 'ar' else 'Done' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+
+        // CCM thickness grid — live average and sample (n-1) std dev per
+        // position, per reading row, and over the whole pipe. Mirrors
+        // measurement_stats_service.describe() so the operator sees the same
+        // numbers the report will store.
+        (function() {
+            var table = document.getElementById('ccmThickTable');
+            if (!table) return;
+
+            function stats(values) {
+                var vals = values.filter(function(v) { return !isNaN(v); });
+                if (!vals.length) return null;
+                var mean = vals.reduce(function(a, b) { return a + b; }, 0) / vals.length;
+                var sd = null;
+                if (vals.length > 1) {
+                    var ss = vals.reduce(function(a, v) {
+                        return a + Math.pow(v - mean, 2);
+                    }, 0);
+                    sd = Math.sqrt(ss / (vals.length - 1));
+                }
+                return { mean: mean, sd: sd };
+            }
+
+            function fmt(v) {
+                if (v === null || v === undefined) return '';
+                return (Math.round(v * 100) / 100).toFixed(2);
+            }
+
+            function valuesFor(selector) {
+                return Array.prototype.map.call(
+                    table.querySelectorAll(selector),
+                    function(el) { return parseFloat(el.value); });
+            }
+
+            function recalc() {
+                var all = [];
+                table.querySelectorAll('.ccm-thick-col-avg').forEach(function(cell) {
+                    var pos = cell.getAttribute('data-pos');
+                    var st = stats(valuesFor('.ccm-thick[data-pos="' + pos + '"]'));
+                    cell.textContent = st ? fmt(st.mean) : '';
+                    var sdCell = table.querySelector('.ccm-thick-col-sd[data-pos="' + pos + '"]');
+                    if (sdCell) sdCell.textContent = st && st.sd !== null ? fmt(st.sd) : '';
+                });
+                table.querySelectorAll('.ccm-thick-row-avg').forEach(function(cell) {
+                    var row = cell.closest('tr');
+                    var vals = Array.prototype.map.call(
+                        row.querySelectorAll('.ccm-thick'),
+                        function(el) { return parseFloat(el.value); });
+                    var st = stats(vals);
+                    cell.textContent = st ? fmt(st.mean) : '';
+                });
+                all = valuesFor('.ccm-thick');
+                var grand = stats(all);
+                var gCell = table.querySelector('.ccm-thick-grand');
+                var gSd = table.querySelector('.ccm-thick-grand-sd');
+                if (gCell) gCell.textContent = grand ? fmt(grand.mean) : '';
+                if (gSd) gSd.textContent = grand && grand.sd !== null ? fmt(grand.sd) : '';
+            }
+
+            table.querySelectorAll('.ccm-thick').forEach(function(el) {
+                el.addEventListener('input', recalc);
+            });
+            recalc();
+
+            var stdInput = document.getElementById('ccmThickStdInput');
+            if (stdInput) {
+                stdInput.addEventListener('input', function() {
+                    var val = stdInput.value;
+                    table.querySelectorAll('.ccm-thick').forEach(function(inp) {
+                        inp.dataset.nominal = val;
+                    });
+                    if (window.refreshStandardComparisons) window.refreshStandardComparisons(table);
+                });
+            }
+            var minInput = document.getElementById('ccmThickStdMinInput');
+            var maxInput = document.getElementById('ccmThickStdMaxInput');
+            function pushCcmLimits(attr, input) {
+                table.querySelectorAll('.ccm-thick').forEach(function(inp) {
+                    inp.dataset[attr] = input.value;
+                });
+                if (window.refreshStandardComparisons) window.refreshStandardComparisons(table);
+            }
+            if (minInput) {
+                minInput.addEventListener('input', function() { pushCcmLimits('lsl', minInput); });
+            }
+            if (maxInput) {
+                maxInput.addEventListener('input', function() { pushCcmLimits('usl', maxInput); });
+            }
+        })();
+        </script>
+
+        <!-- Ovality popup — Annealing stage, per DrAlaa's request (2026-08-14).
+             Ovality % = (X - Y) / (X + Y), one X/Y pair per point (ID, D1-D15). -->
+        {% set ann_stage_obj = stage_map.get(annealing_stage) %}
+        {% set ovp = ann_stage_obj.ovality_profile if ann_stage_obj and ann_stage_obj.ovality_profile else none %}
+        {% set ovp_points = ovality_readings(ovp, ann_stage_obj.dimension_profile if ann_stage_obj else none) %}
+        {% set ovality_point_names = ovality_points %}
+        <div class="modal fade" id="ovalityModal" tabindex="-1">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-rulers"></i>
+                            {{ 'الأبعاد والأوفاليتي — TA 1012' if current_locale == 'ar' else 'Dimensions & ovality — TA 1012' }} <span class="badge bg-secondary ovg-dn-badge{{ ' d-none' if not (pipe and pipe.diameter) }}">{{ 'DN' ~ pipe.diameter if pipe and pipe.diameter else '' }}</span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        {% set ov_points = ovality_columns_for(pipe.diameter if pipe else none, {'points': ovp_points}) %}
+                        <div class="ovg-dn-wrap" data-stage="{{ annealing_stage }}" data-dn="{{ pipe.diameter if pipe and pipe.diameter else '' }}">
+                        {{ std_dims.ovality_standard_grid(
+                            annealing_stage,
+                            pipe.diameter if pipe else none,
+                            dimension_standard_for_dn(pipe.diameter) if pipe and pipe.diameter else {},
+                            ov_points,
+                            ovp_points,
+                            current_locale == 'ar') }}
+                        </div>
+                        {{ std_dims.ovality_standard_grid_script() }}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                            <i class="bi bi-check2"></i> {{ 'تم' if current_locale == 'ar' else 'Done' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual popup — Finish stage: 5-item checklist -->
+        {% set fin_stage_obj = stage_map.get('Finish') %}
+        {% set vp = fin_stage_obj.visual_profile if fin_stage_obj and fin_stage_obj.visual_profile else none %}
+        {% set visual_items = [
+            ('marking', 'الترقيم', 'Marking'),
+            ('ovality', 'البيضاوية', 'Ovality'),
+            ('straightness', 'الاستقامة', 'Straightness'),
+            ('internal_finish', 'التشطيب الداخلي', 'Internal finish'),
+            ('external_finish', 'التشطيب الخارجي', 'External finish'),
+        ] %}
+        <div class="modal fade" id="finishVisualModal" tabindex="-1">
+            <div class="modal-dialog modal-md modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-eye"></i>
+                            {{ 'الفحص البصري — قائمة التحقق' if current_locale == 'ar' else 'Visual inspection checklist' }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-2">
+                        <div class="table-responsive">
+                            <table class="table table-bordered mb-0 text-center align-middle bg-white">
+                                <tbody>
+                                    <tr>
+                                        {% for key, label_ar, label_en in visual_items %}
+                                        {% set checked = vp.get(key, false) if vp else false %}
+                                        <td style="min-width: 120px; height: 86px;">
+                                            <input type="hidden" name="stage_Finish_visual_{{ key }}_hidden" value="0">
+                                            <input class="form-check-input" type="checkbox"
+                                                   name="stage_Finish_visual_{{ key }}" value="1" id="vis_{{ key }}"
+                                                   {{ 'checked' if checked }}>
+                                            <label class="d-block fw-bold mt-2" for="vis_{{ key }}">
+                                                {{ label_ar if current_locale == 'ar' else label_en }}
+                                            </label>
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                            <i class="bi bi-check2"></i> {{ 'تم' if current_locale == 'ar' else 'Done' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Zinc coating-mass popup — M = C(M2 - M1) / A -->
+        {% set zinc_stage_obj = stage_map.get(zinc_stage) %}
+        {% set zp = zinc_stage_obj.zinc_profile if zinc_stage_obj and zinc_stage_obj.zinc_profile else none %}
+        <div class="modal fade" id="zincMassModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-droplet-half"></i>
+                            {{ 'وزن الزنك — M = C (M2 − M1) ÷ A' if current_locale == 'ar' else 'Zinc mass — M = C (M2 − M1) / A' }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        {{ zinc_mass.zinc_mass_grid(zinc_stage, zp, current_locale == 'ar') }}
+                        {{ zinc_mass.zinc_mass_script() }}
+                    </div>
+                    <div class="modal-footer">
+                        {% if pipe %}
+                        <a href="{{ url_for('stages.zinc_sheet', id=pipe.id) }}" target="_blank"
+                           class="btn btn-danger me-auto">
+                            <i class="bi bi-printer-fill"></i> {{ 'طباعة الشهادة' if current_locale == 'ar' else 'Print sheet' }}
+                        </a>
+                        {% endif %}
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-check2"></i> {{ 'تم' if current_locale == 'ar' else 'Done' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ring popup — Cutting stage: force, initial/final OD, % deflection -->
+        {% set cut_stage_obj = stage_map.get(cutting_stage) %}
+        {% set rp = cut_stage_obj.ring_profile if cut_stage_obj and cut_stage_obj.ring_profile else none %}
+        <div class="modal fade" id="ringTestModal" tabindex="-1">
+            <div class="modal-dialog modal-md modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-circle"></i>
+                            {{ 'اختبار الحلقة' if current_locale == 'ar' else 'Ring' }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        {{ ring_test.ring_grid(cutting_stage, rp, current_locale == 'ar') }}
+                        {{ ring_test.ring_script() }}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                            <i class="bi bi-check2"></i> {{ 'تم' if current_locale == 'ar' else 'Done' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Submit Buttons -->
+        {% include 'components/_audit_reason.html' %}
         <div class="d-flex gap-2 justify-content-end mb-4">
             <a href="{{ url_for('stages.list') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-x-circle"></i>
@@ -329,19 +1180,65 @@
 
 {% block extra_js %}
 <script>
-// Auto-fill diameter and type when selecting a production order
+// When selecting a production order, auto-select the linked product.
+// The product change handler then cascades to diameter, class, and weight.
 document.getElementById('productionOrderSelect').addEventListener('change', function() {
     const selectedOption = this.options[this.selectedIndex];
     if (selectedOption.value) {
-        const diameter = selectedOption.getAttribute('data-diameter');
-        const pipeType = selectedOption.getAttribute('data-type');
         const ladles = selectedOption.getAttribute('data-ladles');
+        const productId = selectedOption.getAttribute('data-product-id');
 
-        if (diameter) {
-            document.querySelector('select[name="diameter"]').value = diameter;
+        // Auto-select product linked to this production order — triggers product change handler
+        // which cascades to diameter (+ change event for mold filter), pipe class, and weight
+        if (productId) {
+            const productSelect = document.getElementById('productSelect');
+            for (let option of productSelect.options) {
+                if (option.value === productId) {
+                    productSelect.value = productId;
+                    productSelect.dispatchEvent(new Event('change'));
+                    break;
+                }
+            }
         }
-        if (pipeType) {
-            document.querySelector('select[name="pipe_class"]').value = pipeType;
+
+        // Pre-fill coating/cement/thickness standard fields from order application profile
+        var appRaw = selectedOption.getAttribute('data-app');
+        if (appRaw) {
+            try {
+                var app = JSON.parse(appRaw);
+                var layers = app.layers || {};
+                // Coating popup: cement & coating rows
+                var coatMap = {
+                    cement: {min: 'stage_{{ coating_stage }}_thick_cement_std_min',
+                             std: 'stage_{{ coating_stage }}_thick_cement_std',
+                             max: 'stage_{{ coating_stage }}_thick_cement_std_max'},
+                    coating: {min: 'stage_{{ coating_stage }}_thick_coating_std_min',
+                              std: 'stage_{{ coating_stage }}_thick_coating_std',
+                              max: 'stage_{{ coating_stage }}_thick_coating_std_max'}
+                };
+                for (var lk in coatMap) {
+                    var lr = layers[lk] || {};
+                    for (var fk in coatMap[lk]) {
+                        var el = document.querySelector('[name="' + coatMap[lk][fk] + '"]');
+                        if (el) {
+                            var src = fk === 'std' ? 'nominal' : fk;
+                            el.value = lr[src] != null ? lr[src] : '';
+                            el.dispatchEvent(new Event('input', {bubbles: true}));
+                        }
+                    }
+                }
+                // CCM popup: thickness row
+                var thk = layers.thickness || {};
+                var ccmMap = {min: 'ccmThickStdMinInput', std: 'ccmThickStdInput', max: 'ccmThickStdMaxInput'};
+                for (var fk in ccmMap) {
+                    var el = document.getElementById(ccmMap[fk]);
+                    if (el) {
+                        var src = fk === 'std' ? 'nominal' : fk;
+                        el.value = thk[src] != null ? thk[src] : '';
+                        el.dispatchEvent(new Event('input', {bubbles: true}));
+                    }
+                }
+            } catch (e) {}
         }
 
         // Auto-select first available ladle from the production order in the dropdown
@@ -365,6 +1262,51 @@ document.getElementById('productionOrderSelect').addEventListener('change', func
             }
         }
     }
+});
+
+// Auto-fill diameter, pipe class, and weight when selecting a product
+document.getElementById('productSelect').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    if (selectedOption.value) {
+        const dn = selectedOption.getAttribute('data-dn');
+        const cls = selectedOption.getAttribute('data-class');
+        const weight = selectedOption.getAttribute('data-weight');
+
+        if (dn) {
+            document.querySelector('select[name="diameter"]').value = dn;
+            document.getElementById('diameterSelect').dispatchEvent(new Event('change'));
+        }
+        if (cls) {
+            document.querySelector('select[name="pipe_class"]').value = cls;
+        }
+        // NOTE: actual_weight is intentionally NOT auto-filled from the product.
+        // It must stay empty until the operator weighs the pipe and types it in.
+    }
+    // Product Specifications auto-fill
+    var opt = this.options[this.selectedIndex];
+    var specFields = {pipeFieldZinc: 'zinc', pipeFieldIntent: 'intent'};
+    for (var id in specFields) {
+        var el = document.getElementById(id);
+        if (el) el.value = opt.value ? (opt.dataset[specFields[id]] || '') : '';
+    }
+    var desc = opt.value ? (opt.dataset.desc || '') : '';
+    var intEl = document.getElementById('pipeFieldInternal');
+    var extEl = document.getElementById('pipeFieldExternal');
+    var intVal = '', extVal = '';
+    var iIdx = desc.search(/\bInternal\b/i);
+    var eIdx = desc.search(/\bExternal\b/i);
+    if (iIdx >= 0 && eIdx >= 0 && eIdx > iIdx) {
+        intVal = desc.substring(iIdx + 'Internal'.length, eIdx).trim();
+        extVal = desc.substring(eIdx + 'External'.length).trim();
+    } else if (iIdx >= 0) {
+        intVal = desc.substring(iIdx + 'Internal'.length).trim();
+    } else if (eIdx >= 0) {
+        extVal = desc.substring(eIdx + 'External'.length).trim();
+    }
+    intVal = intVal.replace(/^\s*finish\s*/i, '');
+    extVal = extVal.replace(/^\s*finish\s*/i, '');
+    if (intEl) intEl.value = intVal;
+    if (extEl) extEl.value = extVal;
 });
 
 // Show chemical analysis decision when ladle is selected
@@ -391,6 +1333,24 @@ document.getElementById('ladleIdSelect').addEventListener('change', function() {
         } else {
             ladleDecision.className += 'bg-secondary';
         }
+
+        // Auto-set arrange_pipe to next available number
+        fetch(`${window.APP_ROOT}/stages/api/ladle/${selectedOption.value}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.found && data.next_arrange_pipe) {
+                    const orderInput = document.getElementById('pipeOrderInput');
+                    const autoFlag = document.getElementById('pipeOrderAuto');
+                    if (orderInput && (!autoFlag || autoFlag.value === '1')) {
+                        orderInput.value = data.next_arrange_pipe;
+                        // `.value =` does not fire 'input', so the pipe-code
+                        // generator won't re-run on its own — call it so the
+                        // readonly code preview reflects the real order.
+                        if (typeof generatePipeCode === 'function') generatePipeCode();
+                    }
+                }
+            })
+            .catch(() => {});
     } else {
         ladleInfo.style.display = 'none';
     }
@@ -401,9 +1361,9 @@ if (document.getElementById('ladleIdSelect').value) {
     document.getElementById('ladleIdSelect').dispatchEvent(new Event('change'));
 }
 
-// Auto-fill ladle on page load if production order is pre-selected
+// Auto-fill from production order on page load if pre-selected
 const productionOrderSelect = document.getElementById('productionOrderSelect');
-if (productionOrderSelect.value && !document.getElementById('ladleIdSelect').value) {
+if (productionOrderSelect.value) {
     productionOrderSelect.dispatchEvent(new Event('change'));
 }
 
@@ -423,12 +1383,362 @@ function generatePipeCode() {
     document.getElementById('pipeCodeInput').value = pipeCode;
 }
 
+// Auto-determine shift based on current time
+function autoDetermineShift() {
+    const now = new Date();
+    const hour = now.getHours();
+    let shift = '';
+    
+    if (hour >= 8 && hour < 16) {
+        shift = '1';
+    } else if (hour >= 16 && hour < 24) {
+        shift = '2';
+    } else {
+        shift = '3';
+    }
+    
+    const shiftSelect = document.getElementById('shiftSelect');
+    if (shiftSelect.value === '') {
+        shiftSelect.value = shift;
+    }
+}
+
 // Add event listeners to auto-generate pipe code
 document.getElementById('noCodeInput').addEventListener('input', generatePipeCode);
-document.getElementById('pipeOrderInput').addEventListener('input', generatePipeCode);
+document.getElementById('pipeOrderInput').addEventListener('input', function () {
+    const autoFlag = document.getElementById('pipeOrderAuto');
+    if (autoFlag) autoFlag.value = '0';
+    generatePipeCode();
+});
 document.getElementById('ladleIdSelect').addEventListener('change', generatePipeCode);
 
-// Generate on page load if values exist
+// Filter mold dropdown by selected diameter. Shows molds matching DN + molds with no DN set.
+function filterMoldsByDiameter() {
+    const dnSelect = document.getElementById('diameterSelect');
+    const moldSelect = document.getElementById('moldSelect');
+    if (!dnSelect || !moldSelect) return;
+
+    const dn = dnSelect.value;
+    const previouslySelected = moldSelect.value || moldSelect.dataset.selected || '';
+
+    let visibleCount = 0;
+    for (const opt of moldSelect.options) {
+        if (!opt.value) {
+            opt.hidden = false;
+            continue;
+        }
+        const moldDn = opt.dataset.dn;
+        const show = !dn || !moldDn || moldDn === dn;
+        opt.hidden = !show;
+        if (show) visibleCount++;
+    }
+
+    // Clear selection if previously selected mold isn't compatible with this DN
+    const currentOpt = moldSelect.options[moldSelect.selectedIndex];
+    if (currentOpt && currentOpt.hidden) {
+        moldSelect.value = '';
+    } else if (previouslySelected && !moldSelect.value) {
+        // Restore previously selected value if now visible
+        for (const opt of moldSelect.options) {
+            if (opt.value === previouslySelected && !opt.hidden) {
+                moldSelect.value = previouslySelected;
+                break;
+            }
+        }
+    }
+
+    // Update placeholder message when no molds match
+    const placeholder = moldSelect.options[0];
+    if (placeholder && !placeholder.value) {
+        if (dn && visibleCount === 0) {
+            placeholder.textContent = '-- No molds configured for DN' + dn + ' --';
+        } else if (dn) {
+            placeholder.textContent = '-- Select mold for DN' + dn + ' --';
+        } else {
+            placeholder.textContent = '-- Select diameter first --';
+        }
+    }
+}
+
+document.getElementById('diameterSelect').addEventListener('change', filterMoldsByDiameter);
+
+// Run on page load
 generatePipeCode();
+autoDetermineShift();
+filterMoldsByDiameter();
+
+// Pre-fill Internal/External finish from description on page load (edit mode)
+(function() {
+    var ps = document.getElementById('productSelect');
+    if (!ps || !ps.value) return;
+    var opt = ps.options[ps.selectedIndex];
+    var desc = opt.dataset.desc || '';
+    var intEl = document.getElementById('pipeFieldInternal');
+    var extEl = document.getElementById('pipeFieldExternal');
+    var intVal = '', extVal = '';
+    var iIdx = desc.search(/\bInternal\b/i);
+    var eIdx = desc.search(/\bExternal\b/i);
+    if (iIdx >= 0 && eIdx >= 0 && eIdx > iIdx) {
+        intVal = desc.substring(iIdx + 'Internal'.length, eIdx).trim();
+        extVal = desc.substring(eIdx + 'External'.length).trim();
+    } else if (iIdx >= 0) {
+        intVal = desc.substring(iIdx + 'Internal'.length).trim();
+    } else if (eIdx >= 0) {
+        extVal = desc.substring(eIdx + 'External'.length).trim();
+    }
+    intVal = intVal.replace(/^\s*finish\s*/i, '');
+    extVal = extVal.replace(/^\s*finish\s*/i, '');
+    if (intEl) intEl.value = intVal;
+    if (extEl) extEl.value = extVal;
+})();
+
+// ========================================================================
+// PIPE OCR EXTRACTION
+// ========================================================================
+(function() {
+    const ocrInput = document.getElementById('pipeOcrInput');
+    const ocrBtn = document.getElementById('pipeOcrBtn');
+    const ocrSpinner = document.getElementById('pipeOcrSpinner');
+    const ocrMsg = document.getElementById('pipeOcrMsg');
+    const ocrStatus = document.getElementById('pipeOcrStatus');
+    if (!ocrInput || !ocrBtn) return;
+
+    ocrInput.addEventListener('change', function() { ocrBtn.disabled = !this.files.length; });
+
+    ocrBtn.addEventListener('click', function() {
+        const file = ocrInput.files[0];
+        if (!file) return;
+        ocrStatus.style.display = 'block';
+        ocrSpinner.style.display = 'inline-block';
+        ocrMsg.textContent = 'Extracting pipe data from image...';
+        ocrBtn.disabled = true;
+
+        const fd = new FormData();
+        fd.append('image', file);
+
+        fetch(window.APP_ROOT + '/stages/api/ocr-extract', {
+            method: 'POST', body: fd,
+            headers: {'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value}
+        })
+        .then(r => r.json())
+        .then(data => {
+            ocrSpinner.style.display = 'none';
+            if (data.success) {
+                const v = data.values;
+                // Map OCR fields to form fields
+                const map = {
+                    no_code: 'no_code', diameter: 'diameter', pipe_class: 'pipe_class',
+                    actual_weight: 'actual_weight', iso_weight: 'iso_weight',
+                    mold_number: 'mold_number', ladle_id: null, // handled separately
+                    production_date: 'production_date', shift: 'shift',
+                    thickness: 'thickness', thickness_spigot: 'thickness_spigot',
+                };
+                let filled = 0;
+                for (const [key, name] of Object.entries(map)) {
+                    if (!name || v[key] === null || v[key] === undefined) continue;
+                    const el = document.querySelector(`[name="${name}"]`);
+                    if (el) {
+                        el.value = v[key];
+                        el.style.backgroundColor = '#d4edda';
+                        setTimeout(() => { el.style.backgroundColor = ''; }, 3000);
+                        filled++;
+                    }
+                }
+                // Special: ladle_id is a select
+                if (v.ladle_id) {
+                    const ladleSel = document.getElementById('ladleIdSelect');
+                    if (ladleSel) {
+                        for (const opt of ladleSel.options) {
+                            if (opt.value === v.ladle_id) {
+                                ladleSel.value = v.ladle_id;
+                                // `.value =` fires no 'change': dispatch it so the
+                                // next-available pipe order gets fetched.
+                                ladleSel.dispatchEvent(new Event('change'));
+                                filled++;
+                                break;
+                            }
+                        }
+                    }
+                }
+                // Trigger dependent logic
+                if (v.diameter) {
+                    document.getElementById('diameterSelect').dispatchEvent(new Event('change'));
+                }
+                generatePipeCode();
+                ocrMsg.textContent = `${filled} fields filled. Verify & save.`;
+                ocrMsg.className = 'text-success';
+            } else {
+                ocrMsg.textContent = data.error || 'Extraction failed';
+                ocrMsg.className = 'text-danger';
+            }
+            ocrBtn.disabled = false;
+        })
+        .catch(err => {
+            ocrSpinner.style.display = 'none';
+            ocrMsg.textContent = 'Error: ' + err.message;
+            ocrMsg.className = 'text-danger';
+            ocrBtn.disabled = false;
+        });
+    });
+})();
 </script>
+
+{# The DN select sits on the same form as the grids but above them, and the
+   columns a grid shows are a property of the DN. Bound on document rather than
+   on the select so it does not care which modal is in the DOM yet. #}
+<script>
+(function () {
+    if (window.__ovgDnBound) { return; }
+    window.__ovgDnBound = true;
+    var GRID_URL = '{{ url_for('stages.api_ovality_grid') }}';
+    var inflight = {};
+
+    function load(wrap, dn) {
+        var stage = wrap.dataset.stage || '';
+        if (!stage) { return; }
+        var key = stage;
+        if (inflight[key]) { inflight[key].abort(); }
+        var ctrl = new AbortController();
+        inflight[key] = ctrl;
+        var url = GRID_URL + '?stage=' + encodeURIComponent(stage) +
+                  '&dn=' + encodeURIComponent(dn || '');
+        fetch(url, { signal: ctrl.signal, credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(function (data) {
+                // The operator may have typed into the ID column before picking
+                // the DN; the swap must not throw those readings away.
+                var typed = {};
+                wrap.querySelectorAll('input[name]').forEach(function (i) {
+                    if (i.value !== '') { typed[i.name] = i.value; }
+                });
+                wrap.innerHTML = data.html;
+                wrap.dataset.dn = dn || '';
+                wrap.querySelectorAll('input[name]').forEach(function (i) {
+                    if (typed[i.name] !== undefined) {
+                        i.value = typed[i.name];
+                        // Re-runs the deviation and ovality rows for that column.
+                        i.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                });
+                var modal = wrap.closest('.modal-content') || document;
+                var badge = modal.querySelector('.ovg-dn-badge');
+                if (badge) {
+                    badge.textContent = dn ? 'DN' + dn : '';
+                    badge.classList.toggle('d-none', !dn);
+                }
+            })
+            .catch(function () { /* leave the grid exactly as rendered */ });
+    }
+
+    document.addEventListener('change', function (ev) {
+        var el = ev.target;
+        if (!el || el.id !== 'diameterSelect') { return; }
+        var dn = el.value || '';
+        document.querySelectorAll('.ovg-dn-wrap').forEach(function (wrap) {
+            if ((wrap.dataset.dn || '') !== dn) { load(wrap, dn); }
+        });
+    });
+})();
+</script>
+
+<script>
+// Toggle modal trigger buttons green when a READING inside has a value.
+//
+// The Min/Nominal/Max band lives in the same modal and is prefilled from the
+// order's Application spec the moment an order is picked, so counting every
+// number input turned the button green on a pipe nobody had measured. Same
+// rule as the server: a standard is not a measurement.
+(function () {
+    var pairs = [
+        {modal: 'coatingThicknessModal', btn: 'coatingModalBtn', check: 'coatingModalCheck'},
+        {modal: 'ccmDimensionModal', btn: 'ccmModalBtn', check: 'ccmModalCheck'},
+    ];
+
+    function isBand(input) {
+        return /_std(_min|_max)?$/.test(input.name || '');
+    }
+
+    window.refreshModalButtons = function () {
+        pairs.forEach(function (p) {
+            var modal = document.getElementById(p.modal);
+            var btn = document.getElementById(p.btn);
+            var chk = document.getElementById(p.check);
+            if (!modal || !btn) return;
+            var hasData = false;
+            modal.querySelectorAll('input[type="number"]').forEach(function (inp) {
+                if (inp.value !== '' && !isBand(inp)) hasData = true;
+            });
+            btn.classList.toggle('btn-success', hasData);
+            btn.classList.toggle('btn-outline-secondary', !hasData);
+            if (chk) chk.classList.toggle('d-none', !hasData);
+        });
+    };
+
+    document.addEventListener('hidden.bs.modal', window.refreshModalButtons);
+    document.addEventListener('DOMContentLoaded', window.refreshModalButtons);
+
+    // Also refresh when order selection fills the fields
+    var orderSel = document.getElementById('productionOrderSelect');
+    if (orderSel) {
+        orderSel.addEventListener('change', function () {
+            setTimeout(window.refreshModalButtons, 100);
+        });
+    }
+})();
+</script>
+
+<script>
+// Application standards mirror. The order dropdown already carries the whole
+// application_profile in data-app, so picking a different order re-renders the
+// badges without a round trip. Labels and their order match the order sheet.
+(function () {
+    var STANDARDS = [
+        ['iso_8179', 'ISO 8179'], ['en_598', 'EN 598'],
+        ['iso_2531', 'ISO 2531'], ['en_545', 'EN 545'],
+        ['awwa', 'AWWA']
+    ];
+    var EMPTY = {{ ('لم تحدد مواصفة' if current_locale == 'ar' else 'No standard ticked')|tojson }};
+
+    var box = document.getElementById('pipeFieldStandards');
+    var sel = document.getElementById('productionOrderSelect');
+    if (!box || !sel) { return; }
+
+    function render() {
+        var opt = sel.options[sel.selectedIndex];
+        var ticked = {};
+        try {
+            ticked = (JSON.parse((opt && opt.dataset.app) || '{}') || {}).standards || {};
+        } catch (e) { ticked = {}; }
+
+        var html = STANDARDS
+            .filter(function (s) { return ticked[s[0]]; })
+            .map(function (s) { return '<span class="badge bg-primary me-1">' + s[1] + '</span>'; })
+            .join('');
+        box.innerHTML = html || '<span class="text-muted small">' + EMPTY + '</span>';
+    }
+
+    sel.addEventListener('change', render);
+})();
+</script>
+
+<script>
+// A wedge scanner types the digits and sends Enter. Left alone, that Enter
+// submits the pipe form mid-entry — so swallow it on the barcode box only.
+// Delegated, because the console replaces this pane wholesale on every pipe.
+(function () {
+    if (window.__finishBarcodeBound) { return; }
+    window.__finishBarcodeBound = true;
+    document.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter') { return; }
+        var el = ev.target;
+        if (!el || !el.classList || !el.classList.contains('finish-barcode-in')) { return; }
+        ev.preventDefault();
+        el.blur();
+    });
+})();
+</script>
+
+{# Checkbox-dropdown behaviour for the Defect Type / Defect Reason cells. #}
+{{ multi.multi_select_script('لا يوجد' if current_locale == 'ar' else 'None') }}
+
 {% endblock %}

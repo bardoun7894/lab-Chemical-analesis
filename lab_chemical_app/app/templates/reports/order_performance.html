@@ -1,0 +1,68 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header py-2"><span class="small fw-bold">{title}</span></div>
+    <div class="card-body"><canvas id="orderChart" height="90"></canvas></div>
+</div>
+<script>
+(function(){
+const rows = {{ data.rows | tojson }};
+    new Chart(document.getElementById('orderChart'), { type: 'bar',
+        data: { labels: rows.map(r => r.order_number),
+                datasets: [{ label: 'Completion %', data: rows.map(r => r.completion_pct), backgroundColor: '#2563eb' }] },
+        options: { responsive: true, plugins: { legend: { display: false } },
+                   scales: { y: { beginAtZero: true, max: 100 } } } });
+})();
+</script>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Order</th><th>Customer</th>
+                    <th class="text-end">Target</th>
+                    <th class="text-end">Produced</th>
+                    <th class="text-end">Accepted</th>
+                    <th class="text-end">Rejected</th>
+                    <th class="text-end">Completion %</th>
+                    <th class="text-end">Delay</th>
+                    <th class="text-end">Efficiency %</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in data.rows %}
+                <tr>
+                    <td><a href="{{ url_for('production_orders.view', id=r.order_id) }}">{{ r.order_number }}</a></td>
+                    <td>{{ r.customer }}</td>
+                    <td class="text-end">{{ r.target }}</td>
+                    <td class="text-end">{{ r.produced }}</td>
+                    <td class="text-end text-success">{{ r.accepted }}</td>
+                    <td class="text-end text-danger">{{ r.rejected }}</td>
+                    <td class="text-end">{{ r.completion_pct }}%</td>
+                    <td class="text-end">{{ r.delay_days }}d</td>
+                    <td class="text-end">{{ r.efficiency_pct }}%</td>
+                    <td><span class="badge bg-secondary">{{ r.status }}</span></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="10" class="text-center text-muted py-4">No orders</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col"><small class="text-muted">Orders</small><h5>{{ data.summary.orders }}</h5></div>
+            <div class="col"><small class="text-muted">Avg Completion</small><h5>{{ data.summary.avg_completion }}%</h5></div>
+            <div class="col"><small class="text-muted">Avg Efficiency</small><h5>{{ data.summary.avg_efficiency }}%</h5></div>
+            <div class="col"><small class="text-muted">Total Delay Days</small><h5>{{ data.summary.total_delay_days }}</h5></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PQ Analytics Suite — Query · KPI · Dashboard Builder</title>
+<style>
+/* ==================== RESET & BASE ==================== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sap-blue:#0a6ed1;--sap-blue-dark:#0854a0;--sap-blue-light:#d1e8ff;
+  --sap-gold:#f0ab00;--sap-green:#4db14b;--sap-red:#e00707;
+  --sap-orange:#f27020;--sap-teal:#0f828f;
+  --sap-bg:#f0f2f5;--sap-surface:#fff;--sap-surface-alt:#fafafa;
+  --sap-text:#32363a;--sap-text-light:#6a6d70;--sap-text-lighter:#9da0a4;
+  --sap-border:#e0e0e0;--sap-border-dark:#ccc;
+  --sap-header:#32363a;--sap-sidebar:#32363a;
+  --sap-hover:#e8e8e8;--sap-selected:#0854a0;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.1);--shadow-md:0 4px 12px rgba(0,0,0,.15);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.2);--radius:4px;--radius-lg:8px;
+  --transition:all .2s ease;
+  font-family:"72","72full","Segoe UI",Tahoma,Geneva,Verdana,sans-serif;
+  font-size:14px;color:var(--sap-text);line-height:1.5;
+}
+html,body{height:100%;overflow:hidden;background:var(--sap-bg)}
+button{cursor:pointer;font-family:inherit;font-size:inherit}
+input,select,textarea{font-family:inherit;font-size:inherit}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:#f1f1f1}
+::-webkit-scrollbar-thumb{background:#bbb;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#999}
+
+/* ==================== APP LAYOUT ==================== */
+.app{display:flex;flex-direction:column;height:100vh}
+
+/* Top Bar */
+.topbar{display:flex;align-items:center;justify-content:space-between;height:48px;padding:0 16px;background:var(--sap-header);color:#fff;flex-shrink:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-logo{font-size:18px;font-weight:700;letter-spacing:.5px;color:var(--sap-gold)}
+.topbar-logo span{color:#fff;font-weight:300}
+.topbar-subtitle{font-size:11px;color:var(--sap-text-lighter);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.topbar-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:var(--radius);font-size:12px;transition:var(--transition)}
+.topbar-btn:hover{background:rgba(255,255,255,.22)}
+.topbar-btn.primary{background:var(--sap-blue);border-color:var(--sap-blue)}
+.topbar-btn.primary:hover{background:var(--sap-blue-dark)}
+
+/* Content Area */
+.content{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+.sidebar{width:220px;background:var(--sap-sidebar);flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto}
+.sidebar-section{padding:12px 0}
+.sidebar-title{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--sap-text-lighter);padding:8px 16px 4px;font-weight:600}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 16px;color:rgba(255,255,255,.8);cursor:pointer;transition:var(--transition);font-size:13px;border-left:3px solid transparent}
+.sidebar-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.sidebar-item.active{background:rgba(10,110,209,.3);color:#fff;border-left-color:var(--sap-gold)}
+.sidebar-item .icon{width:18px;text-align:center;font-size:15px;flex-shrink:0}
+.sidebar-item .badge{margin-left:auto;background:var(--sap-blue);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600}
+.sidebar-divider{height:1px;background:rgba(255,255,255,.1);margin:4px 16px}
+
+/* Main Panel */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.module{display:none;flex-direction:column;flex:1;overflow:hidden}
+.module.active{display:flex}
+
+/* ==================== TOOLBAR ==================== */
+.toolbar{display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--sap-surface);border-bottom:1px solid var(--sap-border);flex-shrink:0;flex-wrap:wrap}
+.toolbar-sep{width:1px;height:24px;background:var(--sap-border);margin:0 4px}
+.tb-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--sap-surface);border:1px solid var(--sap-border);border-radius:var(--radius);color:var(--sap-text);font-size:12px;transition:var(--transition);white-space:nowrap}
+.tb-btn:hover{background:var(--sap-hover);border-color:var(--sap-border-dark)}
+.tb-btn.primary{background:var(--sap-blue);color:#fff;border-color:var(--sap-blue)}
+.tb-btn.primary:hover{background:var(--sap-blue-dark)}
+.tb-btn.success{background:var(--sap-green);color:#fff;border-color:var(--sap-green)}
+.tb-btn.danger{background:var(--sap-red);color:#fff;border-color:var(--sap-red)}
+.tb-btn .icon{font-size:14px}
+
+/* ==================== QUERY BUILDER ==================== */
+.qb-layout{display:flex;flex:1;overflow:hidden}
+.qb-left{width:260px;border-right:1px solid var(--sap-border);display:flex;flex-direction:column;flex-shrink:0;background:var(--sap-surface)}
+.qb-right{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--sap-surface-alt);border-bottom:1px solid var(--sap-border);font-weight:600;font-size:13px;flex-shrink:0}
+.panel-header .actions{display:flex;gap:4px}
+
+.db-tree{flex:1;overflow-y:auto;padding:4px 0}
+.db-item{padding:6px 14px 6px 20px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;transition:var(--transition)}
+.db-item:hover{background:var(--sap-hover)}
+.db-item.selected{background:var(--sap-blue-light);color:var(--sap-blue-dark);font-weight:600}
+.db-item .icon{font-size:14px;opacity:.7}
+.db-item.folder{padding-left:14px;font-weight:600;color:var(--sap-text-light)}
+.db-item.folder .icon{color:var(--sap-gold)}
+.db-item.field{padding-left:36px;font-size:12px}
+.db-item.field .icon{font-size:11px;color:var(--sap-teal)}
+.db-item .type-tag{margin-left:auto;font-size:9px;padding:1px 5px;border-radius:3px;background:#e8e8e8;color:#666}
+
+/* SQL Editor */
+.sql-editor-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.sql-editor-header{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#1e1e1e;color:#ccc;font-size:12px;border-bottom:1px solid #333}
+.sql-editor-header .tab{padding:4px 12px;background:#1e1e1e;border:1px solid #333;border-bottom:none;color:#aaa;cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;font-size:11px}
+.sql-editor-header .tab.active{background:#1e1e1e;color:#fff;border-color:#0854a0}
+.sql-textarea{flex:1;width:100%;resize:none;background:#1e1e1e;color:#d4d4d4;border:none;padding:14px 16px;font-family:"Cascadia Code","Fira Code","Consolas",monospace;font-size:13px;line-height:1.6;tab-size:2;outline:none}
+.sql-textarea::placeholder{color:#555}
+
+/* Result Grid */
+.result-area{flex:1;overflow:auto;border-top:1px solid var(--sap-border);background:var(--sap-surface)}
+.result-status{padding:6px 14px;background:var(--sap-surface-alt);border-bottom:1px solid var(--sap-border);font-size:12px;color:var(--sap-text-light);display:flex;align-items:center;gap:12px}
+.result-status .success{color:var(--sap-green);font-weight:600}
+.result-status .error{color:var(--sap-red);font-weight:600}
+.result-grid{width:100%;border-collapse:collapse;font-size:12px}
+.result-grid th{background:#f5f6f7;padding:8px 12px;text-align:left;font-weight:600;position:sticky;top:0;border-bottom:2px solid var(--sap-border);white-space:nowrap;color:var(--sap-text);cursor:pointer;user-select:none}
+.result-grid th:hover{background:#e8e8e8}
+.result-grid th .sort-icon{margin-left:4px;opacity:.5;font-size:10px}
+.result-grid td{padding:7px 12px;border-bottom:1px solid #f0f0f0;white-space:nowrap}
+.result-grid tr:hover td{background:var(--sap-blue-light)}
+.result-grid tr:nth-child(even) td{background:#fafafa}
+.result-grid tr:nth-child(even):hover td{background:var(--sap-blue-light)}
+.null-val{color:var(--sap-text-lighter);font-style:italic}
+
+/* ==================== KPI DESIGNER ==================== */
+.kpi-layout{display:flex;flex:1;overflow:hidden}
+.kpi-sidebar{width:300px;border-right:1px solid var(--sap-border);display:flex;flex-direction:column;flex-shrink:0;background:var(--sap-surface);overflow-y:auto}
+.kpi-main{flex:1;overflow-y:auto;padding:20px;background:var(--sap-bg)}
+.kpi-list-item{padding:10px 14px;border-bottom:1px solid var(--sap-border);cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:10px}
+.kpi-list-item:hover{background:var(--sap-hover)}
+.kpi-list-item.active{background:var(--sap-blue-light);border-left:3px solid var(--sap-blue)}
+.kpi-list-item .kpi-icon{width:36px;height:36px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex-shrink:0}
+.kpi-list-item .kpi-info{flex:1;min-width:0}
+.kpi-list-item .kpi-name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-list-item .kpi-desc{font-size:11px;color:var(--sap-text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* KPI Card Preview */
+.kpi-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px}
+.kpi-card{background:var(--sap-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--transition);border:1px solid var(--sap-border)}
+.kpi-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.kpi-card-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between}
+.kpi-card-title{font-size:13px;font-weight:600;color:var(--sap-text)}
+.kpi-card-body{padding:0 16px 14px}
+.kpi-card-value{font-size:32px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.kpi-card-target{font-size:11px;color:var(--sap-text-light)}
+.kpi-card-footer{padding:10px 16px;background:var(--sap-surface-alt);display:flex;align-items:center;gap:8px;font-size:11px;border-top:1px solid var(--sap-border)}
+.kpi-trend{display:flex;align-items:center;gap:3px;font-weight:600}
+.kpi-trend.up{color:var(--sap-green)}
+.kpi-trend.down{color:var(--sap-red)}
+.kpi-trend.flat{color:var(--sap-text-lighter)}
+.kpi-sparkline{margin-left:auto;height:24px;opacity:.6}
+
+/* KPI Form */
+.kpi-form{background:var(--sap-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:24px;border:1px solid var(--sap-border)}
+.form-section{margin-bottom:20px}
+.form-section-title{font-size:14px;font-weight:700;color:var(--sap-text);margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--sap-blue);display:flex;align-items:center;gap:8px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:12px;font-weight:600;color:var(--sap-text-light)}
+.form-input,.form-select,.form-textarea{padding:8px 10px;border:1px solid var(--sap-border);border-radius:var(--radius);background:var(--sap-surface);transition:var(--transition);outline:none;font-size:13px}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--sap-blue);box-shadow:0 0 0 2px rgba(10,110,209,.15)}
+.form-textarea{min-height:80px;resize:vertical;font-family:"Cascadia Code","Fira Code","Consolas",monospace;font-size:12px}
+.threshold-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end}
+.threshold-item{text-align:center;padding:10px;border-radius:var(--radius);border:1px solid var(--sap-border)}
+.threshold-item.good{border-color:var(--sap-green);background:rgba(77,177,75,.04)}
+.threshold-item.warn{border-color:var(--sap-orange);background:rgba(242,112,32,.04)}
+.threshold-item.bad{border-color:var(--sap-red);background:rgba(224,7,7,.04)}
+.threshold-item label{display:block;font-size:11px;font-weight:600;margin-bottom:4px}
+.threshold-item.good label{color:var(--sap-green)}
+.threshold-item.warn label{color:var(--sap-orange)}
+.threshold-item.bad label{color:var(--sap-red)}
+.threshold-item input{text-align:center;width:100%;padding:5px;border:1px solid var(--sap-border);border-radius:var(--radius);font-size:12px}
+.form-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--sap-border)}
+
+/* ==================== DASHBOARD DESIGNER ==================== */
+.dash-layout{display:flex;flex:1;overflow:hidden}
+.dash-sidebar{width:260px;border-right:1px solid var(--sap-border);display:flex;flex-direction:column;flex-shrink:0;background:var(--sap-surface);overflow-y:auto}
+.dash-main{flex:1;overflow:auto;padding:20px;background:var(--sap-bg)}
+.dash-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.dash-grid-select{padding:6px 10px;border:1px solid var(--sap-border);border-radius:var(--radius);background:var(--sap-surface);font-size:12px}
+
+.widget-palette{padding:8px}
+.widget-palette-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--sap-text-light);padding:6px 8px}
+.widget-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--sap-border);border-radius:var(--radius);margin-bottom:4px;cursor:grab;transition:var(--transition);font-size:12px;background:var(--sap-surface-alt)}
+.widget-item:hover{border-color:var(--sap-blue);background:var(--sap-blue-light);box-shadow:var(--shadow-sm)}
+.widget-item:active{cursor:grabbing;opacity:.7}
+.widget-item .w-icon{width:28px;height:28px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0}
+.widget-item .w-info{flex:1}
+.widget-item .w-name{font-weight:600}
+.widget-item .w-desc{font-size:10px;color:var(--sap-text-lighter)}
+
+/* Dashboard Canvas */
+.dash-canvas{min-height:600px;background:var(--sap-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--sap-border);padding:16px}
+.dash-canvas-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--sap-border)}
+.dash-canvas-title{font-size:18px;font-weight:700;color:var(--sap-text)}
+.dash-canvas-subtitle{font-size:12px;color:var(--sap-text-light)}
+.dash-canvas-grid{display:grid;gap:14px;transition:var(--transition)}
+
+/* Dashboard Widgets */
+.dash-widget{background:var(--sap-surface);border:1px solid var(--sap-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--transition);position:relative;min-height:160px;display:flex;flex-direction:column}
+.dash-widget:hover{box-shadow:var(--shadow-md)}
+.dash-widget.selected{border-color:var(--sap-blue);box-shadow:0 0 0 2px rgba(10,110,209,.2)}
+.dash-widget-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--sap-surface-alt);border-bottom:1px solid var(--sap-border);flex-shrink:0}
+.dash-widget-title{font-size:12px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-widget-actions{display:flex;gap:4px}
+.dash-widget-action{width:24px;height:24px;border:none;background:transparent;color:var(--sap-text-light);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:var(--transition)}
+.dash-widget-action:hover{background:var(--sap-hover);color:var(--sap-text)}
+.dash-widget-action.delete:hover{background:rgba(224,7,7,.1);color:var(--sap-red)}
+.dash-widget-body{flex:1;padding:14px;position:relative;overflow:hidden}
+.dash-widget-footer{padding:8px 14px;background:var(--sap-surface-alt);border-top:1px solid var(--sap-border);font-size:11px;color:var(--sap-text-lighter);flex-shrink:0}
+
+/* Chart containers */
+.chart-container{width:100%;height:100%;min-height:120px;position:relative}
+.chart-bar{display:flex;align-items:flex-end;gap:8px;height:100%;padding:0 4px}
+.chart-bar-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.chart-bar-fill{width:100%;border-radius:3px 3px 0 0;transition:height .5s ease;min-width:12px}
+.chart-bar-label{font-size:9px;color:var(--sap-text-lighter);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.chart-bar-value{font-size:9px;font-weight:600;color:var(--sap-text-light)}
+
+.chart-line{position:relative;height:100%;display:flex;align-items:flex-end}
+.chart-line svg{width:100%;height:100%}
+.chart-donut{display:flex;align-items:center;justify-content:center;height:100%;position:relative}
+.chart-donut svg{width:80%;height:80%}
+.chart-donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.chart-donut-center .value{font-size:24px;font-weight:700;color:var(--sap-text)}
+.chart-donut-center .label{font-size:10px;color:var(--sap-text-light)}
+
+.chart-table{width:100%;font-size:11px;border-collapse:collapse}
+.chart-table th{text-align:left;padding:6px 8px;background:#f5f6f7;font-weight:600;border-bottom:1px solid var(--sap-border);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.chart-table td{padding:5px 8px;border-bottom:1px solid #f0f0f0}
+.chart-table tr:hover td{background:var(--sap-blue-light)}
+
+/* KPI Widget on Dashboard */
+.dash-kpi-value{font-size:28px;font-weight:700;line-height:1.2}
+.dash-kpi-label{font-size:12px;color:var(--sap-text-light);margin-bottom:4px}
+.dash-kpi-trend{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;margin-top:6px}
+.dash-kpi-trend.up{color:var(--sap-green);background:rgba(77,177,75,.1)}
+.dash-kpi-trend.down{color:var(--sap-red);background:rgba(224,7,7,.1)}
+
+/* ==================== MODALS ==================== */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.show{opacity:1;pointer-events:auto}
+.modal{background:var(--sap-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:90%;max-width:640px;max-height:85vh;display:flex;flex-direction:column;transform:translateY(20px);transition:transform .25s}
+.modal-overlay.show .modal{transform:translateY(0)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--sap-border)}
+.modal-title{font-size:16px;font-weight:700}
+.modal-close{width:32px;height:32px;border:none;background:transparent;font-size:20px;color:var(--sap-text-light);cursor:pointer;border-radius:var(--radius);display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:var(--sap-hover)}
+.modal-body{padding:20px;overflow-y:auto;flex:1}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--sap-border);display:flex;justify-content:flex-end;gap:8px}
+
+/* ==================== STATUS BAR ==================== */
+.statusbar{height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:var(--sap-header);color:rgba(255,255,255,.6);font-size:11px;flex-shrink:0}
+.statusbar-item{display:flex;align-items:center;gap:4px}
+
+/* ==================== CONTEXT MENU ==================== */
+.ctx-menu{position:fixed;background:var(--sap-surface);border:1px solid var(--sap-border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:180px;padding:4px 0;z-index:2000;display:none}
+.ctx-menu.show{display:block}
+.ctx-menu-item{padding:7px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:var(--transition)}
+.ctx-menu-item:hover{background:var(--sap-blue);color:#fff}
+.ctx-menu-item .shortcut{margin-left:auto;font-size:10px;opacity:.6}
+.ctx-menu-sep{height:1px;background:var(--sap-border);margin:3px 0}
+
+/* ==================== TOAST ==================== */
+.toast-container{position:fixed;bottom:40px;right:20px;z-index:3000;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 18px;border-radius:var(--radius);box-shadow:var(--shadow-md);font-size:13px;display:flex;align-items:center;gap:8px;animation:toastIn .3s ease;max-width:360px}
+.toast.info{background:#0854a0;color:#fff}
+.toast.success{background:var(--sap-green);color:#fff}
+.toast.error{background:var(--sap-red);color:#fff}
+.toast.warning{background:var(--sap-orange);color:#fff}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(10px)}}
+
+/* Tabs inside panels */
+.inner-tabs{display:flex;gap:0;border-bottom:1px solid var(--sap-border);background:var(--sap-surface-alt);flex-shrink:0}
+.inner-tab{padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;color:var(--sap-text-light);border-bottom:2px solid transparent;transition:var(--transition)}
+.inner-tab:hover{color:var(--sap-text);background:rgba(0,0,0,.02)}
+.inner-tab.active{color:var(--sap-blue);border-bottom-color:var(--sap-blue)}
+
+/* Resizer */
+.resizer{width:4px;cursor:col-resize;background:transparent;flex-shrink:0;transition:background .2s}
+.resizer:hover,.resizer.active{background:var(--sap-blue)}
+
+/* Empty states */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--sap-text-lighter);padding:40px;text-align:center}
+.empty-state .icon{font-size:48px;margin-bottom:12px;opacity:.5}
+.empty-state .title{font-size:16px;font-weight:600;color:var(--sap-text-light);margin-bottom:4px}
+.empty-state .desc{font-size:13px;max-width:300px}
+
+/* Color swatches */
+.color-swatches{display:flex;gap:6px;flex-wrap:wrap}
+.color-swatch{width:28px;height:28px;border-radius:var(--radius);cursor:pointer;border:2px solid transparent;transition:var(--transition)}
+.color-swatch:hover,.color-swatch.active{border-color:var(--sap-text);transform:scale(1.1)}
+
+/* Saved queries dropdown */
+.saved-dropdown{position:absolute;top:100%;left:0;background:var(--sap-surface);border:1px solid var(--sap-border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;max-height:200px;overflow-y:auto;z-index:500;display:none}
+.saved-dropdown.show{display:block}
+.saved-dropdown-item{padding:8px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:var(--transition)}
+.saved-dropdown-item:hover{background:var(--sap-blue-light)}
+.saved-dropdown-item .name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.saved-dropdown-item .delete-q{color:var(--sap-red);opacity:0;transition:var(--transition)}
+.saved-dropdown-item:hover .delete-q{opacity:1}
+
+/* Formula builder */
+.formula-builder{display:flex;align-items:center;gap:6px;padding:8px;background:#f5f6f7;border-radius:var(--radius);margin-top:4px}
+.formula-token{padding:3px 8px;background:var(--sap-surface);border:1px solid var(--sap-border);border-radius:3px;font-size:12px;font-family:monospace}
+.formula-op{padding:3px 6px;background:var(--sap-gold);color:#fff;border-radius:3px;font-size:12px;font-weight:700}
+
+/* Filter row */
+.filter-row{display:flex;gap:8px;align-items:center;padding:6px 0}
+.filter-row select,.filter-row input{padding:5px 8px;border:1px solid var(--sap-border);border-radius:var(--radius);font-size:12px}
+.filter-row .add-filter{width:24px;height:24px;border:1px solid var(--sap-border);background:var(--sap-surface);border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--sap-green)}
+.filter-row .remove-filter{width:24px;height:24px;border:none;background:transparent;cursor:pointer;font-size:16px;color:var(--sap-red)}
+
+/* Responsive */
+@media(max-width:900px){
+  .sidebar{width:180px}
+  .qb-left{width:200px}
+  .kpi-sidebar{width:240px}
+  .dash-sidebar{width:200px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ TOP BAR ============ -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">PQ <span>Analytics Suite</span></div>
+      <div class="topbar-subtitle">Query · KPI · Dashboard Builder</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn" onclick="exportProject()" title="Export">📤 Export</button>
+      <button class="topbar-btn" onclick="importProject()" title="Import">📥 Import</button>
+      <button class="topbar-btn primary" onclick="saveAll()">💾 Save All</button>
+    </div>
+  </div>
+
+  <!-- ============ CONTENT ============ -->
+  <div class="content">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Modules</div>
+        <div class="sidebar-item active" data-module="query-builder" onclick="switchModule('query-builder')">
+          <span class="icon">🔍</span> Query Builder
+          <span class="badge" id="qb-query-count">0</span>
+        </div>
+        <div class="sidebar-item" data-module="kpi-designer" onclick="switchModule('kpi-designer')">
+          <span class="icon">📊</span> KPI Designer
+          <span class="badge" id="kpi-count">0</span>
+        </div>
+        <div class="sidebar-item" data-module="dashboard-designer" onclick="switchModule('dashboard-designer')">
+          <span class="icon">📐</span> Dashboard Designer
+          <span class="badge" id="dash-count">0</span>
+        </div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Quick Actions</div>
+        <div class="sidebar-item" onclick="newQuery()">
+          <span class="icon">➕</span> New Query
+        </div>
+        <div class="sidebar-item" onclick="switchModule('kpi-designer');newKPI()">
+          <span class="icon">➕</span> New KPI
+        </div>
+        <div class="sidebar-item" onclick="switchModule('dashboard-designer');newDashboard()">
+          <span class="icon">➕</span> New Dashboard
+        </div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Data Sources</div>
+        <div class="sidebar-item" onclick="showDataSourceManager()">
+          <span class="icon">🗄️</span> Connections
+        </div>
+        <div class="sidebar-item" onclick="showToast('info','Data refreshed')">
+          <span class="icon">🔄</span> Refresh Metadata
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+
+      <!-- ============ QUERY BUILDER ============ -->
+      <div class="module active" id="query-builder">
+        <div class="toolbar">
+          <button class="tb-btn primary" onclick="executeQuery()">▶ Execute (F5)</button>
+          <button class="tb-btn" onclick="executeQuery(true)">⏱ Explain Plan</button>
+          <div class="toolbar-sep"></div>
+          <button class="tb-btn" onclick="formatSQL()">✨ Format SQL</button>
+          <button class="tb-btn" onclick="clearEditor()">🗑 Clear</button>
+          <div class="toolbar-sep"></div>
+          <div style="position:relative">
+            <button class="tb-btn" onclick="toggleSavedQueries()">📂 Saved Queries ▾</button>
+            <div class="saved-dropdown" id="saved-queries-dropdown"></div>
+          </div>
+          <button class="tb-btn" onclick="saveQuery()">💾 Save Query</button>
+          <div class="toolbar-sep"></div>
+          <button class="tb-btn" onclick="exportResults('csv')">📄 Export CSV</button>
+          <button class="tb-btn" onclick="exportResults('json')">📋 Export JSON</button>
+        </div>
+        <div class="qb-layout">
+          <!-- Left Panel: Database Browser -->
+          <div class="qb-left">
+            <div class="panel-header">
+              <span>📁 Database Browser</span>
+              <div class="actions">
+                <button style="background:none;border:none;cursor:pointer;font-size:14px" onclick="filterTables()" title="Filter">🔍</button>
+              </div>
+            </div>
+            <div style="padding:6px 8px;flex-shrink:0">
+              <input class="form-input" placeholder="Filter tables..." id="table-filter" oninput="filterTables()" style="width:100%;font-size:11px;padding:5px 8px">
+            </div>
+            <div class="db-tree" id="db-tree"></div>
+          </div>
+
+          <!-- Resizer -->
+          <div class="resizer" id="qb-resizer"></div>
+
+          <!-- Right Panel: SQL Editor + Results -->
+          <div class="qb-right">
+            <div class="sql-editor-wrap" style="flex:0 0 40%;min-height:120px">
+              <div class="sql-editor-header">
+                <div class="tab active">SQL Query</div>
+                <div style="margin-left:auto;display:flex;gap:4px;align-items:center">
+                  <span style="font-size:10px;color:#888" id="sql-line-col">Ln 1, Col 1</span>
+                </div>
+              </div>
+              <textarea class="sql-textarea" id="sql-editor" placeholder="-- Enter your SQL query here&#10;-- Press F5 or click Execute to run&#10;&#10;SELECT * FROM OINV WHERE DocDate >= '2024-01-01'&#10;" spellcheck="false" oninput="updateLineCol()" onkeydown="handleEditorKeys(event)"></textarea>
+            </div>
+            <div style="height:4px;background:var(--sap-border);cursor:row-resize;flex-shrink:0" id="editor-resizer"></div>
+            <div class="result-area" id="result-area">
+              <div class="result-status" id="result-status">
+                <span>Ready</span>
+              </div>
+              <div id="result-content">
+                <div class="empty-state">
+                  <div class="icon">⚡</div>
+                  <div class="title">Execute a Query</div>
+                  <div class="desc">Write or select a SQL query and press F5 to see results here</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ KPI DESIGNER ============ -->
+      <div class="module" id="kpi-designer">
+        <div class="toolbar">
+          <button class="tb-btn primary" onclick="newKPI()">➕ New KPI</button>
+          <button class="tb-btn" onclick="duplicateKPI()">📋 Duplicate</button>
+          <button class="tb-btn" onclick="deleteKPI()">🗑 Delete</button>
+          <div class="toolbar-sep"></div>
+          <button class="tb-btn" onclick="refreshKPIPreview()">🔄 Refresh Preview</button>
+          <div class="toolbar-sep"></div>
+          <div class="inner-tabs" style="border:none;background:transparent">
+            <div class="inner-tab active" onclick="switchKPIView('preview',this)">Preview</div>
+            <div class="inner-tab" onclick="switchKPIView('editor',this)">Editor</div>
+          </div>
+        </div>
+        <div class="kpi-layout">
+          <div class="kpi-sidebar" id="kpi-sidebar">
+            <div class="panel-header">
+              <span>📊 KPI Library</span>
+              <span style="font-size:11px;color:var(--sap-text-lighter)" id="kpi-sidebar-count">0 items</span>
+            </div>
+            <div id="kpi-list"></div>
+          </div>
+          <div class="kpi-main" id="kpi-main">
+            <!-- KPI Preview Mode -->
+            <div id="kpi-preview-mode">
+              <div class="kpi-cards" id="kpi-cards-container"></div>
+              <div id="kpi-preview-empty" class="empty-state" style="min-height:300px">
+                <div class="icon">📊</div>
+                <div class="title">No KPIs Defined</div>
+                <div class="desc">Create your first KPI to start monitoring your business metrics</div>
+              </div>
+            </div>
+            <!-- KPI Editor Mode -->
+            <div id="kpi-editor-mode" style="display:none">
+              <div class="kpi-form" id="kpi-form-container">
+                <div id="kpi-form-empty" class="empty-state" style="min-height:300px">
+                  <div class="icon">✏️</div>
+                  <div class="title">Select or Create a KPI</div>
+                  <div class="desc">Choose a KPI from the library or create a new one to edit its properties</div>
+                </div>
+                <div id="kpi-form-content" style="display:none">
+                  <!-- General Section -->
+                  <div class="form-section">
+                    <div class="form-section-title">📌 General Information</div>
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label class="form-label">KPI Name *</label>
+                        <input class="form-input" id="kpi-name" placeholder="e.g. Revenue Growth Rate">
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" id="kpi-category">
+                          <option>Financial</option><option>Sales</option><option>Inventory</option>
+                          <option>Purchasing</option><option>Production</option><option>HR</option>
+                          <option>Customer</option><option>Custom</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Data Source</label>
+                        <select class="form-select" id="kpi-datasource">
+                          <option>SAP B1 Company DB</option><option>Custom SQL Query</option>
+                          <option>Excel Import</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Refresh Interval</label>
+                        <select class="form-select" id="kpi-refresh">
+                          <option>Real-time</option><option>Every 5 min</option><option>Every 15 min</option>
+                          <option>Every hour</option><option>Daily</option><option>Manual</option>
+                        </select>
+                      </div>
+                      <div class="form-group full">
+                        <label class="form-label">Description</label>
+                        <input class="form-input" id="kpi-description" placeholder="Brief description of this KPI...">
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Data Section -->
+                  <div class="form-section">
+                    <div class="form-section-title">💾 Data Definition (SQL)</div>
+                    <div class="form-group full">
+                      <label class="form-label">Query / Formula</label>
+                      <textarea class="form-textarea" id="kpi-sql" placeholder="SELECT SUM(LineTotal) FROM INV1 T0 INNER JOIN OINV T1 ON T0.DocEntry = T1.DocEntry WHERE T1.DocDate >= [%0]"></textarea>
+                    </div>
+                    <div class="form-group full" style="margin-top:8px">
+                      <label class="form-label">Aggregation</label>
+                      <select class="form-select" id="kpi-agg">
+                        <option>SUM</option><option>AVG</option><option>COUNT</option><option>MIN</option><option>MAX</option>
+                        <option>COUNT DISTINCT</option><option>CUSTOM</option>
+                      </select>
+                    </div>
+                  </div>
+                  <!-- Threshold Section -->
+                  <div class="form-section">
+                    <div class="form-section-title">🎯 Thresholds & Alerts</div>
+                    <div class="threshold-row">
+                      <div class="threshold-item good">
+                        <label>✅ Good</label>
+                        <input type="number" id="kpi-threshold-good" placeholder=">=">
+                      </div>
+                      <div class="threshold-item warn">
+                        <label>⚠️ Warning</label>
+                        <input type="number" id="kpi-threshold-warn" placeholder=">=">
+                      </div>
+                      <div class="threshold-item bad">
+                        <label>❌ Critical</label>
+                        <input type="number" id="kpi-threshold-bad" placeholder="<">
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Display Section -->
+                  <div class="form-section">
+                    <div class="form-section-title">🎨 Display Settings</div>
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label class="form-label">Format</label>
+                        <select class="form-select" id="kpi-format">
+                          <option>Number</option><option>Currency ($)</option><option>Currency (€)</option>
+                          <option>Percentage (%)</option><option>Decimal (2)</option><option>Integer</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Prefix</label>
+                        <input class="form-input" id="kpi-prefix" placeholder="$">
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Suffix</label>
+                        <input class="form-input" id="kpi-suffix" placeholder="%">
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Color Theme</label>
+                        <div class="color-swatches" id="kpi-colors">
+                          <div class="color-swatch active" style="background:#0a6ed1" onclick="selectKPIColor(this,'#0a6ed1')"></div>
+                          <div class="color-swatch" style="background:#4db14b" onclick="selectKPIColor(this,'#4db14b')"></div>
+                          <div class="color-swatch" style="background:#f0ab00" onclick="selectKPIColor(this,'#f0ab00')"></div>
+                          <div class="color-swatch" style="background:#e00707" onclick="selectKPIColor(this,'#e00707')"></div>
+                          <div class="color-swatch" style="background:#f27020" onclick="selectKPIColor(this,'#f27020')"></div>
+                          <div class="color-swatch" style="background:#0f828f" onclick="selectKPIColor(this,'#0f828f')"></div>
+                          <div class="color-swatch" style="background:#8b5cf6" onclick="selectKPIColor(this,'#8b5cf6')"></div>
+                          <div class="color-swatch" style="background:#ec4899" onclick="selectKPIColor(this,'#ec4899')"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Actions -->
+                  <div class="form-actions">
+                    <button class="tb-btn" onclick="cancelKPIEdit()">Cancel</button>
+                    <button class="tb-btn primary" onclick="saveKPIData()">💾 Save KPI</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ DASHBOARD DESIGNER ============ -->
+      <div class="module" id="dashboard-designer">
+        <div class="toolbar">
+          <div class="dash-toolbar">
+            <button class="tb-btn primary" onclick="newDashboard()">➕ New Dashboard</button>
+            <button class="tb-btn" onclick="saveDashboard()">💾 Save Dashboard</button>
+            <button class="tb-btn" onclick="deleteDashboard()">🗑 Delete</button>
+            <div class="toolbar-sep"></div>
+            <label style="font-size:12px;color:var(--sap-text-light)">Layout:</label>
+            <select class="dash-grid-select" id="dash-grid-cols" onchange="updateDashGrid()">
+              <option value="2">2 Columns</option>
+              <option value="3" selected>3 Columns</option>
+              <option value="4">4 Columns</option>
+              <option value="1">1 Column</option>
+            </select>
+            <label style="font-size:12px;color:var(--sap-text-light)">Theme:</label>
+            <select class="dash-grid-select" id="dash-theme" onchange="applyDashTheme()">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="sap">SAP Fiori</option>
+            </select>
+            <div class="toolbar-sep"></div>
+            <button class="tb-btn" onclick="exportDashboard('png')">📸 Export Image</button>
+            <button class="tb-btn" onclick="exportDashboard('html')">📄 Export HTML</button>
+            <div style="flex:1"></div>
+            <select class="dash-grid-select" id="dashboard-selector" onchange="loadDashboard(this.value)"><option value="">— Select Dashboard —</option></select>
+          </div>
+        </div>
+        <div class="dash-layout">
+          <!-- Widget Palette -->
+          <div class="dash-sidebar">
+            <div class="panel-header"><span>🧩 Widget Palette</span></div>
+            <div class="widget-palette" id="widget-palette">
+              <div class="widget-palette-title">Charts</div>
+              <div class="widget-item" draggable="true" ondragstart="dragWidget(event,'bar')">
+                <div class="w-icon" style="background:var(--sap-blue)">📊</div>
+                <div class="w-info"><div class="w-name">Bar Chart</div><div class="w-desc">Vertical bar visualization</div></div>
+              </div>
+              <div class="widget-item" draggable="true" ondragstart="dragWidget(event,'line')">
+                <div class="w-icon" style="background:var(--sap-green)">📈</div>
+                <div class="w-info"><div class="w-name">Line Chart</div><div class="w-desc">Trend over time</div></div>
+              </div>
+              <div class="widget-item" draggable="true" ondragstart="dragWidget(event,'donut')">
+                <div class="w-icon" style="background:var(--sap-orange)">🍩</div>
+                <div class="w-info"><div class="w-name">Donut Chart</div><div class="w-desc">Proportional distribution</div></div>
+              </div>
+              <div class="widget-item" draggable="true" ondragstart="dragWidget(event,'pie')">
+                <div class="w-icon" style="background:var(--sap-teal)">🥧</div>
+                <div class="w-info"><div class="w-name">Pie Chart</div><div class="w-desc">Pie distribution</div></div>
+              </div>
+              <div class="widget-palette-title" style="margin-top:8px">Data</div>
+              <div class="widget-item" draggable="true" ondragstart="dragWidget(event,'table')">
+                <div class="w-icon" style="background:#8b5cf6">📋</div>
+                <div class="w-info"><div class="w-name">Data Table</div><div class="w-desc">Tabular data view</div></div>
+              </div>
+              <div class="widget-item" draggable="true" ondragstart="dragWidget(event,'kpi')">
+                <div class="w-icon" style="background:var(--sap-gold)">🎯</div>
+                <div class="w-info"><div class="w-name">KPI Card</div><div class="w-desc">Single metric display</div></div>
+              </div>
+              <div class="widget-palette-title" style="margin-top:8px">Other</div>
+              <div class="widget-item" draggable="true" ondragstart="dragWidget(event,'text')">
+                <div class="w-icon" style="background:#666">📝</div>
+                <div class="w-info"><div class="w-name">Text / Note</div><div class="w-desc">Rich text block</div></div>
+              </div>
+              <div class="widget-item" draggable="true" ondragstart="dragWidget(event,'indicator')">
+                <div class="w-icon" style="background:var(--sap-red)">🚨</div>
+                <div class="w-info"><div class="w-name">Alert Indicator</div><div class="w-desc">Threshold indicator</div></div>
+              </div>
+            </div>
+          </div>
+          <!-- Dashboard Canvas -->
+          <div class="dash-main">
+            <div class="dash-canvas" id="dash-canvas" ondragover="allowDrop(event)" ondrop="dropWidget(event)">
+              <div class="dash-canvas-header">
+                <div>
+                  <div class="dash-canvas-title" id="dash-canvas-title">Untitled Dashboard</div>
+                  <div class="dash-canvas-subtitle" id="dash-canvas-subtitle">Double-click title to rename • Drag widgets from the palette</div>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <button class="tb-btn" onclick="toggleDashEditMode()" id="dash-edit-toggle">✏️ Edit Mode</button>
+                  <button class="tb-btn" onclick="previewDashboard()">👁 Preview</button>
+                </div>
+              </div>
+              <div class="dash-canvas-grid" id="dash-canvas-grid" style="grid-template-columns:repeat(3,1fr)">
+                <!-- Widgets rendered here -->
+              </div>
+              <div id="dash-empty" class="empty-state" style="min-height:200px">
+                <div class="icon">📐</div>
+                <div class="title">Start Building Your Dashboard</div>
+                <div class="desc">Drag and drop widgets from the palette on the left onto this canvas to design your dashboard</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /content -->
+
+  <!-- Status Bar -->
+  <div class="statusbar">
+    <div class="statusbar-item">
+      <span>● Connected</span>
+      <span>|</span>
+      <span id="status-db">SAP B1 Demo DB</span>
+    </div>
+    <div style="display:flex;gap:16px">
+      <div class="statusbar-item"><span id="status-info">Ready</span></div>
+      <div class="statusbar-item"><span id="status-time"></span></div>
+    </div>
+  </div>
+</div><!-- /app -->
+
+<!-- Modal: Data Source Manager -->
+<div class="modal-overlay" id="ds-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🗄️ Data Source Connections</span>
+      <button class="modal-close" onclick="closeModal('ds-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="ds-list"></div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--sap-border)">
+        <div class="form-section-title">➕ Add Connection</div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group">
+            <label class="form-label">Name</label>
+            <input class="form-input" id="ds-name" placeholder="Connection name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select class="form-select" id="ds-type">
+              <option>SQL Server</option><option>SAP HANA</option><option>MySQL</option><option>PostgreSQL</option><option>Oracle</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Server / Host</label>
+            <input class="form-input" id="ds-server" placeholder="server\instance or host:port">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Database</label>
+            <input class="form-input" id="ds-database" placeholder="Database name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input class="form-input" id="ds-user" placeholder="username">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" id="ds-pass" placeholder="••••••••">
+          </div>
+        </div>
+        <div style="margin-top:12px;text-align:right">
+          <button class="tb-btn primary" onclick="addDataSource()">Test & Add Connection</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="tb-btn" onclick="closeModal('ds-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Widget Config -->
+<div class="modal-overlay" id="widget-config-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <span class="modal-title" id="wc-modal-title">Configure Widget</span>
+      <button class="modal-close" onclick="closeModal('widget-config-modal')">&times;</button>
+    </div>
+    <div class="modal-body" id="wc-modal-body"></div>
+    <div class="modal-footer">
+      <button class="tb-btn" onclick="closeModal('widget-config-modal')">Cancel</button>
+      <button class="tb-btn primary" onclick="saveWidgetConfig()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- Context Menu -->
+<div class="ctx-menu" id="ctx-menu"></div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ==================== APPLICATION STATE ====================
+const APP = {
+  activeModule: 'query-builder',
+  queries: [],
+  kpis: [],
+  dashboards: [],
+  activeDashboard: null,
+  activeKPI: null,
+  activeQueryIndex: -1,
+  dataSources: [
+    { id: 1, name: 'SAP B1 Demo DB', type: 'SQL Server', server: 'SBODEMO\\SBODEMO', database: 'SBODemoUS', user: 'sa', status: 'connected' }
+  ],
+  lastResults: null,
+  dashEditMode: false,
+  widgetCounter: 0,
+  expandedTables: {}
+};
+
+// ==================== SAMPLE DATA ====================
+const SAMPLE_TABLES = {
+  'OINV': { label: 'A/R Invoice Header', fields: [
+    { name: 'DocEntry', type: 'Int' }, { name: 'DocNum', type: 'NVarchar' },
+    { name: 'DocDate', type: 'Date' }, { name: 'CardCode', type: 'NVarchar' },
+    { name: 'CardName', type: 'NVarchar' }, { name: 'DocTotal', type: 'Decimal' },
+    { name: 'DocStatus', type: 'Char' }, { name: 'SlpCode', type: 'Int' },
+    { name: 'Series', type: 'Int' }, { name: 'Comments', type: 'Text' }
+  ]},
+  'INV1': { label: 'A/R Invoice Lines', fields: [
+    { name: 'DocEntry', type: 'Int' }, { name: 'LineNum', type: 'Int' },
+    { name: 'ItemCode', type: 'NVarchar' }, { name: 'Dscription', type: 'NVarchar' },
+    { name: 'Quantity', type: 'Decimal' }, { name: 'Price', type: 'Decimal' },
+    { name: 'LineTotal', type: 'Decimal' }, { name: 'VatGroup', type: 'NVarchar' },
+    { name: 'WhsCode', type: 'NVarchar' }, { name: 'AcctCode', type: 'NVarchar' }
+  ]},
+  'ORDR': { label: 'Sales Order Header', fields: [
+    { name: 'DocEntry', type: 'Int' }, { name: 'DocNum', type: 'NVarchar' },
+    { name: 'DocDate', type: 'Date' }, { name: 'CardCode', type: 'NVarchar' },
+    { name: 'CardName', type: 'NVarchar' }, { name: 'DocTotal', type: 'Decimal' },
+    { name: 'DocStatus', type: 'Char' }, { name: 'SlpCode', type: 'Int' }
+  ]},
+  'RDR1': { label: 'Sales Order Lines', fields: [
+    { name: 'DocEntry', type: 'Int' }, { name: 'LineNum', type: 'Int' },
+    { name: 'ItemCode', type: 'NVarchar' }, { name: 'Dscription', type: 'NVarchar' },
+    { name: 'Quantity', type: 'Decimal' }, { name: 'Price', type: 'Decimal' },
+    { name: 'LineTotal', type: 'Decimal' }, { name: 'OpenQty', type: 'Decimal' }
+  ]},
+  'OITM': { label: 'Item Master', fields: [
+    { name: 'ItemCode', type: 'NVarchar' }, { name: 'ItemName', type: 'NVarchar' },
+    { name: 'ItmsGrpCod', type: 'Int' }, { name: 'FrgnName', type: 'NVarchar' },
+    { name: 'InvntryUom', type: 'NVarchar' }, { name: 'BuyUnitMsr', type: 'NVarchar' },
+    { name: 'SalUnitMsr', type: 'NVarchar' }, { name: 'ItemWeight', type: 'Decimal' }
+  ]},
+  'OCRD': { label: 'Business Partner', fields: [
+    { name: 'CardCode', type: 'NVarchar' }, { name: 'CardName', type: 'NVarchar' },
+    { name: 'CardType', type: 'Char' }, { name: 'GroupNum', type: 'Int' },
+    { name: 'Phone1', type: 'NVarchar' }, { name: 'E_Mail', type: 'NVarchar' },
+    { name: 'City', type: 'NVarchar' }, { name: 'Country', type: 'NVarchar' },
+    { name: 'Balance', type: 'Decimal' }, { name: 'DunningLevel', type: 'Int' }
+  ]},
+  'OPDN': { label: 'A/P Invoice Header', fields: [
+    { name: 'DocEntry', type: 'Int' }, { name: 'DocNum', type: 'NVarchar' },
+    { name: 'DocDate', type: 'Date' }, { name: 'CardCode', type: 'NVarchar' },
+    { name: 'CardName', type: 'NVarchar' }, { name: 'DocTotal', type: 'Decimal' },
+    { name: 'DocStatus', type: 'Char' }
+  ]},
+  'PDN1': { label: 'A/P Invoice Lines', fields: [
+    { name: 'DocEntry', type: 'Int' }, { name: 'LineNum', type: 'Int' },
+    { name: 'ItemCode', type: 'NVarchar' }, { name: 'Dscription', type: 'NVarchar' },
+    { name: 'Quantity', type: 'Decimal' }, { name: 'Price', type: 'Decimal' },
+    { name: 'LineTotal', type: 'Decimal' }
+  ]},
+  'OALG': { label: 'Alerts - Definitions', fields: [
+    { name: 'AlertId', type: 'Int' }, { name: 'Name', type: 'NVarchar' },
+    { name: 'Type', type: 'Int' }, { name: 'Active', type: 'Char' },
+    { name: 'StartDate', type: 'Date' }, { name: 'EndDate', type: 'Date' },
+    { name: 'SqlStr', type: 'Text' }
+  ]},
+  'OUSR': { label: 'Users', fields: [
+    { name: 'USERID', type: 'Int' }, { name: 'USER_CODE', type: 'NVarchar' },
+    { name: 'U_NAME', type: 'NVarchar' }, { name: 'Locked', type: 'Char' },
+    { name: 'Department', type: 'Int' }, { name: 'SUPERUSER', type: 'Char' }
+  ]}
+};
+
+const SAMPLE_QUERY_DATA = {
+  'SELECT T0.DocNum, T0.DocDate, T0.CardCode, T0.CardName, T0.DocTotal, T0.DocStatus FROM OINV T0 WHERE T0.DocDate >= \'2024-01-01\' ORDER BY T0.DocDate DESC': {
+    cols: ['DocNum','DocDate','CardCode','CardName','DocTotal','DocStatus'],
+    rows: [
+      ['INV-2024-1201','2024-12-15','C10001','Alpha Electronics Ltd.',15280.50,'O'],
+      ['INV-2024-1200','2024-12-14','C10005','Beta Industries Corp.',8450.00,'O'],
+      ['INV-2024-1199','2024-12-14','C10012','Gamma Trading FZCO',23100.75,'C'],
+      ['INV-2024-1198','2024-12-13','C10003','Delta Solutions Inc.',5675.25,'O'],
+      ['INV-2024-1197','2024-12-12','C10008','Epsilon Manufacturing',19250.00,'O'],
+      ['INV-2024-1196','2024-12-11','C10020','Zeta Global Partners',31420.80,'O'],
+      ['INV-2024-1195','2024-12-10','C10001','Alpha Electronics Ltd.',9870.30,'C'],
+      ['INV-2024-1194','2024-12-09','C10015','Theta Services Ltd.',4520.00,'O'],
+      ['INV-2024-1193','2024-12-08','C10033','Iota Distribution',27890.45,'O'],
+      ['INV-2024-1192','2024-12-07','C10007','Kappa Holdings LLC',16500.00,'O']
+    ]
+  }
+};
+
+// Generate sample data for any query
+function generateSampleData(sql) {
+  const normalizedSql = sql.trim().replace(/\s+/g,' ').toUpperCase();
+  // Check for exact match first
+  for (const key in SAMPLE_QUERY_DATA) {
+    if (key.toUpperCase() === normalizedSql) return SAMPLE_QUERY_DATA[key];
+  }
+  // Generic response based on keywords
+  if (normalizedSql.includes('SELECT') && normalizedSql.includes('COUNT')) {
+    const val = Math.floor(Math.random() * 5000) + 100;
+    return { cols: ['Total'], rows: [[val]] };
+  }
+  if (normalizedSql.includes('SELECT') && normalizedSql.includes('SUM')) {
+    const val = (Math.random() * 500000 + 10000).toFixed(2);
+    return { cols: ['TotalAmount'], rows: [[parseFloat(val)]] };
+  }
+  // Default table data
+  const tables = Object.keys(SAMPLE_TABLES);
+  let matchedTable = null;
+  for (const t of tables) { if (normalizedSql.includes(t)) { matchedTable = t; break; } }
+  if (matchedTable) {
+    const tbl = SAMPLE_TABLES[matchedTable];
+    const cols = tbl.fields.slice(0,5).map(f=>f.name);
+    const rows = [];
+    for (let i = 0; i < 8; i++) {
+      const row = cols.map(c => {
+        if (c.toLowerCase().includes('code')) return 'C' + (10000 + Math.floor(Math.random()*9000));
+        if (c.toLowerCase().includes('name')) return ['Alpha Corp','Beta Inc','Gamma Ltd','Delta Co','Epsilon LLC','Zeta SA'][Math.floor(Math.random()*6)];
+        if (c.toLowerCase().includes('date')) return '2024-' + String(Math.floor(Math.random()*12)+1).padStart(2,'0') + '-' + String(Math.floor(Math.random()*28)+1).padStart(2,'0');
+        if (c.toLowerCase().includes('total') || c.toLowerCase().includes('price') || c.toLowerCase().includes('amount')) return (Math.random()*10000).toFixed(2);
+        if (c.toLowerCase().includes('qty') || c.toLowerCase().includes('quantity')) return Math.floor(Math.random()*100);
+        if (c.toLowerCase().includes('status')) return ['O','C'][Math.floor(Math.random()*2)];
+        if (c.toLowerCase().includes('entry') || c.toLowerCase().includes('num')) return Math.floor(Math.random()*10000);
+        return 'Val-' + i;
+      });
+      rows.push(row);
+    }
+    return { cols, rows };
+  }
+  return { cols: ['Result'], rows: [['Query executed successfully. No data returned.']] };
+}
+
+// ==================== NAVIGATION ====================
+function switchModule(id) {
+  APP.activeModule = id;
+  document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item[data-module]').forEach(m => m.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+  document.querySelector(`.sidebar-item[data-module="${id}"]`)?.classList.add('active');
+  document.getElementById('status-info').textContent = id.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ');
+}
+
+// ==================== TOAST ====================
+function showToast(type, msg) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  const icons = { info: 'ℹ️', success: '✅', error: '❌', warning: '⚠️' };
+  toast.innerHTML = `<span>${icons[type]||''}</span><span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.animation = 'toastOut .3s ease forwards'; setTimeout(()=>toast.remove(),300); }, 3000);
+}
+
+// ==================== MODAL ====================
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ==================== QUERY BUILDER ====================
+function initQueryBrowser() {
+  const tree = document.getElementById('db-tree');
+  tree.innerHTML = '';
+  for (const [table, info] of Object.entries(SAMPLE_TABLES)) {
+    const folder = document.createElement('div');
+    folder.className = 'db-item folder';
+    folder.innerHTML = `<span class="icon">📂</span> ${table} <span style="margin-left:auto;font-size:10px;color:var(--sap-text-lighter);font-weight:400">${info.fields.length} cols</span>`;
+    folder.onclick = () => { toggleTableExpand(table, folder); };
+    tree.appendChild(folder);
+    const fieldsContainer = document.createElement('div');
+    fieldsContainer.id = 'fields-' + table;
+    fieldsContainer.style.display = 'none';
+    info.fields.forEach(f => {
+      const field = document.createElement('div');
+      field.className = 'db-item field';
+      field.innerHTML = `<span class="icon">🔑</span> ${f.name} <span class="type-tag">${f.type}</span>`;
+      field.onclick = (e) => { e.stopPropagation(); insertFieldToEditor(table, f.name); };
+      field.oncontextmenu = (e) => { e.preventDefault(); showFieldContextMenu(e, table, f.name); };
+      fieldsContainer.appendChild(field);
+    });
+    tree.appendChild(fieldsContainer);
+  }
+}
+
+function toggleTableExpand(table, folder) {
+  const fields = document.getElementById('fields-' + table);
+  const isExpanded = fields.style.display !== 'none';
+  fields.style.display = isExpanded ? 'none' : 'block';
+  folder.querySelector('.icon').textContent = isExpanded ? '📂' : '📁';
+  if (!isExpanded) folder.classList.add('selected'); else folder.classList.remove('selected');
+}
+
+function insertFieldToEditor(table, field) {
+  const editor = document.getElementById('sql-editor');
+  const prefix = 'T0.';
+  const text = prefix + field;
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+  editor.value = editor.value.substring(0, start) + text + editor.value.substring(end);
+  editor.selectionStart = editor.selectionEnd = start + text.length;
+  editor.focus();
+  showToast('info', `Inserted: ${text}`);
+}
+
+function filterTables() {
+  const filter = document.getElementById('table-filter').value.toLowerCase();
+  document.querySelectorAll('#db-tree .db-item.folder').forEach(item => {
+    const name = item.textContent.split('\n')[0].trim().toLowerCase();
+    item.style.display = name.includes(filter) || !filter ? '' : 'none';
+  });
+}
+
+function handleEditorKeys(e) {
+  if (e.key === 'F5') { e.preventDefault(); executeQuery(); }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const editor = e.target;
+    const start = editor.selectionStart;
+    editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(editor.selectionEnd);
+    editor.selectionStart = editor.selectionEnd = start + 2;
+  }
+  if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); executeQuery(); }
+}
+
+function updateLineCol() {
+  const editor = document.getElementById('sql-editor');
+  const text = editor.value.substring(0, editor.selectionStart);
+  const lines = text.split('\n');
+  document.getElementById('sql-line-col').textContent = `Ln ${lines.length}, Col ${lines[lines.length-1].length+1}`;
+}
+
+function formatSQL() {
+  const editor = document.getElementById('sql-editor');
+  let sql = editor.value;
+  const keywords = ['SELECT','FROM','WHERE','AND','OR','ORDER BY','GROUP BY','HAVING','INNER JOIN','LEFT JOIN','RIGHT JOIN','FULL JOIN','ON','INSERT','UPDATE','DELETE','SET','INTO','VALUES','AS','IN','NOT','IS','NULL','BETWEEN','LIKE','EXISTS','UNION','ALL','DISTINCT','TOP','CASE','WHEN','THEN','ELSE','END','ASC','DESC','JOIN','CROSS','OUTER','LIMIT','OFFSET'];
+  keywords.forEach(kw => {
+    const re = new RegExp('\\b' + kw.replace(/ /g,'\\s+') + '\\b', 'gi');
+    sql = sql.replace(re, '\n' + kw);
+  });
+  // Indent
+  sql = sql.split('\n').map(line => {
+    const trimmed = line.trim().toUpperCase();
+    if (['SELECT','FROM','WHERE','ORDER BY','GROUP BY','HAVING'].some(k => trimmed.startsWith(k))) return line.trim();
+    if (trimmed.startsWith('AND') || trimmed.startsWith('OR')) return '  ' + line.trim();
+    if (trimmed.startsWith('INNER JOIN') || trimmed.startsWith('LEFT JOIN') || trimmed.startsWith('RIGHT JOIN')) return line.trim();
+    return '    ' + line.trim();
+  }).join('\n').replace(/^\n+/,'').replace(/\n{3,}/g,'\n\n');
+  editor.value = sql;
+  showToast('success', 'SQL formatted');
+}
+
+function clearEditor() { document.getElementById('sql-editor').value = ''; }
+
+function executeQuery(explain) {
+  const sql = document.getElementById('sql-editor').value.trim();
+  if (!sql) { showToast('warning', 'Please enter a SQL query'); return; }
+  const statusEl = document.getElementById('result-status');
+  const contentEl = document.getElementById('result-content');
+  statusEl.innerHTML = `<span style="color:var(--sap-blue)">⏳ Executing query...</span>`;
+  setTimeout(() => {
+    if (explain) {
+      statusEl.innerHTML = `<span class="success">✅ Explain Plan Generated</span><span>Estimated cost: 0.42 | Rows: 1,250 | IO: Sequential Scan</span>`;
+      contentEl.innerHTML = `<div style="padding:16px;font-family:monospace;font-size:12px;background:#f5f6f7">
+        <div style="margin-bottom:8px;color:var(--sap-text-light)">QUERY PLAN:</div>
+        <div style="padding:4px 0">→ Seq Scan on OINV T0 (cost=0.00..120.50 rows=1250 width=120)</div>
+        <div style="padding:4px 0">  → Filter: (T0.DocDate >= '2024-01-01'::date)</div>
+        <div style="padding:4px 0">  → Sort Key: T0.DocDate DESC (cost=120.50..123.00 rows=1250)</div>
+        <div style="padding:4px 0">→ Hash Join with INV1 T1 (cost=50.00..200.00 rows=3500)</div>
+        <div style="padding:4px 0">  → Hash Cond: (T0.DocEntry = T1.DocEntry)</div>
+        <div style="margin-top:8px;color:var(--sap-text-lighter)">Execution time: ~12ms</div>
+      </div>`;
+      return;
+    }
+    const startTime = performance.now();
+    const data = generateSampleData(sql);
+    const elapsed = (performance.now() - startTime).toFixed(1);
+    APP.lastResults = data;
+    const rowCount = data.rows.length;
+    statusEl.innerHTML = `<span class="success">✅ ${rowCount} row(s) returned</span><span>${elapsed}ms</span><span>${data.cols.length} column(s)</span>`;
+    let html = '<table class="result-grid"><thead><tr>';
+    data.cols.forEach(c => { html += `<th>${c} <span class="sort-icon">↕</span></th>`; });
+    html += '</tr></thead><tbody>';
+    data.rows.forEach(row => {
+      html += '<tr>';
+      row.forEach((cell, i) => {
+        const val = cell === null || cell === undefined ? '<span class="null-val">NULL</span>' : cell;
+        html += `<td>${val}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    contentEl.innerHTML = html;
+    // Sortable columns
+    contentEl.querySelectorAll('.result-grid th').forEach((th, idx) => {
+      th.onclick = () => sortResultColumn(idx);
+    });
+  }, 300 + Math.random() * 500);
+}
+
+function sortResultColumn(colIdx) {
+  if (!APP.lastResults) return;
+  const rows = APP.lastResults.rows;
+  const asc = rows.every((r,i,a) => !i || r[colIdx] >= a[i-1][colIdx]);
+  rows.sort((a,b) => {
+    let va = a[colIdx], vb = b[colIdx];
+    if (va === null) return 1; if (vb === null) return -1;
+    const na = parseFloat(va), nb = parseFloat(vb);
+    if (!isNaN(na) && !isNaN(nb)) return asc ? nb - na : na - nb;
+    return asc ? String(vb).localeCompare(String(va)) : String(va).localeCompare(String(vb));
+  });
+  renderResults();
+}
+
+function renderResults() {
+  if (!APP.lastResults) return;
+  const data = APP.lastResults;
+  const contentEl = document.getElementById('result-content');
+  let html = '<table class="result-grid"><thead><tr>';
+  data.cols.forEach(c => { html += `<th>${c} <span class="sort-icon">↕</span></th>`; });
+  html += '</tr></thead><tbody>';
+  data.rows.forEach(row => {
+    html += '<tr>';
+    row.forEach(cell => { html += `<td>${cell === null || cell === undefined ? '<span class="null-val">NULL</span>' : cell}</td>`; });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  contentEl.innerHTML = html;
+}
+
+function showFieldContextMenu(e, table, field) {
+  const menu = document.getElementById('ctx-menu');
+  menu.innerHTML = `
+    <div class="ctx-menu-item" onclick="insertToEditor('T0.${field}');hideCtxMenu()">Insert T0.${field}</div>
+    <div class="ctx-menu-item" onclick="insertToEditor('${table}.${field}');hideCtxMenu()">Insert ${table}.${field}</div>
+    <div class="ctx-menu-sep"></div>
+    <div class="ctx-menu-item" onclick="insertToEditor('${table}.${field} AS ${field}');hideCtxMenu()">Insert with Alias</div>
+    <div class="ctx-menu-item" onclick="insertToEditor('COUNT(${table}.${field})');hideCtxMenu()">COUNT(${field})</div>
+    <div class="ctx-menu-item" onclick="insertToEditor('SUM(${table}.${field})');hideCtxMenu()">SUM(${field})</div>
+    <div class="ctx-menu-item" onclick="insertToEditor('AVG(${table}.${field})');hideCtxMenu()">AVG(${field})</div>
+    <div class="ctx-menu-sep"></div>
+    <div class="ctx-menu-item" onclick="insertToEditor('T0.${field} IS NOT NULL');hideCtxMenu()">IS NOT NULL</div>
+    <div class="ctx-menu-item" onclick="insertToEditor('T0.${field} LIKE \\'%value%\\'');hideCtxMenu()">LIKE filter</div>
+  `;
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  menu.classList.add('show');
+}
+
+function insertToEditor(text) {
+  const editor = document.getElementById('sql-editor');
+  const pos = editor.selectionStart;
+  editor.value = editor.value.substring(0, pos) + text + editor.value.substring(editor.selectionEnd);
+  editor.selectionStart = editor.selectionEnd = pos + text.length;
+  editor.focus();
+}
+
+function hideCtxMenu() { document.getElementById('ctx-menu').classList.remove('show'); }
+document.addEventListener('click', hideCtxMenu);
+
+// Saved Queries
+function saveQuery() {
+  const sql = document.getElementById('sql-editor').value.trim();
+  if (!sql) { showToast('warning', 'No query to save'); return; }
+  const name = prompt('Enter query name:', 'Query ' + (APP.queries.length + 1));
+  if (!name) return;
+  APP.queries.push({ name, sql, date: new Date().toISOString() });
+  updateSavedQueriesUI();
+  showToast('success', `Query "${name}" saved`);
+}
+
+function updateSavedQueriesUI() {
+  document.getElementById('qb-query-count').textContent = APP.queries.length;
+  const dd = document.getElementById('saved-queries-dropdown');
+  if (APP.queries.length === 0) {
+    dd.innerHTML = '<div style="padding:10px;color:var(--sap-text-lighter);font-size:12px">No saved queries</div>';
+    return;
+  }
+  dd.innerHTML = APP.queries.map((q, i) => `
+    <div class="saved-dropdown-item" onclick="loadQuery(${i})">
+      <span>📄</span>
+      <span class="name">${q.name}</span>
+      <span style="font-size:10px;color:var(--sap-text-lighter)">${new Date(q.date).toLocaleDateString()}</span>
+      <span class="delete-q" onclick="event.stopPropagation();deleteSavedQuery(${i})">✕</span>
+    </div>
+  `).join('');
+}
+
+function loadQuery(idx) {
+  const q = APP.queries[idx];
+  document.getElementById('sql-editor').value = q.sql;
+  APP.activeQueryIndex = idx;
+  toggleSavedQueries();
+  showToast('info', `Loaded: ${q.name}`);
+}
+
+function deleteSavedQuery(idx) {
+  APP.queries.splice(idx, 1);
+  updateSavedQueriesUI();
+  showToast('info', 'Query deleted');
+}
+
+function newQuery() {
+  switchModule('query-builder');
+  document.getElementById('sql-editor').value = '-- New Query\nSELECT \n  T0.\nFROM \n  \nWHERE \n  \nORDER BY \n  \n';
+  document.getElementById('sql-editor').focus();
+  document.getElementById('sql-editor').setSelectionRange(11, 15);
+}
+
+function toggleSavedQueries() {
+  const dd = document.getElementById('saved-queries-dropdown');
+  dd.classList.toggle('show');
+}
+
+function exportResults(format) {
+  if (!APP.lastResults) { showToast('warning', 'No results to export'); return; }
+  let content, filename, mime;
+  if (format === 'csv') {
+    content = [APP.lastResults.cols.join(','), ...APP.lastResults.rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+    filename = 'query_results.csv'; mime = 'text/csv';
+  } else {
+    content = JSON.stringify(APP.lastResults, null, 2);
+    filename = 'query_results.json'; mime = 'application/json';
+  }
+  downloadFile(content, filename, mime);
+  showToast('success', `Exported as ${format.toUpperCase()}`);
+}
+
+// ==================== KPI DESIGNER ====================
+function newKPI() {
+  const colors = ['#0a6ed1','#4db14b','#f0ab00','#e00707','#f27020','#0f828f','#8b5cf6','#ec4899'];
+  const kpi = {
+    id: Date.now(),
+    name: 'New KPI ' + (APP.kpis.length + 1),
+    description: '',
+    category: 'Financial',
+    datasource: 'SAP B1 Company DB',
+    refresh: 'Every 15 min',
+    sql: '',
+    aggregation: 'SUM',
+    thresholdGood: 80,
+    thresholdWarn: 50,
+    thresholdBad: 0,
+    format: 'Currency ($)',
+    prefix: '$',
+    suffix: '',
+    color: colors[APP.kpis.length % colors.length],
+    value: (Math.random() * 90000 + 10000).toFixed(2),
+    trend: (Math.random() * 20 - 5).toFixed(1),
+    target: '100000',
+    history: Array.from({length:12}, () => Math.random()*100)
+  };
+  APP.kpis.push(kpi);
+  APP.activeKPI = kpi.id;
+  renderKPIList();
+  renderKPICards();
+  switchKPIView('editor', document.querySelector('.inner-tab.active'));
+  loadKPIForm(kpi);
+  showToast('success', 'New KPI created');
+}
+
+function renderKPIList() {
+  const list = document.getElementById('kpi-list');
+  document.getElementById('kpi-count').textContent = APP.kpis.length;
+  document.getElementById('kpi-sidebar-count').textContent = APP.kpis.length + ' items';
+  if (APP.kpis.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--sap-text-lighter);font-size:12px">No KPIs yet.<br>Click "New KPI" to create one.</div>';
+    return;
+  }
+  list.innerHTML = APP.kpis.map(kpi => `
+    <div class="kpi-list-item ${kpi.id === APP.activeKPI ? 'active' : ''}" onclick="selectKPI(${kpi.id})">
+      <div class="kpi-icon" style="background:${kpi.color}">${kpi.category === 'Financial' ? '💰' : kpi.category === 'Sales' ? '📈' : kpi.category === 'Inventory' ? '📦' : '📊'}</div>
+      <div class="kpi-info">
+        <div class="kpi-name">${kpi.name}</div>
+        <div class="kpi-desc">${kpi.category} • ${kpi.format}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderKPICards() {
+  const container = document.getElementById('kpi-cards-container');
+  const empty = document.getElementById('kpi-preview-empty');
+  if (APP.kpis.length === 0) { container.innerHTML = ''; empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+  container.innerHTML = APP.kpis.map(kpi => {
+    const trendVal = parseFloat(kpi.trend);
+    const trendClass = trendVal >= 0 ? 'up' : 'down';
+    const trendIcon = trendVal >= 0 ? '▲' : '▼';
+    const status = parseFloat(kpi.value) >= kpi.thresholdGood ? 'good' : parseFloat(kpi.value) >= kpi.thresholdWarn ? 'warn' : 'bad';
+    const statusColor = status === 'good' ? 'var(--sap-green)' : status === 'warn' ? 'var(--sap-orange)' : 'var(--sap-red)';
+    const formattedValue = kpi.prefix + parseFloat(kpi.value).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + kpi.suffix;
+    const sparkSvg = generateSparkline(kpi.history, kpi.color);
+    return `
+      <div class="kpi-card" onclick="selectKPI(${kpi.id});switchKPIView('editor',document.querySelectorAll('.inner-tab')[1])">
+        <div class="kpi-card-header">
+          <span class="kpi-card-title">${kpi.name}</span>
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${statusColor}" title="${status}"></span>
+        </div>
+        <div class="kpi-card-body">
+          <div class="kpi-card-value" style="color:${kpi.color}">${formattedValue}</div>
+          <div class="kpi-card-target">Target: ${kpi.prefix}${parseFloat(kpi.target||0).toLocaleString()}${kpi.suffix}</div>
+        </div>
+        <div class="kpi-card-footer">
+          <span class="kpi-trend ${trendClass}">${trendIcon} ${Math.abs(trendVal)}%</span>
+          <span style="color:var(--sap-text-lighter)">${kpi.category}</span>
+          <svg class="kpi-sparkline" viewBox="0 0 60 24" preserveAspectRatio="none">${sparkSvg}</svg>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function generateSparkline(data, color) {
+  if (!data || data.length < 2) return '';
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const w = 60, h = 24, pad = 2;
+  const points = data.map((v, i) => `${pad + (i/(data.length-1))*(w-pad*2)},${h - pad - ((v-min)/range)*(h-pad*2)}`).join(' ');
+  const fillPoints = points + ` ${w-pad},${h-pad} ${pad},${h-pad}`;
+  return `<polygon points="${fillPoints}" fill="${color}" opacity="0.1"/><polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5"/>`;
+}
+
+function selectKPI(id) {
+  APP.activeKPI = id;
+  renderKPIList();
+  const kpi = APP.kpis.find(k => k.id === id);
+  if (kpi) loadKPIForm(kpi);
+}
+
+function loadKPIForm(kpi) {
+  document.getElementById('kpi-form-empty').style.display = 'none';
+  document.getElementById('kpi-form-content').style.display = 'block';
+  document.getElementById('kpi-name').value = kpi.name;
+  document.getElementById('kpi-category').value = kpi.category;
+  document.getElementById('kpi-datasource').value = kpi.datasource;
+  document.getElementById('kpi-refresh').value = kpi.refresh;
+  document.getElementById('kpi-description').value = kpi.description;
+  document.getElementById('kpi-sql').value = kpi.sql;
+  document.getElementById('kpi-agg').value = kpi.aggregation;
+  document.getElementById('kpi-threshold-good').value = kpi.thresholdGood;
+  document.getElementById('kpi-threshold-warn').value = kpi.thresholdWarn;
+  document.getElementById('kpi-threshold-bad').value = kpi.thresholdBad;
+  document.getElementById('kpi-format').value = kpi.format;
+  document.getElementById('kpi-prefix').value = kpi.prefix;
+  document.getElementById('kpi-suffix').value = kpi.suffix;
+  document.querySelectorAll('#kpi-colors .color-swatch').forEach(s => {
+    s.classList.toggle('active', s.style.background === kpi.color || rgbToHex(s.style.background) === kpi.color);
+  });
+}
+
+function saveKPIData() {
+  const kpi = APP.kpis.find(k => k.id === APP.activeKPI);
+  if (!kpi) { showToast('warning', 'No KPI selected'); return; }
+  kpi.name = document.getElementById('kpi-name').value;
+  kpi.category = document.getElementById('kpi-category').value;
+  kpi.datasource = document.getElementById('kpi-datasource').value;
+  kpi.refresh = document.getElementById('kpi-refresh').value;
+  kpi.description = document.getElementById('kpi-description').value;
+  kpi.sql = document.getElementById('kpi-sql').value;
+  kpi.aggregation = document.getElementById('kpi-agg').value;
+  kpi.thresholdGood = parseFloat(document.getElementById('kpi-threshold-good').value) || 0;
+  kpi.thresholdWarn = parseFloat(document.getElementById('kpi-threshold-warn').value) || 0;
+  kpi.thresholdBad = parseFloat(document.getElementById('kpi-threshold-bad').value) || 0;
+  kpi.format = document.getElementById('kpi-format').value;
+  kpi.prefix = document.getElementById('kpi-prefix').value;
+  kpi.suffix = document.getElementById('kpi-suffix').value;
+  renderKPIList();
+  renderKPICards();
+  showToast('success', `KPI "${kpi.name}" saved`);
+  switchKPIView('preview', document.querySelector('.inner-tab'));
+}
+
+function cancelKPIEdit() { switchKPIView('preview', document.querySelector('.inner-tab')); }
+
+function deleteKPI() {
+  if (!APP.activeKPI) { showToast('warning', 'No KPI selected'); return; }
+  if (!confirm('Delete this KPI?')) return;
+  APP.kpis = APP.kpis.filter(k => k.id !== APP.activeKPI);
+  APP.activeKPI = APP.kpis.length ? APP.kpis[0].id : null;
+  renderKPIList();
+  renderKPICards();
+  if (APP.activeKPI) loadKPIForm(APP.kpis.find(k => k.id === APP.activeKPI));
+  else { document.getElementById('kpi-form-empty').style.display = 'flex'; document.getElementById('kpi-form-content').style.display = 'none'; }
+  showToast('info', 'KPI deleted');
+}
+
+function duplicateKPI() {
+  const kpi = APP.kpis.find(k => k.id === APP.activeKPI);
+  if (!kpi) { showToast('warning', 'No KPI selected'); return; }
+  const copy = { ...kpi, id: Date.now(), name: kpi.name + ' (Copy)', history: [...kpi.history] };
+  APP.kpis.push(copy);
+  APP.activeKPI = copy.id;
+  renderKPIList();
+  renderKPICards();
+  loadKPIForm(copy);
+  showToast('success', 'KPI duplicated');
+}
+
+function refreshKPIPreview() {
+  APP.kpis.forEach(kpi => {
+    kpi.value = (Math.random() * 90000 + 10000).toFixed(2);
+    kpi.trend = (Math.random() * 20 - 5).toFixed(1);
+    kpi.history = kpi.history.map(v => v + (Math.random() * 10 - 5));
+  });
+  renderKPICards();
+  showToast('success', 'KPI values refreshed');
+}
+
+function selectKPIColor(el, color) {
+  document.querySelectorAll('#kpi-colors .color-swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function switchKPIView(view, tabEl) {
+  document.querySelectorAll('#kpi-designer .inner-tab').forEach(t => t.classList.remove('active'));
+  if (tabEl) tabEl.classList.add('active');
+  document.getElementById('kpi-preview-mode').style.display = view === 'preview' ? 'block' : 'none';
+  document.getElementById('kpi-editor-mode').style.display = view === 'editor' ? 'block' : 'none';
+  if (view === 'preview') renderKPICards();
+}
+
+function rgbToHex(rgb) {
+  if (rgb.startsWith('#')) return rgb;
+  const match = rgb.match(/\d+/g);
+  if (!match || match.length < 3) return rgb;
+  return '#' + match.slice(0,3).map(x => parseInt(x).toString(16).padStart(2,'0')).join('');
+}
+
+// ==================== DASHBOARD DESIGNER ====================
+function newDashboard() {
+  const name = prompt('Enter dashboard name:', 'Dashboard ' + (APP.dashboards.length + 1));
+  if (!name) return;
+  const dash = { id: Date.now(), name, subtitle: 'Created ' + new Date().toLocaleDateString(), gridCols: 3, theme: 'light', widgets: [] };
+  APP.dashboards.push(dash);
+  APP.activeDashboard = dash.id;
+  updateDashSelector();
+  loadDashboard(dash.id);
+  document.getElementById('dash-count').textContent = APP.dashboards.length;
+  showToast('success', `Dashboard "${name}" created`);
+}
+
+function updateDashSelector() {
+  const sel = document.getElementById('dashboard-selector');
+  sel.innerHTML = '<option value="">— Select Dashboard —</option>' + APP.dashboards.map(d => `<option value="${d.id}" ${d.id === APP.activeDashboard ? 'selected' : ''}>${d.name}</option>`).join('');
+}
+
+function loadDashboard(id) {
+  const dash = APP.dashboards.find(d => d.id == id);
+  if (!dash) return;
+  APP.activeDashboard = dash.id;
+  document.getElementById('dash-canvas-title').textContent = dash.name;
+  document.getElementById('dash-canvas-subtitle').textContent = dash.subtitle;
+  document.getElementById('dash-grid-cols').value = dash.gridCols || 3;
+  document.getElementById('dash-theme').value = dash.theme || 'light';
+  updateDashGrid();
+  renderDashWidgets();
+}
+
+function updateDashGrid() {
+  const cols = document.getElementById('dash-grid-cols').value;
+  document.getElementById('dash-canvas-grid').style.gridTemplateColumns = `repeat(${cols},1fr)`;
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  if (dash) dash.gridCols = parseInt(cols);
+}
+
+function saveDashboard() {
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  if (!dash) { showToast('warning', 'No dashboard selected'); return; }
+  dash.name = document.getElementById('dash-canvas-title').textContent;
+  updateDashSelector();
+  showToast('success', `Dashboard "${dash.name}" saved`);
+}
+
+function deleteDashboard() {
+  if (!APP.activeDashboard) return;
+  if (!confirm('Delete this dashboard?')) return;
+  APP.dashboards = APP.dashboards.filter(d => d.id !== APP.activeDashboard);
+  APP.activeDashboard = APP.dashboards.length ? APP.dashboards[0].id : null;
+  document.getElementById('dash-count').textContent = APP.dashboards.length;
+  updateDashSelector();
+  if (APP.activeDashboard) loadDashboard(APP.activeDashboard);
+  else { document.getElementById('dash-canvas-grid').innerHTML = ''; document.getElementById('dash-empty').style.display = 'flex'; }
+  showToast('info', 'Dashboard deleted');
+}
+
+function toggleDashEditMode() {
+  APP.dashEditMode = !APP.dashEditMode;
+  document.getElementById('dash-edit-toggle').textContent = APP.dashEditMode ? '✅ Lock Mode' : '✏️ Edit Mode';
+  document.querySelectorAll('.dash-widget').forEach(w => {
+    const actions = w.querySelector('.dash-widget-actions');
+    if (actions) actions.style.display = APP.dashEditMode ? 'flex' : 'none';
+  });
+}
+
+// Drag & Drop
+function dragWidget(e, type) { e.dataTransfer.setData('widgetType', type); }
+function allowDrop(e) { e.preventDefault(); e.currentTarget.style.background = 'rgba(10,110,209,.05)'; }
+function dropWidget(e) {
+  e.preventDefault();
+  e.currentTarget.style.background = '';
+  const type = e.dataTransfer.getData('widgetType');
+  if (!type) return;
+  addWidgetToDashboard(type);
+}
+
+function addWidgetToDashboard(type) {
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  if (!dash) { showToast('warning', 'Create or select a dashboard first'); return; }
+  APP.widgetCounter++;
+  const widget = { id: 'w-' + Date.now() + '-' + APP.widgetCounter, type, title: getDefaultWidgetTitle(type), config: getDefaultWidgetConfig(type) };
+  dash.widgets.push(widget);
+  renderDashWidgets();
+  showToast('info', `${type.charAt(0).toUpperCase()+type.slice(1)} widget added`);
+}
+
+function getDefaultWidgetTitle(type) {
+  const titles = { bar: 'Bar Chart', line: 'Line Chart', donut: 'Donut Chart', pie: 'Pie Chart', table: 'Data Table', kpi: 'KPI Metric', text: 'Text Note', indicator: 'Alert Indicator' };
+  return (titles[type] || 'Widget') + ' ' + (APP.widgetCounter);
+}
+
+function getDefaultWidgetConfig(type) {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const sampleData = type === 'bar' || type === 'line'
+    ? months.map(m => ({ label: m, value: Math.floor(Math.random()*100) }))
+    : type === 'donut' || type === 'pie'
+    ? ['Category A','Category B','Category C','Category D','Category E'].map(c => ({ label: c, value: Math.floor(Math.random()*100)+10 }))
+    : type === 'table'
+    ? { columns: ['Name','Value','Status','Date'], rows: Array.from({length:5}, () => ['Item ' + Math.floor(Math.random()*100), (Math.random()*10000).toFixed(2), ['Active','Pending','Closed'][Math.floor(Math.random()*3)], '2024-' + String(Math.floor(Math.random()*12)+1).padStart(2,'0') + '-' + String(Math.floor(Math.random()*28)+1).padStart(2,'0')]) }
+    : type === 'kpi'
+    ? { value: (Math.random()*90000+10000).toFixed(2), prefix: '$', suffix: '', trend: (Math.random()*15-3).toFixed(1), label: 'Revenue' }
+    : type === 'indicator'
+    ? { value: Math.floor(Math.random()*100), status: Math.random()>.5 ? 'warning' : 'critical', message: 'Attention required' }
+    : { content: 'Double-click to edit this text block. You can add notes, descriptions, or instructions here.' };
+  return { data: sampleData, color: type === 'kpi' ? '#0a6ed1' : undefined };
+}
+
+function renderDashWidgets() {
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  const grid = document.getElementById('dash-canvas-grid');
+  const empty = document.getElementById('dash-empty');
+  if (!dash || dash.widgets.length === 0) { grid.innerHTML = ''; empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = dash.widgets.map(w => renderWidgetHTML(w)).join('');
+}
+
+function renderWidgetHTML(w) {
+  const editActions = `
+    <div class="dash-widget-actions" style="display:${APP.dashEditMode ? 'flex' : 'none'}">
+      <button class="dash-widget-action" onclick="configureWidget('${w.id}')" title="Configure">⚙️</button>
+      <button class="dash-widget-action" onclick="refreshWidget('${w.id}')" title="Refresh">🔄</button>
+      <button class="dash-widget-action" onclick="resizeWidget('${w.id}')" title="Resize">📐</button>
+      <button class="dash-widget-action delete" onclick="removeWidget('${w.id}')" title="Delete">🗑</button>
+    </div>`;
+  let body = '';
+  switch(w.type) {
+    case 'bar': body = renderBarChart(w.config.data, w.config.color || '#0a6ed1'); break;
+    case 'line': body = renderLineChart(w.config.data, w.config.color || '#4db14b'); break;
+    case 'donut': body = renderDonutChart(w.config.data); break;
+    case 'pie': body = renderPieChart(w.config.data); break;
+    case 'table': body = renderTableWidget(w.config.data); break;
+    case 'kpi': body = renderKPIWidget(w.config.data); break;
+    case 'text': body = `<div style="padding:4px;font-size:13px;line-height:1.6;color:var(--sap-text)">${w.config.data.content}</div>`; break;
+    case 'indicator': body = renderIndicatorWidget(w.config.data); break;
+    default: body = '<div style="color:var(--sap-text-lighter);text-align:center;padding:20px">Unknown widget</div>';
+  }
+  const span = w.config?.span || 1;
+  return `
+    <div class="dash-widget" id="${w.id}" style="grid-column:span ${span}" ondblclick="configureWidget('${w.id}')">
+      <div class="dash-widget-header">
+        <span class="dash-widget-title">${w.title}</span>
+        ${editActions}
+      </div>
+      <div class="dash-widget-body">${body}</div>
+      <div class="dash-widget-footer">Widget ID: ${w.id.split('-')[1]?.slice(-4) || '—'} • ${w.type}</div>
+    </div>`;
+}
+
+function renderBarChart(data, color) {
+  if (!data || !data.length) return '<div class="empty-state"><span>No data</span></div>';
+  const max = Math.max(...data.map(d=>d.value));
+  return `<div class="chart-container"><div class="chart-bar">${data.map(d => `
+    <div class="chart-bar-item">
+      <div class="chart-bar-value">${d.value}</div>
+      <div class="chart-bar-fill" style="height:${(d.value/max)*100}%;background:${color}"></div>
+      <div class="chart-bar-label">${d.label}</div>
+    </div>`).join('')}</div></div>`;
+}
+
+function renderLineChart(data, color) {
+  if (!data || !data.length) return '<div class="empty-state"><span>No data</span></div>';
+  const max = Math.max(...data.map(d=>d.value));
+  const min = Math.min(...data.map(d=>d.value));
+  const range = max - min || 1;
+  const w = 240, h = 120, pad = 10;
+  const points = data.map((d,i) => `${pad+(i/(data.length-1))*(w-pad*2)},${h-pad-((d.value-min)/range)*(h-pad*2)}`).join(' ');
+  const areaPoints = points + ` ${w-pad},${h-pad} ${pad},${h-pad}`;
+  return `<div class="chart-container"><div class="chart-line"><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <defs><linearGradient id="lg-${color.replace('#','')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.3"/><stop offset="100%" stop-color="${color}" stop-opacity="0.02"/></linearGradient></defs>
+    <polygon points="${areaPoints}" fill="url(#lg-${color.replace('#','')})"/>
+    <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2"/>
+    ${data.map((d,i) => { const x=pad+(i/(data.length-1))*(w-pad*2); const y=h-pad-((d.value-min)/range)*(h-pad*2); return `<circle cx="${x}" cy="${y}" r="3" fill="${color}" stroke="#fff" stroke-width="1.5"/>`; }).join('')}
+  </svg></div></div>`;
+}
+
+function renderDonutChart(data) {
+  if (!data || !data.length) return '<div class="empty-state"><span>No data</span></div>';
+  const colors = ['#0a6ed1','#4db14b','#f0ab00','#e00707','#f27020','#0f828f','#8b5cf6','#ec4899'];
+  const total = data.reduce((s,d)=>s+d.value,0);
+  let currentAngle = -90;
+  const segments = data.map((d,i) => {
+    const angle = (d.value/total)*360;
+    const startAngle = currentAngle;
+    currentAngle += angle;
+    return { startAngle, angle, color: colors[i%colors.length], label: d.label, value: d.value, pct: ((d.value/total)*100).toFixed(1) };
+  });
+  const paths = segments.map(s => {
+    const startRad = (s.startAngle*Math.PI)/180;
+    const endRad = ((s.startAngle+s.angle)*Math.PI)/180;
+    const large = s.angle > 180 ? 1 : 0;
+    const x1 = 50 + 40*Math.cos(startRad);
+    const y1 = 50 + 40*Math.sin(startRad);
+    const x2 = 50 + 40*Math.cos(endRad);
+    const y2 = 50 + 40*Math.sin(endRad);
+    if (s.angle >= 359.99) return `<circle cx="50" cy="50" r="40" fill="none" stroke="${s.color}" stroke-width="20"/>`;
+    return `<path d="M ${x1} ${y1} A 40 40 0 ${large} 1 ${x2} ${y2}" fill="none" stroke="${s.color}" stroke-width="20"/>`;
+  }).join('');
+  return `<div class="chart-container"><div class="chart-donut">
+    <svg viewBox="0 0 100 100">${paths}</svg>
+    <div class="chart-donut-center"><div class="value">${total.toLocaleString()}</div><div class="label">Total</div></div>
+  </div></div>`;
+}
+
+function renderPieChart(data) {
+  if (!data || !data.length) return '<div class="empty-state"><span>No data</span></div>';
+  const colors = ['#0a6ed1','#4db14b','#f0ab00','#e00707','#f27020','#0f828f','#8b5cf6','#ec4899'];
+  const total = data.reduce((s,d)=>s+d.value,0);
+  let currentAngle = -90;
+  const slices = data.map((d,i) => {
+    const angle = (d.value/total)*360;
+    const startRad = (currentAngle*Math.PI)/180;
+    const endRad = ((currentAngle+angle)*Math.PI)/180;
+    const large = angle > 180 ? 1 : 0;
+    const x1 = 50 + 40*Math.cos(startRad);
+    const y1 = 50 + 40*Math.sin(startRad);
+    const x2 = 50 + 40*Math.cos(endRad);
+    const y2 = 50 + 40*Math.sin(endRad);
+    const path = angle >= 359.99
+      ? `<circle cx="50" cy="50" r="40" fill="${colors[i%colors.length]}"/>`
+      : `<path d="M 50 50 L ${x1} ${y1} A 40 40 0 ${large} 1 ${x2} ${y2} Z" fill="${colors[i%colors.length]}"/>`;
+    currentAngle += angle;
+    return path;
+  }).join('');
+  return `<div class="chart-container"><div class="chart-donut">
+    <svg viewBox="0 0 100 100">${slices}</svg>
+    <div class="chart-donut-center"><div class="value">${total.toLocaleString()}</div><div class="label">Total</div></div>
+  </div></div>`;
+}
+
+function renderTableWidget(data) {
+  if (!data || !data.columns) return '<div class="empty-state"><span>No data</span></div>';
+  let html = '<div style="overflow:auto;height:100%"><table class="chart-table"><thead><tr>';
+  data.columns.forEach(c => { html += `<th>${c}</th>`; });
+  html += '</tr></thead><tbody>';
+  data.rows.forEach(r => { html += '<tr>'; r.forEach(c => { html += `<td>${c}</td>`; }); html += '</tr>'; });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function renderKPIWidget(data) {
+  if (!data) return '<div class="empty-state"><span>No data</span></div>';
+  const trendClass = parseFloat(data.trend) >= 0 ? 'up' : 'down';
+  const trendIcon = parseFloat(data.trend) >= 0 ? '▲' : '▼';
+  return `<div style="display:flex;flex-direction:column;justify-content:center;height:100%">
+    <div class="dash-kpi-label">${data.label}</div>
+    <div class="dash-kpi-value" style="color:${data.color||'var(--sap-text)'}">${data.prefix||''}${parseFloat(data.value).toLocaleString(undefined,{minimumFractionDigits:2})}${data.suffix||''}</div>
+    <div class="dash-kpi-trend ${trendClass}">${trendIcon} ${Math.abs(data.trend)}% vs last period</div>
+  </div>`;
+}
+
+function renderIndicatorWidget(data) {
+  if (!data) return '<div class="empty-state"><span>No data</span></div>';
+  const color = data.status === 'critical' ? 'var(--sap-red)' : data.status === 'warning' ? 'var(--sap-orange)' : 'var(--sap-green)';
+  return `<div style="display:flex;align-items:center;gap:16px;height:100%">
+    <div style="width:64px;height:64px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:700">${data.value}</div>
+    <div>
+      <div style="font-size:16px;font-weight:700;color:${color}">${data.status === 'critical' ? 'Critical' : 'Warning'}</div>
+      <div style="font-size:12px;color:var(--sap-text-light);margin-top:2px">${data.message}</div>
+    </div>
+  </div>`;
+}
+
+function configureWidget(id) {
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  if (!dash) return;
+  const widget = dash.widgets.find(w => w.id === id);
+  if (!widget) return;
+  document.getElementById('wc-modal-title').textContent = 'Configure: ' + widget.title;
+  let bodyHTML = `
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">Widget Title</label>
+      <input class="form-input" id="wc-title" value="${widget.title}">
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">Column Span</label>
+      <select class="form-select" id="wc-span">
+        <option value="1" ${(!widget.config?.span || widget.config.span===1)?'selected':''}>1 Column</option>
+        <option value="2" ${widget.config?.span===2?'selected':''}>2 Columns</option>
+        <option value="3" ${widget.config?.span===3?'selected':''}>3 Columns (Full Width)</option>
+      </select>
+    </div>`;
+  if (widget.type === 'bar' || widget.type === 'line') {
+    bodyHTML += `<div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">Chart Color</label>
+      <input class="form-input" type="color" id="wc-color" value="${widget.config?.color || '#0a6ed1'}">
+    </div>`;
+  }
+  if (widget.type === 'text') {
+    bodyHTML += `<div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">Content</label>
+      <textarea class="form-textarea" id="wc-text">${widget.config?.data?.content || ''}</textarea>
+    </div>`;
+  }
+  if (widget.type === 'kpi') {
+    bodyHTML += `
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="form-group"><label class="form-label">Value</label><input class="form-input" id="wc-kpi-val" value="${widget.config?.data?.value || ''}"></div>
+      <div class="form-group"><label class="form-label">Label</label><input class="form-input" id="wc-kpi-label" value="${widget.config?.data?.label || ''}"></div>
+      <div class="form-group"><label class="form-label">Prefix</label><input class="form-input" id="wc-kpi-prefix" value="${widget.config?.data?.prefix || ''}"></div>
+      <div class="form-group"><label class="form-label">Suffix</label><input class="form-input" id="wc-kpi-suffix" value="${widget.config?.data?.suffix || ''}"></div>
+    </div>`;
+  }
+  if (widget.type === 'indicator') {
+    bodyHTML += `
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="form-group"><label class="form-label">Value</label><input class="form-input" type="number" id="wc-ind-val" value="${widget.config?.data?.value || 0}"></div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-select" id="wc-ind-status"><option value="warning" ${widget.config?.data?.status==='warning'?'selected':''}>Warning</option><option value="critical" ${widget.config?.data?.status==='critical'?'selected':''}>Critical</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Message</label><input class="form-input" id="wc-ind-msg" value="${widget.config?.data?.message || ''}"></div>`;
+  }
+  bodyHTML += `<div class="form-group"><label class="form-label">Custom Data (JSON - optional)</label><textarea class="form-textarea" id="wc-custom-json" style="min-height:60px;font-size:11px" placeholder='{"key": "value"}'>${JSON.stringify(widget.config?.data || {}, null, 2)}</textarea></div>`;
+  document.getElementById('wc-modal-body').innerHTML = bodyHTML;
+  openModal('widget-config-modal');
+  window._currentWidgetId = id;
+}
+
+function saveWidgetConfig() {
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  if (!dash) return;
+  const widget = dash.widgets.find(w => w.id === window._currentWidgetId);
+  if (!widget) return;
+  widget.title = document.getElementById('wc-title').value;
+  widget.config = widget.config || {};
+  widget.config.span = parseInt(document.getElementById('wc-span').value) || 1;
+  const colorEl = document.getElementById('wc-color');
+  if (colorEl) widget.config.color = colorEl.value;
+  const textEl = document.getElementById('wc-text');
+  if (textEl) { widget.config.data = widget.config.data || {}; widget.config.data.content = textEl.value; }
+  const kpiVal = document.getElementById('wc-kpi-val');
+  if (kpiVal) {
+    widget.config.data = widget.config.data || {};
+    widget.config.data.value = kpiVal.value;
+    widget.config.data.label = document.getElementById('wc-kpi-label').value;
+    widget.config.data.prefix = document.getElementById('wc-kpi-prefix').value;
+    widget.config.data.suffix = document.getElementById('wc-kpi-suffix').value;
+  }
+  const indVal = document.getElementById('wc-ind-val');
+  if (indVal) {
+    widget.config.data = widget.config.data || {};
+    widget.config.data.value = parseInt(indVal.value);
+    widget.config.data.status = document.getElementById('wc-ind-status').value;
+    widget.config.data.message = document.getElementById('wc-ind-msg').value;
+  }
+  try {
+    const customJson = document.getElementById('wc-custom-json').value;
+    if (customJson) widget.config.data = { ...widget.config.data, ...JSON.parse(customJson) };
+  } catch(e) {}
+  closeModal('widget-config-modal');
+  renderDashWidgets();
+  showToast('success', 'Widget updated');
+}
+
+function refreshWidget(id) {
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  if (!dash) return;
+  const widget = dash.widgets.find(w => w.id === id);
+  if (!widget) return;
+  widget.config.data = getDefaultWidgetConfig(widget.type).data;
+  if (widget.config.color) widget.config.data._color = widget.config.color;
+  renderDashWidgets();
+  showToast('info', 'Widget data refreshed');
+}
+
+function resizeWidget(id) {
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  if (!dash) return;
+  const widget = dash.widgets.find(w => w.id === id);
+  if (!widget) return;
+  widget.config = widget.config || {};
+  widget.config.span = widget.config.span === 1 ? 2 : widget.config.span === 2 ? 3 : 1;
+  renderDashWidgets();
+  showToast('info', `Widget span: ${widget.config.span}`);
+}
+
+function removeWidget(id) {
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  if (!dash) return;
+  if (!confirm('Remove this widget?')) return;
+  dash.widgets = dash.widgets.filter(w => w.id !== id);
+  renderDashWidgets();
+  showToast('info', 'Widget removed');
+}
+
+function previewDashboard() {
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  if (!dash || !dash.widgets.length) { showToast('warning', 'Nothing to preview'); return; }
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${dash.name}</title>
+<style>body{margin:0;font-family:Segoe UI,Tahoma,sans-serif;background:#f0f2f5;color:#32363a}
+.dashboard{padding:20px;max-width:1400px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}p{color:#6a6d70;font-size:13px;margin:0 0 20px}
+.grid{display:grid;grid-template-columns:repeat(${dash.gridCols},1fr);gap:14px}
+.widget{background:#fff;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.widget-header{padding:10px 14px;background:#fafafa;border-bottom:1px solid #e0e0e0;font-weight:700;font-size:12px}
+.widget-body{padding:14px;min-height:120px}
+.timestamp{text-align:right;font-size:11px;color:#999;margin-top:20px}</style></head><body>
+<div class="dashboard"><h1>${dash.name}</h1><p>${dash.subtitle} • Generated: ${new Date().toLocaleString()}</p>
+<div class="grid">${dash.widgets.map(w => renderWidgetHTML(w)).join('')}</div>
+<div class="timestamp">Generated by PQ Analytics Suite</div></div></body></html>`);
+  win.document.close();
+}
+
+function applyDashTheme() {
+  const theme = document.getElementById('dash-theme').value;
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  if (dash) dash.theme = theme;
+  const canvas = document.getElementById('dash-canvas');
+  if (theme === 'dark') {
+    canvas.style.background = '#1a1a2e';
+    canvas.style.color = '#e0e0e0';
+    canvas.style.borderColor = '#333';
+  } else if (theme === 'sap') {
+    canvas.style.background = '#f5f6f7';
+    canvas.style.color = '#32363a';
+    canvas.style.borderColor = '#d9d9d9';
+  } else {
+    canvas.style.background = '#fff';
+    canvas.style.color = '#32363a';
+    canvas.style.borderColor = '#e0e0e0';
+  }
+}
+
+function exportDashboard(format) {
+  const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+  if (!dash) { showToast('warning', 'No dashboard to export'); return; }
+  if (format === 'html') {
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${dash.name}</title>
+<style>body{margin:0;font-family:Segoe UI,Tahoma,sans-serif;background:#f0f2f5;color:#32363a}.dashboard{padding:20px;max-width:1400px;margin:0 auto}h1{font-size:22px;margin:0 0 4px}p{color:#6a6d70;font-size:13px;margin:0 0 20px}.grid{display:grid;grid-template-columns:repeat(${dash.gridCols},1fr);gap:14px}.widget{background:#fff;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)}.widget-header{padding:10px 14px;background:#fafafa;border-bottom:1px solid #e0e0e0;font-weight:700;font-size:12px}.widget-body{padding:14px;min-height:120px}.widget-footer{padding:8px 14px;background:#fafafa;border-top:1px solid #e0e0e0;font-size:11px;color:#999}</style></head><body><div class="dashboard"><h1>${dash.name}</h1><p>${dash.subtitle}</p><div class="grid">${dash.widgets.map(w=>renderWidgetHTML(w)).join('')}</div></div></body></html>`;
+    downloadFile(html, dash.name.replace(/\s+/g,'_') + '.html', 'text/html');
+    showToast('success', 'Dashboard exported as HTML');
+  } else {
+    showToast('info', 'PNG export requires a preview window. Use the Preview button instead.');
+    previewDashboard();
+  }
+}
+
+// ==================== DATA SOURCE MANAGER ====================
+function showDataSourceManager() {
+  renderDataSources();
+  openModal('ds-modal');
+}
+
+function renderDataSources() {
+  const list = document.getElementById('ds-list');
+  list.innerHTML = APP.dataSources.map(ds => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--sap-border);border-radius:var(--radius);margin-bottom:8px">
+      <span style="font-size:18px">${ds.type === 'SQL Server' ? '🗄️' : ds.type === 'SAP HANA' ? '🌊' : '🗄️'}</span>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:13px">${ds.name}</div>
+        <div style="font-size:11px;color:var(--sap-text-light)">${ds.type} • ${ds.server} • ${ds.database}</div>
+      </div>
+      <span style="font-size:11px;padding:3px 8px;border-radius:10px;font-weight:600;background:rgba(77,177,75,.1);color:var(--sap-green)">${ds.status}</span>
+      <button class="tb-btn" style="padding:4px 8px;font-size:11px" onclick="removeDataSource(${ds.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+function addDataSource() {
+  const name = document.getElementById('ds-name').value;
+  const type = document.getElementById('ds-type').value;
+  const server = document.getElementById('ds-server').value;
+  const database = document.getElementById('ds-database').value;
+  const user = document.getElementById('ds-user').value;
+  if (!name || !server || !database) { showToast('warning', 'Name, Server, and Database are required'); return; }
+  APP.dataSources.push({ id: Date.now(), name, type, server, database, user, status: 'connected' });
+  document.getElementById('ds-name').value = '';
+  document.getElementById('ds-server').value = '';
+  document.getElementById('ds-database').value = '';
+  document.getElementById('ds-user').value = '';
+  document.getElementById('ds-pass').value = '';
+  renderDataSources();
+  document.getElementById('status-db').textContent = name;
+  showToast('success', `Connected to ${name}`);
+}
+
+function removeDataSource(id) {
+  APP.dataSources = APP.dataSources.filter(d => d.id !== id);
+  renderDataSources();
+  if (APP.dataSources.length) document.getElementById('status-db').textContent = APP.dataSources[0].name;
+}
+
+// ==================== UTILITY ====================
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function saveAll() {
+  const data = { queries: APP.queries, kpis: APP.kpis, dashboards: APP.dashboards, dataSources: APP.dataSources };
+  downloadFile(JSON.stringify(data, null, 2), 'PQ_Analytics_Suite_Data.json', 'application/json');
+  showToast('success', 'All data exported successfully');
+}
+
+function importProject() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.queries) APP.queries = data.queries;
+        if (data.kpis) { APP.kpis = data.kpis; renderKPIList(); renderKPICards(); }
+        if (data.dashboards) { APP.dashboards = data.dashboards; updateDashSelector(); if (APP.dashboards.length) loadDashboard(APP.dashboards[0].id); }
+        if (data.dataSources) { APP.dataSources = data.dataSources; }
+        updateSavedQueriesUI();
+        showToast('success', 'Project imported successfully');
+      } catch(err) { showToast('error', 'Invalid file format'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function exportProject() {
+  saveAll();
+}
+
+// ==================== RESIZERS ====================
+function initResizers() {
+  const qbResizer = document.getElementById('qb-resizer');
+  const editorResizer = document.getElementById('editor-resizer');
+  let startX, startW, startH;
+  if (qbResizer) {
+    qbResizer.addEventListener('mousedown', (e) => {
+      startX = e.clientX;
+      startW = document.querySelector('.qb-left').offsetWidth;
+      qbResizer.classList.add('active');
+      const onMouseMove = (e) => {
+        const newW = Math.max(180, Math.min(400, startW + (e.clientX - startX)));
+        document.querySelector('.qb-left').style.width = newW + 'px';
+      };
+      const onMouseUp = () => { qbResizer.classList.remove('active'); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  }
+  if (editorResizer) {
+    editorResizer.addEventListener('mousedown', (e) => {
+      startY = e.clientY;
+      startH = document.querySelector('.sql-editor-wrap').offsetHeight;
+      const onMouseMove = (e) => {
+        const newH = Math.max(100, Math.min(600, startH + (e.clientY - startY)));
+        document.querySelector('.sql-editor-wrap').style.flex = `0 0 ${newH}px`;
+        document.querySelector('.sql-editor-wrap').style.minHeight = newH + 'px';
+      };
+      const onMouseUp = () => { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  }
+}
+
+// ==================== CLOCK ====================
+function updateClock() {
+  document.getElementById('status-time').textContent = new Date().toLocaleTimeString();
+}
+
+// ==================== KEYBOARD SHORTCUTS ====================
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'F5' && APP.activeModule === 'query-builder') { e.preventDefault(); executeQuery(); }
+  if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveAll(); }
+  if (e.ctrlKey && e.key === 'n' && e.shiftKey) { e.preventDefault(); newQuery(); }
+  if (e.ctrlKey && e.key === 'k') { e.preventDefault(); switchModule('kpi-designer'); }
+  if (e.ctrlKey && e.key === 'd') { e.preventDefault(); switchModule('dashboard-designer'); }
+  if (e.ctrlKey && e.key === 'q') { e.preventDefault(); switchModule('query-builder'); }
+});
+
+// Make canvas title editable
+document.getElementById('dash-canvas-title').addEventListener('dblclick', function() {
+  const input = document.createElement('input');
+  input.className = 'form-input';
+  input.value = this.textContent;
+  input.style.fontSize = '18px';
+  input.style.fontWeight = '700';
+  input.style.width = '300px';
+  this.replaceWith(input);
+  input.focus();
+  input.select();
+  const finish = () => {
+    const title = document.createElement('div');
+    title.className = 'dash-canvas-title';
+    title.id = 'dash-canvas-title';
+    title.textContent = input.value;
+    title.addEventListener('dblclick', arguments.callee);
+    input.replaceWith(title);
+    const dash = APP.dashboards.find(d => d.id === APP.activeDashboard);
+    if (dash) dash.name = input.value;
+  };
+  input.onblur = finish;
+  input.onkeydown = (e) => { if (e.key === 'Enter') finish(); };
+});
+
+// Close dropdown on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.saved-dropdown') && !e.target.closest('.tb-btn')) {
+    document.getElementById('saved-queries-dropdown')?.classList.remove('show');
+  }
+});
+
+// ==================== INIT ====================
+function init() {
+  initQueryBrowser();
+  updateSavedQueriesUI();
+  renderKPIList();
+  renderKPICards();
+  updateClock();
+  setInterval(updateClock, 1000);
+  initResizers();
+
+  // Set a default query
+  document.getElementById('sql-editor').value = `SELECT 
+  T0.DocNum, T0.DocDate, T0.CardCode, T0.CardName, 
+  T0.DocTotal, T0.DocStatus
+FROM OINV T0 
+WHERE T0.DocDate >= '2024-01-01' 
+ORDER BY T0.DocDate DESC`;
+
+  // Create sample KPIs
+  APP.kpis = [
+    { id: 1, name: 'Monthly Revenue', description: 'Total revenue from A/R invoices for current month', category: 'Financial', datasource: 'SAP B1 Company DB', refresh: 'Daily', sql: 'SELECT SUM(DocTotal) FROM OINV WHERE DocDate >= [%0]', aggregation: 'SUM', thresholdGood: 100000, thresholdWarn: 60000, thresholdBad: 0, format: 'Currency ($)', prefix: '$', suffix: '', color: '#0a6ed1', value: '87450.60', trend: '12.5', target: '100000', history: [65,72,80,75,88,92,85,78,90,95,87,87.45] },
+    { id: 2, name: 'Open Orders Count', description: 'Number of sales orders not yet fully closed', category: 'Sales', datasource: 'SAP B1 Company DB', refresh: 'Every 15 min', sql: 'SELECT COUNT(*) FROM ORDR WHERE DocStatus = \'O\'', aggregation: 'COUNT', thresholdGood: 50, thresholdWarn: 30, thresholdBad: 0, format: 'Integer', prefix: '', suffix: '', color: '#4db14b', value: '42', trend: '5.2', target: '50', history: [30,32,28,35,38,40,36,42,45,43,40,42] },
+    { id: 3, name: 'Gross Margin %', description: 'Profit margin percentage across all sales', category: 'Financial', datasource: 'SAP B1 Company DB', refresh: 'Daily', sql: 'SELECT (SUM(Revenue)-SUM(Cost))/SUM(Revenue)*100', aggregation: 'CUSTOM', thresholdGood: 35, thresholdWarn: 20, thresholdBad: 0, format: 'Percentage (%)', prefix: '', suffix: '%', color: '#f0ab00', value: '28.7', trend: '-2.1', target: '35', history: [32,31,30,29,30,28,27,29,28,27,29,28.7] }
+  ];
+  APP.activeKPI = 1;
+  renderKPIList();
+  renderKPICards();
+
+  // Create sample dashboard
+  APP.dashboards.push({
+    id: 100, name: 'Executive Overview', subtitle: 'Key business metrics at a glance', gridCols: 3, theme: 'light',
+    widgets: [
+      { id: 'w-sample-1', type: 'kpi', title: 'Total Revenue', config: { span: 1, data: { value: '87450.60', prefix: '$', suffix: '', trend: '12.5', label: 'Total Revenue', color: '#0a6ed1' } } },
+      { id: 'w-sample-2', type: 'kpi', title: 'Open Orders', config: { span: 1, data: { value: '42', prefix: '', suffix: '', trend: '5.2', label: 'Open Orders', color: '#4db14b' } } },
+      { id: 'w-sample-3', type: 'indicator', title: 'System Health', config: { span: 1, data: { value: 98, status: 'warning', message: '2 alerts pending review' } } },
+      { id: 'w-sample-4', type: 'bar', title: 'Revenue by Month', config: { span: 2, color: '#0a6ed1', data: [{ label: 'Jan', value: 65 },{ label: 'Feb', value: 72 },{ label: 'Mar', value: 80 },{ label: 'Apr', value: 75 },{ label: 'May', value: 88 },{ label: 'Jun', value: 92 },{ label: 'Jul', value: 85 },{ label: 'Aug', value: 78 },{ label: 'Sep', value: 90 },{ label: 'Oct', value: 95 },{ label: 'Nov', value: 87 },{ label: 'Dec', value: 87 }] } },
+      { id: 'w-sample-5', type: 'donut', title: 'Sales by Category', config: { span: 1, data: [{ label: 'Electronics', value: 35 },{ label: 'Machinery', value: 25 },{ label: 'Services', value: 20 },{ label: 'Materials', value: 15 },{ label: 'Other', value: 5 }] } },
+      { id: 'w-sample-6', type: 'line', title: 'Order Trend', config: { span: 2, color: '#4db14b', data: [{ label: 'Jan', value: 30 },{ label: 'Feb', value: 32 },{ label: 'Mar', value: 28 },{ label: 'Apr', value: 35 },{ label: 'May', value: 38 },{ label: 'Jun', value: 40 },{ label: 'Jul', value: 36 },{ label: 'Aug', value: 42 },{ label: 'Sep', value: 45 },{ label: 'Oct', value: 43 },{ label: 'Nov', value: 40 },{ label: 'Dec', value: 42 }] } },
+      { id: 'w-sample-7', type: 'table', title: 'Top Customers', config: { span: 1, data: { columns: ['Customer','Amount','Orders'], rows: [['Alpha Corp','$45,200','12'],['Beta Inc','$38,100','9'],['Gamma Ltd','$31,800','15'],['Delta Co','$27,500','8'],['Epsilon LLC','$22,300','11']] } } }
+    ]
+  });
+  APP.activeDashboard = 100;
+  updateDashSelector();
+  loadDashboard(100);
+
+  document.getElementById('dash-count').textContent = APP.dashboards.length;
+  showToast('info', 'PQ Analytics Suite loaded — Ready to use');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

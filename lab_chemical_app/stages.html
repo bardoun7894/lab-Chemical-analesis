@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'إدارة المراحل' if current_locale == 'ar' else 'Manage Stages' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-list-check"></i>
+            {{ 'إدارة مراحل الإنتاج' if current_locale == 'ar' else 'Production Stage Management' }}
+        </h2>
+        <div>
+            <a href="{{ url_for('admin.add_stage') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i>
+                {{ 'إضافة مرحلة' if current_locale == 'ar' else 'Add Stage' }}
+            </a>
+            <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        {{ 'المراحل الأساسية لا يمكن حذفها أو إعادة تسميتها — يمكن تعديل الاسم العربي والترتيب والحالة فقط. المراحل غير النشطة تُخفى من جميع الشاشات.' if current_locale == 'ar' else 'Built-in stages cannot be deleted or renamed — only their Arabic label, order, and status can change. Inactive stages are hidden from all screens.' }}
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 90px;">{{ 'الترتيب' if current_locale == 'ar' else 'Order' }}</th>
+                            <th>{{ 'اسم المرحلة' if current_locale == 'ar' else 'Stage Name' }}</th>
+                            <th>{{ 'الاسم العربي' if current_locale == 'ar' else 'Arabic Name' }}</th>
+                            <th>{{ 'النوع' if current_locale == 'ar' else 'Type' }}</th>
+                            <th>{{ 'الاستخدام' if current_locale == 'ar' else 'Usage' }}</th>
+                            <th>{{ 'الحالة' if current_locale == 'ar' else 'Status' }}</th>
+                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stage in stages %}
+                        <tr class="{{ '' if stage.is_active else 'table-secondary' }}">
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <form method="POST" action="{{ url_for('admin.move_stage', id=stage.id, direction='up') }}" style="display:inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-secondary" {{ 'disabled' if loop.first }}>
+                                            <i class="bi bi-arrow-up"></i>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('admin.move_stage', id=stage.id, direction='down') }}" style="display:inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-secondary" {{ 'disabled' if loop.last }}>
+                                            <i class="bi bi-arrow-down"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                            <td><strong>{{ stage.name }}</strong></td>
+                            <td>{{ stage.name_ar or '-' }}</td>
+                            <td>
+                                {% if stage.is_builtin %}
+                                <span class="badge bg-primary">{{ 'أساسية' if current_locale == 'ar' else 'Built-in' }}</span>
+                                {% else %}
+                                <span class="badge bg-info">{{ 'مخصصة' if current_locale == 'ar' else 'Custom' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set count = usage.get(stage.name, 0) %}
+                                {{ count }} {{ 'أنبوب' if current_locale == 'ar' else 'pipe(s)' }}
+                            </td>
+                            <td>
+                                {% if stage.is_active %}
+                                <span class="badge bg-success">{{ 'نشطة' if current_locale == 'ar' else 'Active' }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ 'غير نشطة' if current_locale == 'ar' else 'Inactive' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if can('admin', 'production_stages_edit') %}<a href="{{ url_for('admin.edit_stage', id=stage.id) }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>{% endif %}
+                                    <form method="POST" action="{{ url_for('admin.toggle_stage', id=stage.id) }}" style="display:inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-warning" title="{{ 'تفعيل/إلغاء تفعيل' if current_locale == 'ar' else 'Activate/Deactivate' }}">
+                                            <i class="bi bi-power"></i>
+                                        </button>
+                                    </form>
+                                    {% if not stage.is_builtin %}
+                                    {% if can('admin', 'production_stages_delete') %}<form method="POST" action="{{ url_for('admin.delete_stage', id=stage.id) }}"
+                                          onsubmit="return confirm('{{ 'هل أنت متأكد من الحذف؟' if current_locale == 'ar' else 'Are you sure you want to delete?' }}');" style="display:inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        {% if can('admin', 'production_stages_delete') %}<button type="submit" class="btn btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>{% endif %}
+                                    </form>{% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if not stages %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-3">{{ 'لا توجد مراحل' if current_locale == 'ar' else 'No stages found' }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

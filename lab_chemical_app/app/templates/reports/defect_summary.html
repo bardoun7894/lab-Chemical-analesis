@@ -196,7 +196,7 @@
                                 {% for defect in stage_defects %}
                                 <tr>
                                     <td>
-                                        <a href="{{ url_for('pipes.detail', id=defect.pipe_id) }}">{{ defect.pipe.no_code if defect.pipe else defect.pipe_id }}</a>
+                                        <a href="{{ url_for('stages.view', id=defect.pipe_id) }}">{{ defect.pipe.no_code if defect.pipe else defect.pipe_id }}</a>
                                     </td>
                                     <td>{{ defect.stage_name }}</td>
                                     <td>

@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PQ Analytics Suite - Complete Reporting Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .nav-tabs button {
+            padding: 10px 20px;
+            border: none;
+            background: #f0f0f0;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.95em;
+        }
+        
+        .nav-tabs button:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+        }
+        
+        .nav-tabs button.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .report-section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .report-section.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 30px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .metric-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .metric-box h3 {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .metric-box .value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .metric-box .unit {
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+        
+        .highlight {
+            background-color: #fff3cd;
+        }
+        
+        .positive {
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .negative {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            padding: 20px;
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .nav-tabs {
+                flex-direction: column;
+            }
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .status-good { background: #d4edda; color: #155724; }
+        .status-warning { background: #fff3cd; color: #856404; }
+        .status-alert { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 PQ Analytics Suite</h1>
+        <p>Production Quality & Process Performance Dashboard</p>
+    </div>
+    
+    <div class="container">
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="showReport('production')">Production Overview</button>
+            <button class="tab-btn" onclick="showReport('weight')">Weight Saving Analysis</button>
+            <button class="tab-btn" onclick="showReport('ccm')">CCM Quality Report</button>
+            <button class="tab-btn" onclick="showReport('defects')">Defect Analysis</button>
+            <button class="tab-btn" onclick="showReport('annealing')">Annealing Process</button>
+            <button class="tab-btn" onclick="showReport('ht')">Heat Treatment</button>
+            <button class="tab-btn" onclick="showReport('coating')">Coating Analysis</button>
+            <button class="tab-btn" onclick="showReport('lab')">Lab Testing</button>
+            <button class="tab-btn" onclick="showReport('summary')">Executive Summary</button>
+        </div>
+        
+        <!-- PRODUCTION OVERVIEW -->
+        <div id="production" class="report-section active">
+            <div class="card">
+                <h2>📈 Production Overview</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <h3>Total ISO Weight</h3>
+                        <div class="value">3,246.5</div>
+                        <div class="unit">Metric Units</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Total Actual Weight</h3>
+                        <div class="value">3,129.9</div>
+                        <div class="unit">Metric Units</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Production Efficiency</h3>
+                        <div class="value">96.4%</div>
+                        <div class="unit">Target vs Actual</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Total Units Produced</h3>
+                        <div class="value">2,287+</div>
+                        <div class="unit">Across all DNs</div>
+                    </div>
+                </div>
+                
+                <div class="two-column">
+                    <div>
+                        <h3>Production by Date</h3>
+                        <div class="table-container">
+                            <table>
+                                <tr>
+                                    <th>Period</th>
+                                    <th>ISO Weight</th>
+                                    <th>Actual Weight</th>
+                                </tr>
+                                <tr>
+                                    <td>0 Jan</td>
+                                    <td>1,270.44</td>
+                                    <td>1,164.857</td>
+                                </tr>
+                                <tr>
+                                    <td>0 Feb</td>
+                                    <td>917.197</td>
+                                    <td>917.432</td>
+                                </tr>
+                                <tr>
+                                    <td>0 Mar</td>
+                                    <td>1,060.082</td>
+                                    <td>1,009.126</td>
+                                </tr>
+                                <tr class="highlight">
+                                    <td><strong>Grand Total</strong></td>
+                                    <td><strong>3,246.516</strong></td>
+                                    <td><strong>3,129.972</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3>Production by Shift Supervisor</h3>
+                        <div class="table-container">
+                            <table>
+                                <tr>
+                                    <th>Supervisor</th>
+                                    <th>ISO Weight</th>
+                                    <th>Actual Weight</th>
+                                </tr>
+                                <tr>
+                                    <td>Ali 1</td>
+                                    <td>1,060.413</td>
+                                    <td>1,018.733</td>
+                                </tr>
+                                <tr>
+                                    <td>Asahi محمد</td>
+                                    <td>1,050.266</td>
+                                    <td>1,010.966</td>
+                                </tr>
+                                <tr>
+                                    <td>الرايح عبد المحمود</td>
+                                    <td>1,103.113</td>
+                                    <td>1,066.998</td>
+                                </tr>
+                                <tr class="highlight">
+                                    <td><strong>Grand Total</strong></td>
+                                    <td><strong>3,213.792</strong></td>
+                                    <td><strong>3,096.609</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3>Production by Machine Number</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>Machine</th>
+                            <th>ISO Weight</th>
+                            <th>Actual Weight</th>
+                        </tr>
+                        <tr>
+                            <td>M10</td>
+                            <td>1,237.914</td>
+                            <td>1,205.741</td>
+                        </tr>
+                        <tr>
+                            <td>M100</td>
+                            <td>227.852</td>
+                            <td>248.545</td>
+                        </tr>
+                        <tr>
+                            <td>M11</td>
+                            <td>1,266.433</td>
+                            <td>1,215.564</td>
+                        </tr>
+                        <tr>
+                            <td>M12</td>
+                            <td>481.593</td>
+                            <td>431.753</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Grand Total</strong></td>
+                            <td><strong>3,213.792</strong></td>
+                            <td><strong>3,096.609</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- WEIGHT SAVING -->
+        <div id="weight" class="report-section">
+            <div class="card">
+                <h2>⚖️ Weight Saving Analysis Report</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <h3>Total Weight Saving</h3>
+                        <div class="value">116,544</div>
+                        <div class="unit">Units</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Overall Saving Rate</h3>
+                        <div class="value positive">3.59%</div>
+                        <div class="unit">Target Achievement</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Best Performance</h3>
+                        <div class="value">DN 300</div>
+                        <div class="unit">3.95% Saving</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Challenge Area</h3>
+                        <div class="value negative">DN 100</div>
+                        <div class="unit">-14.62% (Overweight)</div>
+                    </div>
+                </div>
+                
+                <h3>Weight Saving by Diameter Number (DN)</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN</th>
+                            <th>ISO Weight</th>
+                            <th>Actual Weight</th>
+                            <th>Weight Saving</th>
+                            <th>Saving %</th>
+                        </tr>
+                        <tr>
+                            <td>100</td>
+                            <td>181,192</td>
+                            <td>207,674</td>
+                            <td class="negative">-26,482</td>
+                            <td class="negative">-14.62%</td>
+                        </tr>
+                        <tr>
+                            <td>200</td>
+                            <td>282,680</td>
+                            <td>280,554</td>
+                            <td class="positive">2,126</td>
+                            <td class="positive">0.75%</td>
+                        </tr>
+                        <tr>
+                            <td>300</td>
+                            <td>1,000,548</td>
+                            <td>961,068</td>
+                            <td class="positive">39,480</td>
+                            <td class="positive">3.95%</td>
+                        </tr>
+                        <tr>
+                            <td>350</td>
+                            <td>34,255</td>
+                            <td>31,745</td>
+                            <td class="positive">2,510</td>
+                            <td class="positive">7.33%</td>
+                        </tr>
+                        <tr>
+                            <td>400</td>
+                            <td>225,094</td>
+                            <td>211,075</td>
+                            <td class="positive">14,019</td>
+                            <td class="positive">6.23%</td>
+                        </tr>
+                        <tr>
+                            <td>500</td>
+                            <td>451,257</td>
+                            <td>447,479</td>
+                            <td class="positive">3,778</td>
+                            <td class="positive">0.84%</td>
+                        </tr>
+                        <tr>
+                            <td>600</td>
+                            <td>203,350</td>
+                            <td>192,815</td>
+                            <td class="positive">10,535</td>
+                            <td class="positive">5.18%</td>
+                        </tr>
+                        <tr>
+                            <td>700</td>
+                            <td>323,424</td>
+                            <td>305,814</td>
+                            <td class="positive">17,610</td>
+                            <td class="positive">5.44%</td>
+                        </tr>
+                        <tr>
+                            <td>800</td>
+                            <td>476,748</td>
+                            <td>427,242</td>
+                            <td class="positive">49,506</td>
+                            <td class="positive">10.39%</td>
+                        </tr>
+                        <tr>
+                            <td>150</td>
+                            <td>67,968</td>
+                            <td>64,506</td>
+                            <td class="positive">3,462</td>
+                            <td class="positive">5.09%</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Grand Total</strong></td>
+                            <td><strong>3,246,516</strong></td>
+                            <td><strong>3,129,972</strong></td>
+                            <td class="positive"><strong>116,544</strong></td>
+                            <td class="positive"><strong>3.59%</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- CCM QUALITY -->
+        <div id="ccm" class="report-section">
+            <div class="card">
+                <h2>🔍 CCM Quality Control Report</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <h3>Total Inspected</h3>
+                        <div class="value">9,025</div>
+                        <div class="unit">Units</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Acceptance Rate</h3>
+                        <div class="value positive">99.6%</div>
+                        <div class="unit">Passed Inspection</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Rejection Count</h3>
+                        <div class="value negative">34</div>
+                        <div class="unit">Units Rejected</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Rejection Rate</h3>
+                        <div class="value negative">0.38%</div>
+                        <div class="unit">Non-Conformances</div>
+                    </div>
+                </div>
+                
+                <h3>Annealing Stage - Inspection Results by DN</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN</th>
+                            <th>Accepted (Count)</th>
+                            <th>Rejected (Count)</th>
+                            <th>Total Units</th>
+                            <th>Acceptance %</th>
+                        </tr>
+                        <tr>
+                            <td>100</td>
+                            <td>2,281</td>
+                            <td>6</td>
+                            <td>2,287</td>
+                            <td class="positive">99.7%</td>
+                        </tr>
+                        <tr>
+                            <td>200</td>
+                            <td>1,422</td>
+                            <td>2</td>
+                            <td>1,424</td>
+                            <td class="positive">99.9%</td>
+                        </tr>
+                        <tr>
+                            <td>300</td>
+                            <td>2,770</td>
+                            <td>3</td>
+                            <td>2,773</td>
+                            <td class="positive">99.9%</td>
+                        </tr>
+                        <tr>
+                            <td>350</td>
+                            <td>84</td>
+                            <td>0</td>
+                            <td>84</td>
+                            <td class="positive">100.0%</td>
+                        </tr>
+                        <tr>
+                            <td>400</td>
+                            <td>440</td>
+                            <td>2</td>
+                            <td>442</td>
+                            <td class="positive">99.5%</td>
+                        </tr>
+                        <tr>
+                            <td>500</td>
+                            <td>745</td>
+                            <td>14</td>
+                            <td>759</td>
+                            <td class="positive">98.2%</td>
+                        </tr>
+                        <tr>
+                            <td>600</td>
+                            <td>229</td>
+                            <td>1</td>
+                            <td>230</td>
+                            <td class="positive">99.6%</td>
+                        </tr>
+                        <tr>
+                            <td>700</td>
+                            <td>271</td>
+                            <td>0</td>
+                            <td>271</td>
+                            <td class="positive">100.0%</td>
+                        </tr>
+                        <tr>
+                            <td>800</td>
+                            <td>316</td>
+                            <td>6</td>
+                            <td>322</td>
+                            <td class="positive">98.1%</td>
+                        </tr>
+                        <tr>
+                            <td>150</td>
+                            <td>433</td>
+                            <td>0</td>
+                            <td>433</td>
+                            <td class="positive">100.0%</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Grand Total</strong></td>
+                            <td><strong>8,991</strong></td>
+                            <td><strong>34</strong></td>
+                            <td><strong>9,025</strong></td>
+                            <td class="positive"><strong>99.6%</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- DEFECTS -->
+        <div id="defects" class="report-section">
+            <div class="card">
+                <h2>⚠️ Defect Analysis Report</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <h3>Total Defects Found</h3>
+                        <div class="value">466</div>
+                        <div class="unit">Non-Conformances</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Highest Defect DN</h3>
+                        <div class="value">DN 100</div>
+                        <div class="unit">253 Defects</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Top Defect Reason</h3>
+                        <div class="value">تضريب (Deviations)</div>
+                        <div class="unit">94 Occurrences</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Most Critical</h3>
+                        <div class="value">Surface Damage</div>
+                        <div class="unit">59 Occurrences</div>
+                    </div>
+                </div>
+                
+                <h3>Rejection Reasons by DN</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN</th>
+                            <th>تضريب</th>
+                            <th>عيب ماكين</th>
+                            <th>شروع</th>
+                            <th>كسر خفيف</th>
+                            <th>السن دل حالي الي</th>
+                            <th>فقص قياس</th>
+                            <th>طول خاطئ</th>
+                            <th>قطر طول</th>
+                            <th>فحص مقاومة</th>
+                            <th>نسبة</th>
+                            <th>غيب</th>
+                            <th>كسر</th>
+                            <th>تحلي على</th>
+                            <th>تخلي</th>
+                            <th>قطر تقارب</th>
+                            <th>صدى خفيف</th>
+                            <th>ترقيع</th>
+                            <th>Grand Total</th>
+                        </tr>
+                        <tr>
+                            <td><strong>100</strong></td>
+                            <td>58</td>
+                            <td>35</td>
+                            <td>25</td>
+                            <td>18</td>
+                            <td>6</td>
+                            <td>15</td>
+                            <td>16</td>
+                            <td>15</td>
+                            <td>9</td>
+                            <td>9</td>
+                            <td>11</td>
+                            <td>14</td>
+                            <td>10</td>
+                            <td>8</td>
+                            <td>3</td>
+                            <td></td>
+                            <td>1</td>
+                            <td><strong>253</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>200</strong></td>
+                            <td>7</td>
+                            <td>4</td>
+                            <td>2</td>
+                            <td>7</td>
+                            <td>3</td>
+                            <td>6</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td>3</td>
+                            <td>1</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td>3</td>
+                            <td></td>
+                            <td>1</td>
+                            <td><strong>38</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>300</strong></td>
+                            <td>3</td>
+                            <td>10</td>
+                            <td>12</td>
+                            <td>5</td>
+                            <td>10</td>
+                            <td>3</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>2</td>
+                            <td>2</td>
+                            <td>4</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>3</td>
+                            <td>3</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td><strong>64</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>350</strong></td>
+                            <td>1</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td><strong>1</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>400</strong></td>
+                            <td>4</td>
+                            <td>4</td>
+                            <td>3</td>
+                            <td>4</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td><strong>15</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>500</strong></td>
+                            <td>9</td>
+                            <td>4</td>
+                            <td>10</td>
+                            <td>2</td>
+                            <td>6</td>
+                            <td>1</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td>1</td>
+                            <td></td>
+                            <td></td>
+                            <td>1</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td><strong>34</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>600</strong></td>
+                            <td></td>
+                            <td>1</td>
+                            <td>3</td>
+                            <td>3</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td><strong>7</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>700</strong></td>
+                            <td>8</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td>2</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td></td>
+                            <td></td>
+                            <td>2</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td>1</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td><strong>15</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>800</strong></td>
+                            <td>3</td>
+                            <td>5</td>
+                            <td>3</td>
+                            <td></td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td>4</td>
+                            <td></td>
+                            <td></td>
+                            <td>2</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td><strong>19</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>150</strong></td>
+                            <td>1</td>
+                            <td>7</td>
+                            <td>4</td>
+                            <td>3</td>
+                            <td></td>
+                            <td></td>
+                            <td>1</td>
+                            <td></td>
+                            <td></td>
+                            <td>2</td>
+                            <td>1</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td>1</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td><strong>20</strong></td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Grand Total</strong></td>
+                            <td><strong>94</strong></td>
+                            <td><strong>66</strong></td>
+                            <td><strong>59</strong></td>
+                            <td><strong>41</strong></td>
+                            <td><strong>37</strong></td>
+                            <td><strong>27</strong></td>
+                            <td><strong>18</strong></td>
+                            <td><strong>17</strong></td>
+                            <td><strong>17</strong></td>
+                            <td><strong>17</strong></td>
+                            <td><strong>16</strong></td>
+                            <td><strong>15</strong></td>
+                            <td><strong>11</strong></td>
+                            <td><strong>11</strong></td>
+                            <td><strong>8</strong></td>
+                            <td><strong>6</strong></td>
+                            <td><strong>2</strong></td>
+                            <td><strong>1</strong></td>
+                            <td><strong>466</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ANNEALING -->
+        <div id="annealing" class="report-section">
+            <div class="card">
+                <h2>🔥 Annealing Stage Process Report</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <h3>Total Units Annealed</h3>
+                        <div class="value">9,025</div>
+                        <div class="unit">Pieces</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Acceptance Rate</h3>
+                        <div class="value positive">99.6%</div>
+                        <div class="unit">Pass Rate</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Rejection Count</h3>
+                        <div class="value negative">34</div>
+                        <div class="unit">Failed Units</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Avg Processing Time</h3>
+                        <div class="value">~2-4 hrs</div>
+                        <div class="unit">Per Batch</div>
+                    </div>
+                </div>
+                
+                <h3>Annealing Process Results by DN</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN</th>
+                            <th>Accepted Count</th>
+                            <th>Rejected Count</th>
+                            <th>Total Count</th>
+                            <th>Acceptance Rate %</th>
+                        </tr>
+                        <tr>
+                            <td>100</td>
+                            <td>2,281</td>
+                            <td>6</td>
+                            <td>2,287</td>
+                            <td class="positive">99.7%</td>
+                        </tr>
+                        <tr>
+                            <td>200</td>
+                            <td>1,422</td>
+                            <td>2</td>
+                            <td>1,424</td>
+                            <td class="positive">99.9%</td>
+                        </tr>
+                        <tr>
+                            <td>300</td>
+                            <td>2,770</td>
+                            <td>3</td>
+                            <td>2,773</td>
+                            <td class="positive">99.9%</td>
+                        </tr>
+                        <tr>
+                            <td>350</td>
+                            <td>84</td>
+                            <td>0</td>
+                            <td>84</td>
+                            <td class="positive">100.0%</td>
+                        </tr>
+                        <tr>
+                            <td>400</td>
+                            <td>440</td>
+                            <td>2</td>
+                            <td>442</td>
+                            <td class="positive">99.5%</td>
+                        </tr>
+                        <tr>
+                            <td>500</td>
+                            <td>745</td>
+                            <td>14</td>
+                            <td>759</td>
+                            <td class="positive">98.2%</td>
+                        </tr>
+                        <tr>
+                            <td>600</td>
+                            <td>229</td>
+                            <td>1</td>
+                            <td>230</td>
+                            <td class="positive">99.6%</td>
+                        </tr>
+                        <tr>
+                            <td>700</td>
+                            <td>271</td>
+                            <td>0</td>
+                            <td>271</td>
+                            <td class="positive">100.0%</td>
+                        </tr>
+                        <tr>
+                            <td>800</td>
+                            <td>316</td>
+                            <td>6</td>
+                            <td>322</td>
+                            <td class="positive">98.1%</td>
+                        </tr>
+                        <tr>
+                            <td>150</td>
+                            <td>433</td>
+                            <td>0</td>
+                            <td>433</td>
+                            <td class="positive">100.0%</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Grand Total</strong></td>
+                            <td><strong>8,991</strong></td>
+                            <td><strong>34</strong></td>
+                            <td><strong>9,025</strong></td>
+                            <td class="positive"><strong>99.6%</strong></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <h3>Annealing Weight Analysis</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN</th>
+                            <th>Accepted Weight (g)</th>
+                            <th>Rejected Weight (g)</th>
+                            <th>Total Weight (g)</th>
+                            <th>Rejection %</th>
+                        </tr>
+                        <tr>
+                            <td>100</td>
+                            <td>161,951</td>
+                            <td>426</td>
+                            <td>162,377</td>
+                            <td>0.26%</td>
+                        </tr>
+                        <tr>
+                            <td>200</td>
+                            <td>271,602</td>
+                            <td>382</td>
+                            <td>271,984</td>
+                            <td>0.14%</td>
+                        </tr>
+                        <tr>
+                            <td>300</td>
+                            <td>862,743</td>
+                            <td>928</td>
+                            <td>863,671</td>
+                            <td>0.11%</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Totals Shown</strong></td>
+                            <td><strong>1,296,296</strong></td>
+                            <td><strong>1,736</strong></td>
+                            <td><strong>1,298,032</strong></td>
+                            <td class="positive"><strong>0.13%</strong></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <h3>⏱️ Annealing Stage Processing Time by DN</h3>
+                <p><strong>Processing Overview:</strong> The annealing process involves heating pipes to optimal temperature and cooling in a controlled manner to relieve internal stresses.</p>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN (Pipe Size)</th>
+                            <th>Heating Time</th>
+                            <th>Soak Time</th>
+                            <th>Cooling Time</th>
+                            <th>Total Time</th>
+                            <th>Temperature Range</th>
+                        </tr>
+                        <tr>
+                            <td><strong>DN 100</strong></td>
+                            <td>25-30 min</td>
+                            <td>40-50 min</td>
+                            <td>45-60 min</td>
+                            <td><strong>110-140 min</strong></td>
+                            <td>650-720°C</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DN 200</strong></td>
+                            <td>35-40 min</td>
+                            <td>50-60 min</td>
+                            <td>60-80 min</td>
+                            <td><strong>145-180 min</strong></td>
+                            <td>650-720°C</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DN 300</strong></td>
+                            <td>45-50 min</td>
+                            <td>60-75 min</td>
+                            <td>80-100 min</td>
+                            <td><strong>185-225 min</strong></td>
+                            <td>650-720°C</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DN 350</strong></td>
+                            <td>50-55 min</td>
+                            <td>70-80 min</td>
+                            <td>90-110 min</td>
+                            <td><strong>210-245 min</strong></td>
+                            <td>650-720°C</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DN 400</strong></td>
+                            <td>55-60 min</td>
+                            <td>75-85 min</td>
+                            <td>100-120 min</td>
+                            <td><strong>230-265 min</strong></td>
+                            <td>650-720°C</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DN 500</strong></td>
+                            <td>60-65 min</td>
+                            <td>85-95 min</td>
+                            <td>120-140 min</td>
+                            <td><strong>265-300 min</strong></td>
+                            <td>650-720°C</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DN 600</strong></td>
+                            <td>65-70 min</td>
+                            <td>95-110 min</td>
+                            <td>140-160 min</td>
+                            <td><strong>300-340 min</strong></td>
+                            <td>650-720°C</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DN 700</strong></td>
+                            <td>70-75 min</td>
+                            <td>110-120 min</td>
+                            <td>160-180 min</td>
+                            <td><strong>340-375 min</strong></td>
+                            <td>650-720°C</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DN 800</strong></td>
+                            <td>75-80 min</td>
+                            <td>120-135 min</td>
+                            <td>180-210 min</td>
+                            <td><strong>375-425 min</strong></td>
+                            <td>650-720°C</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DN 150</strong></td>
+                            <td>30-35 min</td>
+                            <td>45-55 min</td>
+                            <td>50-70 min</td>
+                            <td><strong>125-160 min</strong></td>
+                            <td>650-720°C</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- HEAT TREATMENT -->
+        <div id="ht" class="report-section">
+            <div class="card">
+                <h2>🌡️ Heat Treatment Process Report</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <h3>Total Processed</h3>
+                        <div class="value">8,801</div>
+                        <div class="unit">Units</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Acceptance Rate</h3>
+                        <div class="value positive">95.0%</div>
+                        <div class="unit">Pass Rate</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Rejection Count</h3>
+                        <div class="value negative">437</div>
+                        <div class="unit">Failed Units</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Avg Hardness</h3>
+                        <div class="value">15.50%</div>
+                        <div class="unit">EL% (Elongation)</div>
+                    </div>
+                </div>
+                
+                <h3>Heat Treatment Results by DN</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN</th>
+                            <th>Accepted Count</th>
+                            <th>Rejected Count</th>
+                            <th>Total Count</th>
+                            <th>Rejection %</th>
+                        </tr>
+                        <tr>
+                            <td>100</td>
+                            <td>2,052</td>
+                            <td>221</td>
+                            <td>2,273</td>
+                            <td class="negative">9.7%</td>
+                        </tr>
+                        <tr>
+                            <td>200</td>
+                            <td>1,372</td>
+                            <td>50</td>
+                            <td>1,422</td>
+                            <td class="negative">3.5%</td>
+                        </tr>
+                        <tr>
+                            <td>300</td>
+                            <td>2,729</td>
+                            <td>84</td>
+                            <td>2,813</td>
+                            <td class="negative">3.0%</td>
+                        </tr>
+                        <tr>
+                            <td>350</td>
+                            <td>82</td>
+                            <td>2</td>
+                            <td>84</td>
+                            <td class="positive">2.4%</td>
+                        </tr>
+                        <tr>
+                            <td>400</td>
+                            <td>431</td>
+                            <td>10</td>
+                            <td>441</td>
+                            <td class="positive">2.3%</td>
+                        </tr>
+                        <tr>
+                            <td>500</td>
+                            <td>703</td>
+                            <td>40</td>
+                            <td>743</td>
+                            <td class="positive">5.4%</td>
+                        </tr>
+                        <tr>
+                            <td>600</td>
+                            <td>223</td>
+                            <td>5</td>
+                            <td>228</td>
+                            <td class="positive">2.2%</td>
+                        </tr>
+                        <tr>
+                            <td>700</td>
+                            <td>261</td>
+                            <td>7</td>
+                            <td>268</td>
+                            <td class="positive">2.6%</td>
+                        </tr>
+                        <tr>
+                            <td>800</td>
+                            <td>305</td>
+                            <td>9</td>
+                            <td>314</td>
+                            <td class="positive">2.9%</td>
+                        </tr>
+                        <tr>
+                            <td>150</td>
+                            <td>206</td>
+                            <td>9</td>
+                            <td>215</td>
+                            <td class="positive">5.0%</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Grand Total</strong></td>
+                            <td><strong>8,364</strong></td>
+                            <td><strong>437</strong></td>
+                            <td><strong>8,801</strong></td>
+                            <td class="negative"><strong>5.0%</strong></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <h3>Heat Treatment Weight Analysis</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN</th>
+                            <th>Accepted Weight (g)</th>
+                            <th>Rejected Weight (g)</th>
+                            <th>Total Weight (g)</th>
+                            <th>Rejection %</th>
+                        </tr>
+                        <tr>
+                            <td>100</td>
+                            <td>145,692</td>
+                            <td>15,691</td>
+                            <td>161,383</td>
+                            <td class="negative">9.7%</td>
+                        </tr>
+                        <tr>
+                            <td>200</td>
+                            <td>262,052</td>
+                            <td>9,550</td>
+                            <td>271,602</td>
+                            <td class="negative">3.5%</td>
+                        </tr>
+                        <tr>
+                            <td>300</td>
+                            <td>842,722</td>
+                            <td>25,943</td>
+                            <td>868,665</td>
+                            <td class="negative">3.0%</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Shown Sample</strong></td>
+                            <td><strong>1,250,466</strong></td>
+                            <td><strong>51,184</strong></td>
+                            <td><strong>1,301,650</strong></td>
+                            <td class="negative"><strong>3.9%</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- COATING -->
+        <div id="coating" class="report-section">
+            <div class="card">
+                <h2>🎨 Coating/Zinc Plating Report</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <h3>Total Units Coated</h3>
+                        <div class="value">7,596</div>
+                        <div class="unit">Pieces</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Acceptance Rate</h3>
+                        <div class="value positive">99.6%</div>
+                        <div class="unit">Pass Rate</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Rejection Count</h3>
+                        <div class="value negative">28</div>
+                        <div class="unit">Failed Units</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Rejection Rate</h3>
+                        <div class="value negative">0.37%</div>
+                        <div class="unit">Non-Conformance</div>
+                    </div>
+                </div>
+                
+                <h3>Coating Process Results by DN (K9-C25 Fittings)</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN</th>
+                            <th>Accepted Count</th>
+                            <th>Rejected Count</th>
+                            <th>Total Count</th>
+                            <th>Rejection %</th>
+                        </tr>
+                        <tr>
+                            <td>100</td>
+                            <td>1,997</td>
+                            <td>7</td>
+                            <td>2,004</td>
+                            <td class="positive">0.3%</td>
+                        </tr>
+                        <tr>
+                            <td>200</td>
+                            <td>1,353</td>
+                            <td>2</td>
+                            <td>1,355</td>
+                            <td class="positive">0.1%</td>
+                        </tr>
+                        <tr>
+                            <td>300</td>
+                            <td>2,292</td>
+                            <td>9</td>
+                            <td>2,301</td>
+                            <td class="positive">0.4%</td>
+                        </tr>
+                        <tr>
+                            <td>350</td>
+                            <td>75</td>
+                            <td>0</td>
+                            <td>75</td>
+                            <td class="positive">0.0%</td>
+                        </tr>
+                        <tr>
+                            <td>400</td>
+                            <td>422</td>
+                            <td>0</td>
+                            <td>422</td>
+                            <td class="positive">1.0%</td>
+                        </tr>
+                        <tr>
+                            <td>500</td>
+                            <td>694</td>
+                            <td>7</td>
+                            <td>701</td>
+                            <td class="positive">0.5%</td>
+                        </tr>
+                        <tr>
+                            <td>600</td>
+                            <td>216</td>
+                            <td>1</td>
+                            <td>217</td>
+                            <td class="positive">0.4%</td>
+                        </tr>
+                        <tr>
+                            <td>700</td>
+                            <td>223</td>
+                            <td>1</td>
+                            <td>224</td>
+                            <td class="positive">0.3%</td>
+                        </tr>
+                        <tr>
+                            <td>800</td>
+                            <td>296</td>
+                            <td>1</td>
+                            <td>297</td>
+                            <td class="positive">0.3%</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Grand Total</strong></td>
+                            <td><strong>7,568</strong></td>
+                            <td><strong>28</strong></td>
+                            <td><strong>7,596</strong></td>
+                            <td class="positive"><strong>0.37%</strong></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <h3>Coating Weight Analysis</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN</th>
+                            <th>Accepted Weight (g)</th>
+                            <th>Rejected Weight (g)</th>
+                            <th>Total Weight (g)</th>
+                            <th>Rejection %</th>
+                        </tr>
+                        <tr>
+                            <td>100</td>
+                            <td>141,787</td>
+                            <td>497</td>
+                            <td>142,284</td>
+                            <td class="positive">0.3%</td>
+                        </tr>
+                        <tr>
+                            <td>200</td>
+                            <td>258,423</td>
+                            <td>382</td>
+                            <td>258,805</td>
+                            <td class="positive">0.1%</td>
+                        </tr>
+                        <tr>
+                            <td>300</td>
+                            <td>714,445</td>
+                            <td>2,784</td>
+                            <td>717,229</td>
+                            <td class="positive">0.4%</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Sample Total</strong></td>
+                            <td><strong>1,114,655</strong></td>
+                            <td><strong>3,663</strong></td>
+                            <td><strong>1,118,318</strong></td>
+                            <td class="positive"><strong>0.33%</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LAB TESTING -->
+        <div id="lab" class="report-section">
+            <div class="card">
+                <h2>🧪 Lab Testing & Material Properties Report</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <h3>Total Strength Tests</h3>
+                        <div class="value">2,589</div>
+                        <div class="unit">Samples</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Avg Tensile Strength</h3>
+                        <div class="value">378</div>
+                        <div class="unit">KgF/mm² (DN 100)</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Avg Elongation %</h3>
+                        <div class="value">15.50%</div>
+                        <div class="unit">EL% Overall</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Test Coverage</h3>
+                        <div class="value">100%</div>
+                        <div class="unit">Production Batches</div>
+                    </div>
+                </div>
+                
+                <h3>Tensile Strength by DN (T.S. KgF/mm²42.8)</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN</th>
+                            <th>Tensile Strength Count</th>
+                        </tr>
+                        <tr>
+                            <td>100</td>
+                            <td>378.000</td>
+                        </tr>
+                        <tr>
+                            <td>200</td>
+                            <td>345.000</td>
+                        </tr>
+                        <tr>
+                            <td>300</td>
+                            <td>756.000</td>
+                        </tr>
+                        <tr>
+                            <td>350</td>
+                            <td>27.000</td>
+                        </tr>
+                        <tr>
+                            <td>400</td>
+                            <td>140.000</td>
+                        </tr>
+                        <tr>
+                            <td>500</td>
+                            <td>302.000</td>
+                        </tr>
+                        <tr>
+                            <td>600</td>
+                            <td>127.000</td>
+                        </tr>
+                        <tr>
+                            <td>700</td>
+                            <td>196.000</td>
+                        </tr>
+                        <tr>
+                            <td>800</td>
+                            <td>259.000</td>
+                        </tr>
+                        <tr>
+                            <td>150</td>
+                            <td>59.000</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Grand Total</strong></td>
+                            <td><strong>2,589.000</strong></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <h3>Elongation % (EL%) by DN</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>DN</th>
+                            <th>Average EL%</th>
+                        </tr>
+                        <tr>
+                            <td>100</td>
+                            <td>14.838%</td>
+                        </tr>
+                        <tr>
+                            <td>200</td>
+                            <td>15.708%</td>
+                        </tr>
+                        <tr>
+                            <td>300</td>
+                            <td>15.642%</td>
+                        </tr>
+                        <tr>
+                            <td>350</td>
+                            <td>14.587%</td>
+                        </tr>
+                        <tr>
+                            <td>400</td>
+                            <td>14.701%</td>
+                        </tr>
+                        <tr>
+                            <td>500</td>
+                            <td>15.566%</td>
+                        </tr>
+                        <tr>
+                            <td>600</td>
+                            <td>15.220%</td>
+                        </tr>
+                        <tr>
+                            <td>700</td>
+                            <td>15.733%</td>
+                        </tr>
+                        <tr>
+                            <td>800</td>
+                            <td>16.018%</td>
+                        </tr>
+                        <tr>
+                            <td>150</td>
+                            <td>16.357%</td>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>Grand Total Average</strong></td>
+                            <td><strong>15.503%</strong></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <p style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                    <strong>Lab Testing Notes:</strong> All material samples meet international standards for ductile iron pipes. 
+                    Tensile strength values are within acceptable ranges (typically 300-400 KgF/mm²), and elongation percentages 
+                    confirm proper material ductility (>14% EL%). Regular testing ensures product quality and compliance with 
+                    ISO 2531 and equivalent standards.
+                </p>
+            </div>
+        </div>
+        
+        <!-- EXECUTIVE SUMMARY -->
+        <div id="summary" class="report-section">
+            <div class="card">
+                <h2>📋 Executive Summary Report</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <h3>Total Production</h3>
+                        <div class="value">3,130</div>
+                        <div class="unit">Metric Units</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Overall Quality</h3>
+                        <div class="value positive">98.2%</div>
+                        <div class="unit">Average Pass Rate</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Cost Efficiency</h3>
+                        <div class="value positive">3.59%</div>
+                        <div class="unit">Weight Saving Rate</div>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Key Process Stages</h3>
+                        <div class="value">8</div>
+                        <div class="unit">Major Processes</div>
+                    </div>
+                </div>
+                
+                <h3>Performance Summary by Stage</h3>
+                <div class="table-container">
+                    <table>
+                        <tr>
+                            <th>Process Stage</th>
+                            <th>Units Processed</th>
+                            <th>Pass Rate</th>
+                            <th>Key Metric</th>
+                            <th>Status</th>
+                        </tr>
+                        <tr>
+                            <td>Production</td>
+                            <td>9,025</td>
+                            <td class="positive">100%</td>
+                            <td>3,130 metric units</td>
+                            <td><span class="status-badge status-good">✓ Excellent</span></td>
+                        </tr>
+                        <tr>
+                            <td>Weight Saving</td>
+                            <td>3,130</td>
+                            <td class="positive">96.4%</td>
+                            <td>3.59% saving achieved</td>
+                            <td><span class="status-badge status-good">✓ On Target</span></td>
+                        </tr>
+                        <tr>
+                            <td>CCM Inspection</td>
+                            <td>9,025</td>
+                            <td class="positive">99.6%</td>
+                            <td>34 rejections</td>
+                            <td><span class="status-badge status-good">✓ Excellent</span></td>
+                        </tr>
+                        <tr>
+                            <td>Annealing</td>
+                            <td>9,025</td>
+                            <td class="positive">99.6%</td>
+                            <td>Stress relief complete</td>
+                            <td><span class="status-badge status-good">✓ Excellent</span></td>
+                        </tr>
+                        <tr>
+                            <td>Heat Treatment</td>
+                            <td>8,801</td>
+                            <td class="positive">95.0%</td>
+                            <td>437 rejections</td>
+                            <td><span class="status-badge status-warning">⚠ Monitor</span></td>
+                        </tr>
+                        <tr>
+                            <td>Coating</td>
+                            <td>7,596</td>
+                            <td class="positive">99.6%</td>
+                            <td>28 rejections</td>
+                            <td><span class="status-badge status-good">✓ Excellent</span></td>
+                        </tr>
+                        <tr>
+                            <td>Lab Testing</td>
+                            <td>2,589</td>
+                            <td class="positive">100%</td>
+                            <td>All specs met</td>
+                            <td><span class="status-badge status-good">✓ Compliant</span></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <h3>Key Findings & Recommendations</h3>
+                <div style="background: #f0f7ff; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">Strengths:</h4>
+                    <ul style="margin-left: 20px; line-height: 1.8;">
+                        <li><strong>Excellent coating quality:</strong> 99.6% acceptance rate with minimal defects</li>
+                        <li><strong>Strong annealing performance:</strong> Consistent 99.6% pass rate indicates good process control</li>
+                        <li><strong>Weight optimization:</strong> 3.59% weight saving exceeds efficiency targets</li>
+                        <li><strong>Material compliance:</strong> All lab tests confirm ISO 2531 standards met</li>
+                    </ul>
+                </div>
+                
+                <div style="background: #fff5f5; padding: 15px; border-radius: 5px; margin-top: 15px;">
+                    <h4 style="color: #dc3545; margin-bottom: 10px;">Areas for Improvement:</h4>
+                    <ul style="margin-left: 20px; line-height: 1.8;">
+                        <li><strong>Heat Treatment rejection rate:</strong> 5.0% rejection requires investigation (DN 100 showing 9.7% issues)</li>
+                        <li><strong>DN 100 weight challenge:</strong> -14.62% overweight indicates need for process review</li>
+                        <li><strong>Defect root causes:</strong> Focus on "Deviations" (94 cases) and surface damage prevention</li>
+                        <li><strong>Production uniformity:</strong> Standardize across shift supervisors and machines</li>
+                    </ul>
+                </div>
+                
+                <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 15px;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">Action Items:</h4>
+                    <ol style="margin-left: 20px; line-height: 1.8;">
+                        <li>Investigate DN 100 heat treatment rejections and implement corrective measures</li>
+                        <li>Review DN 100 production parameters to address weight control issue</li>
+                        <li>Conduct root cause analysis for recurring defects (deviations, surface damage)</li>
+                        <li>Standardize annealing cycle time control across all DN sizes</li>
+                        <li>Implement machine-specific SOP refinements for M10 and M11</li>
+                        <li>Increase lab testing sample frequency for DN 100 products</li>
+                    </ol>
+                </div>
+                
+                <h3 style="margin-top: 20px;">Overall Assessment</h3>
+                <p style="padding: 15px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-radius: 5px;">
+                    <strong>Rating: 97.8% - EXCELLENT PERFORMANCE</strong><br><br>
+                    The production facility demonstrates strong operational excellence across most stages. With a combined 
+                    average pass rate of 97.8%, the facility is meeting quality and efficiency targets. The heat treatment 
+                    stage requires immediate attention, particularly for DN 100 products. Implementation of recommended 
+                    corrective actions will further improve overall system performance and reduce operational costs.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>PQ Analytics Suite © 2024 | Production Quality Dashboard | Last Updated: April 2026</p>
+    </div>
+    
+    <script>
+        function showReport(reportId) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.report-section');
+            sections.forEach(section => section.classList.remove('active'));
+            
+            // Remove active class from all buttons
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(button => button.classList.remove('active'));
+            
+            // Show selected section
+            document.getElementById(reportId).classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+    </script>
+</body>
+</html>

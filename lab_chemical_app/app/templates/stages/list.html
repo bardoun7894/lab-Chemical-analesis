@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{% from 'components/table_tools.html' import table_tools %}
+{% from 'components/pagination.html' import pagination %}
 
 {% block title %}Pipes List{% endblock %}
 
@@ -31,26 +33,88 @@
             <form method="GET" class="row g-3">
                 <div class="col-md-2">
                     <label class="form-label">{{ 'من تاريخ' if current_locale == 'ar' else 'From Date' }}</label>
-                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                    <input type="date" name="date_from" class="form-control" value="{{ request.args.get('date_from', '') }}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">{{ 'إلى تاريخ' if current_locale == 'ar' else 'To Date' }}</label>
-                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                    <input type="date" name="date_to" class="form-control" value="{{ request.args.get('date_to', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'كود الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}</label>
+                    <input type="text" name="no_code" class="form-control" placeholder="N8739..."
+                           value="{{ request.args.get('no_code', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</label>
+                    <input type="text" name="ladle_id" class="form-control" placeholder="Ladle ID..."
+                           value="{{ request.args.get('ladle_id', '') }}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</label>
                     <select name="diameter" class="form-select">
                         <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
-                        <option value="300" {{ 'selected' if selected_diameter == 300 }}>DN300</option>
-                        <option value="400" {{ 'selected' if selected_diameter == 400 }}>DN400</option>
-                        <option value="500" {{ 'selected' if selected_diameter == 500 }}>DN500</option>
-                        <option value="600" {{ 'selected' if selected_diameter == 600 }}>DN600</option>
+                        {% for d in diameters %}
+                        <option value="{{ d }}" {{ 'selected' if request.args.get('diameter')|int == d }}>DN{{ d }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">{{ 'كود الأنبوب' if current_locale == 'ar' else 'Pipe Code' }}</label>
-                    <input type="text" name="no_code" class="form-control" placeholder="N8739..."
-                           value="{{ selected_no_code }}">
+                    <label class="form-label">{{ 'الكلاس' if current_locale == 'ar' else 'Class' }}</label>
+                    <select name="pipe_class" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        {% for c in classes %}
+                        <option value="{{ c }}" {{ 'selected' if request.args.get('pipe_class') == c }}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'أمر الإنتاج' if current_locale == 'ar' else 'Production Order' }}</label>
+                    <select name="production_order_id" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        {% for order in production_orders %}
+                        <option value="{{ order.id }}" {{ 'selected' if request.args.get('production_order_id')|int == order.id }}>{{ order.order_number }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</label>
+                    <select name="shift" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        <option value="1" {{ 'selected' if request.args.get('shift') == '1' }}>{{ 'الأولى' if current_locale == 'ar' else 'Shift 1' }}</option>
+                        <option value="2" {{ 'selected' if request.args.get('shift') == '2' }}>{{ 'الثانية' if current_locale == 'ar' else 'Shift 2' }}</option>
+                        <option value="3" {{ 'selected' if request.args.get('shift') == '3' }}>{{ 'الثالثة' if current_locale == 'ar' else 'Shift 3' }}</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'القرار النهائي' if current_locale == 'ar' else 'Final Decision' }}</label>
+                    <select name="final_decision" class="form-select">
+                        <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                        <option value="ACCEPT" {{ 'selected' if request.args.get('final_decision') == 'ACCEPT' }}>{{ 'مقبول' if current_locale == 'ar' else 'Accept' }}</option>
+                        <option value="REJECT" {{ 'selected' if request.args.get('final_decision') == 'REJECT' }}>{{ 'مرفوض' if current_locale == 'ar' else 'Reject' }}</option>
+                        <option value="HOLD" {{ 'selected' if request.args.get('final_decision') == 'HOLD' }}>{{ 'هولد' if current_locale == 'ar' else 'Hold' }}</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ 'تجميع حسب' if current_locale == 'ar' else 'Group by' }}</label>
+                    {% set gb = request.args.get('group_by', '') %}
+                    <select name="group_by" class="form-select">
+                        <option value="">{{ '— بدون —' if current_locale == 'ar' else '(none)' }}</option>
+                        <option value="diameter" {{ 'selected' if gb == 'diameter' }}>{{ 'القطر' if current_locale == 'ar' else 'Diameter' }}</option>
+                        <option value="pipe_class" {{ 'selected' if gb == 'pipe_class' }}>{{ 'الكلاس/النوع' if current_locale == 'ar' else 'Class' }}</option>
+                        <option value="shift" {{ 'selected' if gb == 'shift' }}>{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</option>
+                        <option value="final_decision" {{ 'selected' if gb == 'final_decision' }}>{{ 'القرار النهائي' if current_locale == 'ar' else 'Final Decision' }}</option>
+                        <option value="production_order" {{ 'selected' if gb == 'production_order' }}>{{ 'أمر الإنتاج' if current_locale == 'ar' else 'Production Order' }}</option>
+                        <option value="ladle" {{ 'selected' if gb == 'ladle' }}>{{ 'المغرفة (لادل)' if current_locale == 'ar' else 'Ladle' }}</option>
+                    </select>
+                </div>
+
+                <!-- Advanced filter toggle + actions -->
+                {% set adv_open = request.args.get('machine_id') or request.args.get('mold_number') or request.args.get('customer') or request.args.get('sales_order') or request.args.get('weight_min') or request.args.get('weight_max') or request.args.get('mechanical_test_role') or request.args.get('product_id') or request.args.get('stage') or request.args.get('pipe_status') or request.args.get('responsible') or request.args.get('delivery_receipt') or request.args.get('bundle') or request.args.get('hour_from') or request.args.get('hour_to') or request.args.get('stage_date') or request.args.get('stage_hour_from') or request.args.get('stage_hour_to') or request.args.get('approved_from') or request.args.get('approved_to') or request.args.get('delivery_date_from') or request.args.get('delivery_date_to') %}
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilter">
+                        <i class="bi bi-sliders"></i>
+                        {{ 'فلتر متقدم' if current_locale == 'ar' else 'Advanced Filter' }}
+                    </button>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100">
@@ -64,86 +128,334 @@
                         {{ 'مسح' if current_locale == 'ar' else 'Clear' }}
                     </a>
                 </div>
+
+                <!-- Advanced filter panel (less-common filters) -->
+                <div class="col-12 collapse {{ 'show' if adv_open }}" id="advancedFilter">
+                    <div class="row g-3 mt-1 p-2 border rounded bg-light">
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'الماكينة' if current_locale == 'ar' else 'Machine' }}</label>
+                            <select name="machine_id" class="form-select">
+                                <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                                {% for m in machines %}
+                                <option value="{{ m.id }}" {{ 'selected' if request.args.get('machine_id')|int == m.id }}>{{ m.machine_code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'القالب' if current_locale == 'ar' else 'Mold' }}</label>
+                            <input type="text" name="mold_number" class="form-control" placeholder="Mold #"
+                                   value="{{ request.args.get('mold_number', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</label>
+                            <input type="text" name="customer" class="form-control" placeholder="Customer..."
+                                   value="{{ request.args.get('customer', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'أمر البيع' if current_locale == 'ar' else 'Sales Order' }}</label>
+                            <input type="text" name="sales_order" class="form-control" placeholder="SO..."
+                                   value="{{ request.args.get('sales_order', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'أدنى وزن' if current_locale == 'ar' else 'Weight Min' }}</label>
+                            <input type="number" step="0.1" name="weight_min" class="form-control" placeholder="kg"
+                                   value="{{ request.args.get('weight_min', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'أقصى وزن' if current_locale == 'ar' else 'Weight Max' }}</label>
+                            <input type="number" step="0.1" name="weight_max" class="form-control" placeholder="kg"
+                                   value="{{ request.args.get('weight_max', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'دور الاختبار الميكانيكي' if current_locale == 'ar' else 'Mechanical Test Role' }}</label>
+                            {% set mtr = request.args.get('mechanical_test_role', '') %}
+                            <select name="mechanical_test_role" class="form-select">
+                                <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                                <option value="FIRST" {{ 'selected' if mtr == 'FIRST' }}>FIRST</option>
+                                <option value="LAST" {{ 'selected' if mtr == 'LAST' }}>LAST</option>
+                                <option value="ALL" {{ 'selected' if mtr == 'ALL' }}>ALL</option>
+                                <option value="ANY" {{ 'selected' if mtr == 'ANY' }}>ANY</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'المنتج' if current_locale == 'ar' else 'Product' }}</label>
+                            <select name="product_id" class="form-select">
+                                <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                                {% for p in products %}
+                                <option value="{{ p.id }}" {{ 'selected' if request.args.get('product_id')|int == p.id }}>{{ p.product_code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'المرحلة' if current_locale == 'ar' else 'Stage' }}</label>
+                            {% set sel_stage = request.args.get('stage', '') %}
+                            <select name="stage" class="form-select">
+                                <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                                {% for s in production_stages %}
+                                <option value="{{ s }}" {{ 'selected' if sel_stage == s }}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'حالة الأنبوب' if current_locale == 'ar' else 'Pipe Status' }}</label>
+                            {% set sel_status = request.args.get('pipe_status', '') %}
+                            <select name="pipe_status" class="form-select">
+                                <option value="">{{ 'الكل' if current_locale == 'ar' else 'All' }}</option>
+                                {% for st in ['WAITING', 'ACCEPT', 'HOLD', 'FROZEN', 'BLOCKED', 'REJECT'] %}
+                                <option value="{{ st }}" {{ 'selected' if sel_status == st }}>{{ st }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'المسؤولون' if current_locale == 'ar' else 'Responsibles' }}</label>
+                            <input type="text" name="responsible" class="form-control" placeholder="{{ 'مسؤول...' if current_locale == 'ar' else 'Responsible...' }}"
+                                   value="{{ request.args.get('responsible', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'إيصال التسليم' if current_locale == 'ar' else 'Delivery Receipt' }}</label>
+                            <input type="text" name="delivery_receipt" class="form-control" placeholder="DR..."
+                                   value="{{ request.args.get('delivery_receipt', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'تسليم من تاريخ' if current_locale == 'ar' else 'Delivery From' }}</label>
+                            <input type="date" name="delivery_date_from" class="form-control"
+                                   value="{{ request.args.get('delivery_date_from', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'تسليم إلى تاريخ' if current_locale == 'ar' else 'Delivery To' }}</label>
+                            <input type="date" name="delivery_date_to" class="form-control"
+                                   value="{{ request.args.get('delivery_date_to', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'رقم الحزمة' if current_locale == 'ar' else 'Bundle #' }}</label>
+                            <input type="text" name="bundle" class="form-control" placeholder="Bundle #"
+                                   value="{{ request.args.get('bundle', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'من ساعة' if current_locale == 'ar' else 'Hour From' }}</label>
+                            <input type="time" name="hour_from" class="form-control"
+                                   value="{{ request.args.get('hour_from', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'إلى ساعة' if current_locale == 'ar' else 'Hour To' }}</label>
+                            <input type="time" name="hour_to" class="form-control"
+                                   value="{{ request.args.get('hour_to', '') }}">
+                        </div>
+
+                        <!-- Stage timing: which pipes entered/were approved at a stage, when -->
+                        <div class="col-12"><hr class="my-1"></div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'تاريخ المرحلة' if current_locale == 'ar' else 'Stage Date' }}</label>
+                            <input type="date" name="stage_date" class="form-control"
+                                   value="{{ request.args.get('stage_date', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'ساعة المرحلة من' if current_locale == 'ar' else 'Stage Hour From' }}</label>
+                            <input type="time" name="stage_hour_from" class="form-control"
+                                   value="{{ request.args.get('stage_hour_from', '') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{{ 'ساعة المرحلة إلى' if current_locale == 'ar' else 'Stage Hour To' }}</label>
+                            <input type="time" name="stage_hour_to" class="form-control"
+                                   value="{{ request.args.get('stage_hour_to', '') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'الموافقة من' if current_locale == 'ar' else 'Approved From' }}</label>
+                            <input type="datetime-local" name="approved_from" class="form-control"
+                                   value="{{ request.args.get('approved_from', '') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{{ 'الموافقة إلى' if current_locale == 'ar' else 'Approved To' }}</label>
+                            <input type="datetime-local" name="approved_to" class="form-control"
+                                   value="{{ request.args.get('approved_to', '') }}">
+                        </div>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
 
     <!-- Results Table -->
     <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-end align-items-center">
+            {{ table_tools('pipes', export_url=url_for('stages.export_excel'), columns=picker_columns) }}
+        </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover table-striped mb-0">
+                <table class="table table-hover table-striped mb-0" data-table-tools="pipes" data-row-select>
                     <thead class="table-dark">
                         <tr>
-                            <th>{{ 'كود الأنبوب' if current_locale == 'ar' else 'No. Code' }}</th>
-                            <th>{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
-                            <th>{{ 'القطر' if current_locale == 'ar' else 'DN' }}</th>
-                            <th>{{ 'النوع' if current_locale == 'ar' else 'Type' }}</th>
-                            <th>{{ 'الوزن' if current_locale == 'ar' else 'Weight' }}</th>
-                            <th>{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
-                            <th>{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</th>
+                            <th data-col="no_code">{{ 'كود الأنبوب' if current_locale == 'ar' else 'No. Code' }}</th>
+                            <th data-col="ladle_id">{{ 'معرف المغرفة' if current_locale == 'ar' else 'Ladle ID' }}</th>
+                            <th data-col="ladle_decision">{{ 'قرار المغرفة' if current_locale == 'ar' else 'Ladle Decision' }}</th>
+                            <th data-col="order">{{ 'الترتيب' if current_locale == 'ar' else 'Order' }}</th>
+                            <th data-col="dn">{{ 'القطر' if current_locale == 'ar' else 'DN' }}</th>
+                            <th data-col="type">{{ 'النوع' if current_locale == 'ar' else 'Type' }}</th>
+                            <th data-col="weight">{{ 'الوزن' if current_locale == 'ar' else 'Weight' }}</th>
+                            <th data-col="date">{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</th>
+                            <th data-col="shift">{{ 'الوردية' if current_locale == 'ar' else 'Shift' }}</th>
+                            <th data-col="lab">{{ 'قرار المختبر' if current_locale == 'ar' else 'Lab' }}</th>
+                            <th data-col="final">{{ 'النهائي' if current_locale == 'ar' else 'Final' }}</th>
                             <!-- Stage columns -->
-                            <th class="text-center" title="CCM">CCM</th>
-                            <th class="text-center" title="Annealing">Ann</th>
-                            <th class="text-center" title="Zinc">Zn</th>
-                            <th class="text-center" title="Cutting">Cut</th>
-                            <th class="text-center" title="Hydrotest">Hyd</th>
-                            <th class="text-center" title="Cement">Cem</th>
-                            <th class="text-center" title="Coating">Coat</th>
-                            <th class="text-center" title="Finish">Fin</th>
-                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                            {% set _stage_short_labels = {
+                                stage_names_by_code.ccm: 'CCM',
+                                stage_names_by_code.annealing: 'Ann',
+                                stage_names_by_code.lab: 'Lab',
+                                stage_names_by_code.zinc: 'Zn',
+                                stage_names_by_code.cutting: 'Cut',
+                                stage_names_by_code.hydrotest: 'Hyd',
+                                stage_names_by_code.cement: 'Cem',
+                                stage_names_by_code.coating: 'Coat',
+                                stage_names_by_code.finish: 'Fin',
+                                stage_names_by_code.delivery: 'Del',
+                            } %}
+                            {% for s in production_stages %}
+                            <th class="text-center" data-col="stage_{{ loop.index }}" data-col-label="{{ s }}" title="{{ s }}">{{ _stage_short_labels.get(s, s[:3]) }}</th>
+                            {% endfor %}
+                            <th data-col="actions" data-col-label="{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}">{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for pipe in pipes %}
-                        <tr>
-                            <td><strong>{{ pipe.no_code }}</strong></td>
-                            <td><small class="text-muted">{{ pipe.ladle_id or '-' }}</small></td>
-                            <td>DN{{ pipe.diameter or '?' }}</td>
-                            <td>{{ pipe.pipe_class or '-' }}</td>
-                            <td>{{ pipe.actual_weight|round(1) if pipe.actual_weight else '-' }} kg</td>
-                            <td>{{ pipe.production_date }}</td>
-                            <td>
+                        {% macro render_pipe_row(pipe) %}
+                        <tr data-row-id="{{ pipe.id }}">
+                            <td data-col="no_code"><strong>{{ pipe.no_code }}</strong></td>
+                            <td data-col="ladle_id"><small class="text-muted">{{ pipe.ladle_id or '-' }}</small></td>
+                            <!-- Ladle Decision -->
+                            <td data-col="ladle_decision">
+                                {% set ladle_dec = ladle_decisions.get(pipe.ladle_id) %}
+                                {% if ladle_dec %}
+                                    {% set color = get_decision_color(ladle_dec) %}
+                                    {% if color == 'orange' %}
+                                    <span class="badge" style="background-color:#fd7e14;color:#fff" title="{{ ladle_dec }}">{{ ladle_dec }}</span>
+                                    {% else %}
+                                    <span class="badge bg-{{ color }}" title="{{ ladle_dec }}">{{ ladle_dec }}</span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="badge bg-light text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <!-- Pipe Order / Role -->
+                            <td data-col="order">
+                                <span class="font-monospace">#{{ pipe.arrange_pipe or '?' }}</span>
+                                {% if pipe.mechanical_test_role == 'FIRST' %}
+                                <span class="badge bg-warning text-dark" title="First Pipe">⭐ First</span>
+                                {% elif pipe.mechanical_test_role == 'LAST' %}
+                                <span class="badge bg-info" title="Last Pipe">⭐ Last</span>
+                                {% elif pipe.mechanical_test_role == 'ALL' %}
+                                <span class="badge bg-success" title="100% Test">✅ All</span>
+                                {% elif pipe.mechanical_test_role == 'ANY' %}
+                                <span class="badge bg-secondary" title="Waiting">⏳</span>
+                                {% endif %}
+                            </td>
+                            <td data-col="dn">DN{{ pipe.diameter or '?' }}</td>
+                            <td data-col="type">{{ pipe.pipe_class or '-' }}</td>
+                            <td data-col="weight">{{ pipe.actual_weight|round(1) if pipe.actual_weight else '-' }} kg</td>
+                            <td data-col="date">{{ pipe.production_date }}</td>
+                            <td data-col="shift">
                                 {% if pipe.shift %}
                                 <span class="badge bg-secondary">{{ pipe.shift }}</span>
                                 {% else %}-{% endif %}
                             </td>
+                            <!-- Lab Decision -->
+                            <td data-col="lab">
+                                {% if pipe.lab_decision == 'ACCEPT' %}
+                                <span class="badge bg-success" title="Accept">{{ pipe.lab_decision }}</span>
+                                {% elif pipe.lab_decision == 'REJECT' %}
+                                <span class="badge bg-danger" title="Reject">{{ pipe.lab_decision }}</span>
+                                {% elif pipe.lab_decision == 'HOLD' %}
+                                <span class="badge bg-warning" title="Hold">{{ pipe.lab_decision }}</span>
+                                {% elif pipe.lab_decision == 'WAITING' %}
+                                <span class="badge bg-info" title="Waiting">{{ '⌛' if current_locale == 'ar' else 'Wait' }}</span>
+                                {% elif pipe.lab_decision == 'BLOCKED' %}
+                                <span class="badge bg-dark" title="Blocked">{{ '🚫' if current_locale == 'ar' else 'Block' }}</span>
+                                {% elif pipe.lab_decision == 'FROZEN' %}
+                                <span class="badge bg-primary" title="Frozen — recoverable mechanical freeze (lift via retest)">❄️ {{ 'مجمّد' if current_locale == 'ar' else 'Frozen' }}</span>
+                                {% else %}
+                                <span class="badge bg-light text-muted">-</span>
+                                {% endif %}
+                                {% if pipe.cascade_from %}
+                                <br><small class="text-muted" style="font-size: 0.7rem;">{{ pipe.cascade_from }}</small>
+                                {% endif %}
+                            </td>
+                            <!-- Final Decision -->
+                            <td data-col="final">
+                                {% if pipe.final_decision_value == 'ACCEPT' %}
+                                <span class="badge bg-success" title="Accept">{{ '✓' if current_locale == 'ar' else '✓' }}</span>
+                                {% elif pipe.final_decision_value == 'REJECT' %}
+                                <span class="badge bg-danger" title="Reject">{{ '✗' if current_locale == 'ar' else '✗' }}</span>
+                                {% elif pipe.final_decision_value == 'HOLD' %}
+                                <span class="badge bg-warning" title="Hold">{{ '⏸' if current_locale == 'ar' else 'Hold' }}</span>
+                                {% else %}
+                                <span class="badge bg-light text-muted">-</span>
+                                {% endif %}
+                            </td>
 
                             <!-- Stage status indicators -->
-                            {% set stage_names = ['CCM', 'Annealing', 'Zinc', 'Cutting', 'Hydrotest', 'Cement', 'Coating', 'Finish'] %}
+                            {% set stage_names = production_stages %}
                             {% set stage_map = {} %}
                             {% for stage in pipe.stages %}
                                 {% set _ = stage_map.update({stage.stage_name: stage}) %}
                             {% endfor %}
 
                             {% for stage_name in stage_names %}
-                            <td class="text-center">
+                            <td class="text-center" data-col="stage_{{ loop.index }}">
                                 {% set stage = stage_map.get(stage_name) %}
-                                {% if stage %}
-                                    {% if stage.decision == 'ACCEPT' %}
-                                    <span class="badge bg-success" title="Accept">
+                                {% if stage and stage.decision %}
+                                    {% set dec = stage.decision|lower %}
+                                    {# Melting Ladle carries the chemical decision ("فحص أولى وأخيرة", "تالف"...), which the keyword checks below cannot read. #}
+                                    {% set melt_class = stage.classify_decision(stage.decision) if stage_name == stage_names_by_code.melting_ladle else none %}
+                                    {% if melt_class == 'accept' %}
+                                    <span class="badge bg-success" title="{{ stage.decision }}">
                                         <i class="bi bi-check"></i>
                                     </span>
-                                    {% elif stage.decision == 'REJECT' %}
-                                    <span class="badge bg-danger" title="Reject">
+                                    {% elif melt_class == 'reject' %}
+                                    <span class="badge bg-danger" title="{{ stage.decision }}">
                                         <i class="bi bi-x"></i>
                                     </span>
-                                    {% elif stage.has_defect %}
-                                    <span class="badge bg-warning" title="Defect">
-                                        <i class="bi bi-exclamation"></i>
+                                    {% elif 'accept' in dec %}
+                                    <span class="badge bg-success" title="{{ stage.decision }}">
+                                        <i class="bi bi-check"></i>
+                                    </span>
+                                    {% elif 'reject' in dec %}
+                                    <span class="badge bg-danger" title="{{ stage.decision }}">
+                                        <i class="bi bi-x"></i>
+                                    </span>
+                                    {% elif 'hold' in dec %}
+                                    <span class="badge bg-warning text-dark" title="{{ stage.decision }}">
+                                        <i class="bi bi-pause"></i>
+                                    </span>
+                                    {% elif 'rework' in dec or 'reheat' in dec or 'resample' in dec or 'retest' in dec %}
+                                    <span class="badge bg-info" title="{{ stage.decision }}">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </span>
+                                    {% elif 'downgrade' in dec %}
+                                    <span class="badge bg-secondary" title="{{ stage.decision }}">
+                                        <i class="bi bi-arrow-down"></i>
+                                    </span>
+                                    {% elif 'deliver' in dec %}
+                                    <span class="badge bg-primary" title="{{ stage.decision }}">
+                                        <i class="bi bi-truck"></i>
+                                    </span>
+                                    {% elif 'inspect' in dec %}
+                                    <span class="badge bg-info" title="{{ stage.decision }}">
+                                        <i class="bi bi-search"></i>
                                     </span>
                                     {% else %}
-                                    <span class="badge bg-info" title="{{ stage.decision or 'In Progress' }}">
+                                    <span class="badge bg-secondary" title="{{ stage.decision }}">
                                         <i class="bi bi-arrow-right"></i>
                                     </span>
                                     {% endif %}
+                                {% elif stage and stage.has_defect %}
+                                    <span class="badge bg-warning text-dark" title="Defect">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                    </span>
                                 {% else %}
-                                <span class="badge bg-light text-muted">-</span>
+                                <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
                             {% endfor %}
 
-                            <td>
+                            <td data-col="actions">
                                 <div class="btn-group btn-group-sm">
                                     <a href="{{ url_for('stages.tracking', id=pipe.id) }}" class="btn btn-outline-info" title="View">
                                         <i class="bi bi-eye"></i>
@@ -157,24 +469,99 @@
                                 </div>
                             </td>
                         </tr>
+                        {% endmacro %}
+
+                        {% if grouped is not none %}
+                            {% for label, group_pipes in grouped %}
+                            {% if group_by == 'ladle' %}
+                            {# ---- Rich Ladle group header: chemistry + lab decision + action ---- #}
+                            {% set analysis = ladle_analyses.get(label) %}
+                            {% set chem_dec = ladle_decisions.get(label) %}
+                            {% set lab_counts = {} %}
+                            {% for p in group_pipes %}
+                                {% set k = p.lab_decision or 'WAITING' %}
+                                {% set _ = lab_counts.update({k: lab_counts.get(k, 0) + 1}) %}
+                            {% endfor %}
+                            {% set lab_colors = {'ACCEPT':'success','REJECT':'danger','HOLD':'warning','WAITING':'info','BLOCKED':'dark','FROZEN':'primary'} %}
+                            <tr class="table-info">
+                                <td colspan="21" class="py-2">
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <span class="fw-bold">
+                                            <i class="bi bi-droplet-half"></i>
+                                            {{ 'لادل' if current_locale == 'ar' else 'Ladle' }} {{ label }}
+                                        </span>
+                                        <span class="badge bg-dark">{{ group_pipes|length }} {{ 'أنبوب' if current_locale == 'ar' else 'pipes' }}</span>
+
+                                        {% if chem_dec %}
+                                        {% set ccolor = get_decision_color(chem_dec) %}
+                                        <span class="badge {{ 'bg-' ~ ccolor if ccolor != 'orange' else '' }}" {{ 'style=background-color:#fd7e14;color:#fff' if ccolor == 'orange' }} title="{{ 'قرار اللادل (كيميائي)' if current_locale == 'ar' else 'Ladle (chemical) decision' }}">{{ chem_dec }}</span>
+                                        {% endif %}
+
+                                        {% if analysis %}
+                                        <small class="text-muted">
+                                            C {{ analysis.carbon if analysis.carbon is not none else '-' }} ·
+                                            Si {{ analysis.silicon if analysis.silicon is not none else '-' }} ·
+                                            Mg {{ analysis.magnesium if analysis.magnesium is not none else '-' }} ·
+                                            CE {{ analysis.carbon_equivalent if analysis.carbon_equivalent is not none else '-' }}
+                                        </small>
+                                        {% endif %}
+
+                                        <span class="ms-1">{{ 'قرار المعمل:' if current_locale == 'ar' else 'Lab:' }}</span>
+                                        {% for state, cnt in lab_counts.items() %}
+                                        <span class="badge bg-{{ lab_colors.get(state, 'secondary') }}" title="{{ state }}">{{ state }} × {{ cnt }}</span>
+                                        {% endfor %}
+
+                                        <span class="ms-auto">
+                                            {% if analysis %}
+                                            <a href="{{ url_for('chemical.detail', id=analysis.id) }}" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-clipboard2-pulse"></i>
+                                                {{ 'التحليل وقرار المعمل' if current_locale == 'ar' else 'Analysis & Lab Decision' }}
+                                            </a>
+                                            {% else %}
+                                            <span class="badge bg-light text-muted">{{ 'لا يوجد تحليل لهذا اللادل' if current_locale == 'ar' else 'No analysis for this ladle' }}</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr class="table-secondary fw-bold">
+                                <td colspan="21">{{ label }} <span class="badge bg-dark">{{ group_pipes|length }}</span></td>
+                            </tr>
+                            {% endif %}
+                            {% for pipe in group_pipes %}{{ render_pipe_row(pipe) }}{% endfor %}
+                            {% endfor %}
+                            {% if not grouped %}
+                            <tr>
+                                <td colspan="21" class="text-center py-4 text-muted">
+                                    {{ 'لا توجد نتائج' if current_locale == 'ar' else 'No results found' }}
+                                </td>
+                            </tr>
+                            {% endif %}
                         {% else %}
-                        <tr>
-                            <td colspan="17" class="text-center py-4 text-muted">
-                                {{ 'لا توجد نتائج' if current_locale == 'ar' else 'No results found' }}
-                            </td>
-                        </tr>
-                        {% endfor %}
+                            {% for pipe in pipes %}{{ render_pipe_row(pipe) }}
+                            {% else %}
+                            <tr>
+                                <td colspan="21" class="text-center py-4 text-muted">
+                                    {{ 'لا توجد نتائج' if current_locale == 'ar' else 'No results found' }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
         </div>
-        {% if pipes.total > 0 %}
+        {% if grouped is not none %}
+        {% set grouped_total = grouped | map(attribute='1') | map('length') | sum %}
         <div class="card-footer bg-white">
             <small class="text-muted">
-                {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ pipes.total }}
+                {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ grouped_total }}
                 {{ 'أنبوب' if current_locale == 'ar' else 'pipes' }}
             </small>
         </div>
+        {% else %}
+        {{ pagination(pipes, 'stages.list', unit_ar='أنبوب', unit_en='pipes') }}
         {% endif %}
     </div>
 </div>

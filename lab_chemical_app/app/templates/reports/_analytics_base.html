@@ -1,0 +1,103 @@
+{# Shared base for analytics reports.
+   Blocks:
+     - filters: override to add report-specific filters (else the default set renders)
+     - body: the main table / chart area
+#}
+{% extends 'base.html' %}
+
+{% block title %}{{ report_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-bar-chart-line"></i> {{ report_title }}</h2>
+        <div class="d-flex gap-2">
+            <a href="?{{ request.query_string.decode() }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </a>
+            {% block export_links %}
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print();">
+                <i class="bi bi-printer"></i> {{ 'طباعة' if current_locale == 'ar' else 'Print' }}
+            </button>
+            <a href="{{ url_for('reports.export_analytics_excel', report_name=request.path.rstrip('/').rsplit('/', 1)[-1]) }}?{{ request.query_string.decode() }}"
+               class="btn btn-success btn-sm">
+                <i class="bi bi-file-excel"></i> Excel
+            </a>
+            {% endblock %}
+            <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter panel -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="bi bi-funnel"></i> Filters</h6>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-2">
+                {% block filters %}
+                <div class="col-md-2">
+                    <label class="form-label small">From date</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm"
+                           value="{{ data.filters.date_from or '' }}" placeholder="{{ 'All time' if current_locale != 'ar' else 'كل الفترات' }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">To date</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm"
+                           value="{{ data.filters.date_to or '' }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">DN</label>
+                    <select name="diameter" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        {% for dn in [80, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200] %}
+                        <option value="{{ dn }}" {{ 'selected' if data.filters.diameter == dn }}>DN{{ dn }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Class</label>
+                    <input type="text" name="pipe_class" class="form-control form-control-sm"
+                           value="{{ data.filters.pipe_class or '' }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Order</label>
+                    <select name="production_order_id" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        {% for o in orders %}
+                        <option value="{{ o.id }}" {{ 'selected' if data.filters.production_order_id == o.id }}>
+                            {{ o.order_number }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small">Mode</label>
+                    <select name="mode" class="form-select form-select-sm">
+                        <option value="count" {{ 'selected' if data.filters.mode == 'count' }}>Count</option>
+                        <option value="weight" {{ 'selected' if data.filters.mode == 'weight' }}>Weight</option>
+                        <option value="length" {{ 'selected' if data.filters.mode == 'length' }}>Length</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small">Group by</label>
+                    <select name="group_by" class="form-select form-select-sm">
+                        {% for g in ['dn', 'machine', 'mold', 'supervisor', 'month', 'class'] %}
+                        <option value="{{ g }}" {{ 'selected' if data.filters.group_by == g }}>{{ g }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endblock %}
+                <div class="col-12 d-flex justify-content-end">
+                    <button class="btn btn-primary btn-sm"><i class="bi bi-search"></i> Apply</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Body -->
+    {% block body %}{% endblock %}
+</div>
+{% endblock %}

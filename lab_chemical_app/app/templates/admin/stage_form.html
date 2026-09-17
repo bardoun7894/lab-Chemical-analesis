@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{{ ('تعديل مرحلة' if stage else 'إضافة مرحلة') if current_locale == 'ar' else ('Edit Stage' if stage else 'Add Stage') }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-check"></i>
+                        {{ ('تعديل مرحلة' if stage else 'إضافة مرحلة جديدة') if current_locale == 'ar' else ('Edit Stage' if stage else 'Add New Stage') }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'اسم المرحلة (إنجليزي)' if current_locale == 'ar' else 'Stage Name (English)' }} <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required
+                                   value="{{ stage.name if stage else '' }}">
+                            {% if stage and stage.is_builtin %}
+                            <small class="text-muted">
+                                {{ 'إعادة التسمية آمنة — رمز المرحلة الثابت يُستخدم في المنطق الخلفي' if current_locale == 'ar' else 'Renaming is safe — the stable stage code keeps backend logic working' }}
+                                {% if stage.code %}<code class="ms-1">{{ stage.code }}</code>{% endif %}
+                            </small>
+                            {% elif stage %}
+                            <small class="text-muted">{{ 'إعادة التسمية تُحدّث جميع السجلات المرتبطة تلقائياً' if current_locale == 'ar' else 'Renaming updates all linked records automatically' }}</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الاسم العربي' if current_locale == 'ar' else 'Arabic Name' }}</label>
+                            <input type="text" name="name_ar" class="form-control" dir="rtl"
+                                   value="{{ stage.name_ar if stage else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'الترتيب' if current_locale == 'ar' else 'Sort Order' }}</label>
+                            <input type="number" name="sort_order" class="form-control"
+                                   value="{{ stage.sort_order if stage else '' }}"
+                                   placeholder="{{ 'يُحدد تلقائياً في النهاية' if current_locale == 'ar' else 'Auto-assigned at the end' }}">
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="isActive"
+                                   {{ 'checked' if (stage and stage.is_active) or not stage }}>
+                            <label class="form-check-label" for="isActive">
+                                {{ 'نشطة' if current_locale == 'ar' else 'Active' }}
+                            </label>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i>
+                                {{ 'حفظ' if current_locale == 'ar' else 'Save' }}
+                            </button>
+                            <a href="{{ url_for('admin.stages') }}" class="btn btn-outline-secondary">
+                                {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

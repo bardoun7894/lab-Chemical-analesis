@@ -165,6 +165,28 @@
                 </div>
             </div>
         </div>
+
+        {% if can('admin', 'reason_types_list') %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-chat-left-text display-4 text-info"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'أسباب القرارات' if current_locale == 'ar' else 'Reason Types' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'إدارة قائمة أسباب تغيير القرار المشتركة' if current_locale == 'ar' else 'Manage the shared list of decision/change reasons' }}
+                    </p>
+                    <a href="{{ url_for('admin.reason_types') }}" class="btn btn-info">
+                        <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة' if current_locale == 'ar' else 'Manage' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

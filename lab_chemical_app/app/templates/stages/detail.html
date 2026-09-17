@@ -1,6 +1,70 @@
 {% extends 'base.html' %}
+{% from 'components/_reason_picker.html' import reason_picker with context %}
 
 {% block title %}Pipe Details - {{ pipe.no_code }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Print: fit the whole pipe record on ONE page (scoped to this template). */
+@media print {
+    @page { margin: 7mm; }
+
+    /* Keep the on-screen two-column layout — Bootstrap cols stack below lg,
+       and the print viewport is narrower than the lg breakpoint. */
+    .container > .row > .col-lg-4 { width: 30% !important; }
+    .container > .row > .col-lg-8 { width: 70% !important; }
+
+    /* Colors are data here (decision badges, row states, progress dots) —
+       force them to print even when "background graphics" is off. */
+    .container, .container * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Compact everything so both columns fit one page. */
+    .container { font-size: 10.5px; }
+    .container h2 { font-size: 15px; margin-bottom: 0; }
+    .container .fs-5 { font-size: 12px !important; }
+    .container .row.mb-4 { margin-bottom: 4px !important; }
+    .container .card { margin-bottom: 6px !important; }
+    .container .card-header { padding: 3px 8px; }
+    .container .card-header h5 { font-size: 11px; }
+    .container .card-body { padding: 4px 8px; }
+    .container .table { font-size: 9.5px; margin-bottom: 0; line-height: 1.25; }
+    .container .table th,
+    .container .table td { padding: 1px 5px !important; }
+    .container .progress { height: 10px !important; font-size: 8px; }
+
+    /* Stage progress dots are inline-styled 50px circles — shrink for print. */
+    .container .rounded-circle { width: 24px !important; height: 24px !important; font-size: 11px; }
+    .container .rounded-circle + .small { font-size: 9px; }
+    .container .flex-fill.d-flex.align-items-center { margin-top: -12px !important; }
+
+    /* The stages table must fit the column, not scroll: .table-responsive
+       clips overflow in print, so disable it and shrink the table instead. */
+    .container .table-responsive { overflow-x: visible !important; }
+    .container .table-bordered { font-size: 8.5px; table-layout: fixed; }
+    .container .table-bordered th,
+    .container .table-bordered td {
+        padding: 1px 3px !important;
+        overflow-wrap: anywhere;
+        /* Global .table th and th.te-sortable force nowrap + 10px — undo both
+           so long headers wrap instead of overflowing their fixed columns. */
+        white-space: normal !important;
+    }
+    .container .table-bordered th { font-size: 8px !important; letter-spacing: 0 !important; }
+    /* Wider columns where the content is long (Action column is hidden). */
+    .container .table-bordered th:nth-child(5),
+    .container .table-bordered td:nth-child(5),
+    .container .table-bordered th:nth-child(8),
+    .container .table-bordered td:nth-child(8) { width: 15%; }
+
+    /* The Action column is all buttons (already hidden) — drop the column. */
+    .container .table-bordered th:last-child,
+    .container .table-bordered td:last-child { display: none; }
+}
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -20,19 +84,31 @@
                         </ol>
                     </nav>
                 </div>
-                <div class="btn-group">
-                    <a href="{{ url_for('stages.edit_pipe', id=pipe.id) }}" class="btn btn-primary">
-                        <i class="bi bi-pencil"></i>
-                        {{ 'تعديل' if current_locale == 'ar' else 'Edit' }}
+                <div class="d-flex gap-2 align-items-center">
+                    {% if prev_pipe %}
+                    <a href="{{ url_for('stages.view', id=prev_pipe.id) }}" class="btn btn-outline-secondary" title="{{ prev_pipe.no_code }}">
+                        <i class="bi bi-arrow-left"></i> {{ prev_pipe.no_code }}
                     </a>
-                    <a href="{{ url_for('stickers.preview_sticker', pipe_id=pipe.id) }}" class="btn btn-success">
-                        <i class="bi bi-qr-code"></i>
-                        {{ 'طباعة ملصق' if current_locale == 'ar' else 'Print Sticker' }}
+                    {% endif %}
+                    {% if next_pipe %}
+                    <a href="{{ url_for('stages.view', id=next_pipe.id) }}" class="btn btn-outline-secondary" title="{{ next_pipe.no_code }}">
+                        {{ next_pipe.no_code }} <i class="bi bi-arrow-right"></i>
                     </a>
-                    <button type="button" class="btn btn-outline-primary" onclick="window.print();">
-                        <i class="bi bi-printer"></i>
-                        {{ 'طباعة' if current_locale == 'ar' else 'Print' }}
-                    </button>
+                    {% endif %}
+                    <div class="btn-group">
+                        <a href="{{ url_for('stages.edit_pipe', id=pipe.id) }}" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i>
+                            {{ 'تعديل' if current_locale == 'ar' else 'Edit' }}
+                        </a>
+                        <a href="{{ url_for('stickers.preview_sticker', pipe_id=pipe.id) }}" class="btn btn-success">
+                            <i class="bi bi-qr-code"></i>
+                            {{ 'طباعة ملصق' if current_locale == 'ar' else 'Print Sticker' }}
+                        </a>
+                        <button type="button" class="btn btn-outline-primary" onclick="window.print();">
+                            <i class="bi bi-printer"></i>
+                            {{ 'طباعة' if current_locale == 'ar' else 'Print' }}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -168,14 +244,25 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span>{{ 'القرار:' if current_locale == 'ar' else 'Decision:' }}</span>
-                        {% if chemical_analysis.decision == 'ACCEPT' %}
-                        <span class="badge bg-success">ACCEPT</span>
-                        {% elif chemical_analysis.decision == 'REJECT' %}
-                        <span class="badge bg-danger">REJECT</span>
+                        {% if chemical_analysis.decision == 'تالف' or chemical_analysis.decision == 'Reject' %}
+                        <span class="badge bg-danger">{{ chemical_analysis.decision }}</span>
+                        {% elif 'فحص الشحنة 100%' in (chemical_analysis.decision or '') or chemical_analysis.decision == 'Inspect 100%' %}
+                        <span class="badge bg-warning text-dark">{{ chemical_analysis.decision }}</span>
+                        {% elif 'فحص أولى وأخيرة' in (chemical_analysis.decision or '') or chemical_analysis.decision == 'Inspect 1st and Last pipes' %}
+                        <span class="badge bg-info text-dark">{{ chemical_analysis.decision }}</span>
+                        {% elif 'فحص أخيرة فقط' in (chemical_analysis.decision or '') or chemical_analysis.decision == 'Inspect Last pipes' %}
+                        <span class="badge bg-success">{{ chemical_analysis.decision }}</span>
+                        {% elif chemical_analysis.decision %}
+                        <span class="badge bg-secondary">{{ chemical_analysis.decision }}</span>
                         {% else %}
-                        <span class="badge bg-secondary">{{ chemical_analysis.decision or 'N/A' }}</span>
+                        <span class="badge bg-secondary">N/A</span>
                         {% endif %}
                     </div>
+                    {% if chemical_analysis.reason %}
+                    <div class="small text-muted mb-2">
+                        <i class="bi bi-info-circle"></i> {{ chemical_analysis.reason }}
+                    </div>
+                    {% endif %}
                     <a href="{{ url_for('chemical.detail', id=chemical_analysis.id) }}" class="btn btn-sm btn-outline-warning w-100">
                         <i class="bi bi-eye"></i>
                         {{ 'عرض التفاصيل' if current_locale == 'ar' else 'View Details' }}
@@ -183,6 +270,98 @@
                 </div>
             </div>
             {% endif %}
+
+            <!-- Mechanical Tests: required but none recorded yet -->
+            {% if not mechanical_tests and pipe.mechanical_test_role and pipe.lab_decision == 'WAITING' %}
+            <div class="card border-0 shadow-sm mb-4 border-start border-warning border-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-rulers"></i>
+                        {{ 'الاختبار الميكانيكي مطلوب' if current_locale == 'ar' else 'Mechanical Test Required' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        {% if current_locale == 'ar' %}
+                        تم تسجيل قرار التحليل الكيميائي — قرار المعمل بانتظار الاختبار الميكانيكي
+                        (دور الفحص: <strong>{{ pipe.mechanical_test_role }}</strong>).
+                        {% else %}
+                        Chemical decision recorded — the Lab decision is waiting for the mechanical test
+                        (test role: <strong>{{ pipe.mechanical_test_role }}</strong>).
+                        {% endif %}
+                    </p>
+                    <a href="{{ url_for('mechanical.add', ladle_id=pipe.ladle_id) }}" class="btn btn-warning">
+                        <i class="bi bi-plus-circle"></i>
+                        {{ 'إضافة اختبار ميكانيكي' if current_locale == 'ar' else 'Add Mechanical Test' }}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Mechanical Tests -->
+            {% if mechanical_tests %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-rulers"></i>
+                        {{ 'الاختبار الميكانيكي' if current_locale == 'ar' else 'Mechanical Test' }}
+                        <span class="badge bg-light text-dark ms-1">{{ mechanical_tests|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for mt in mechanical_tests %}
+                    <div class="{% if not loop.first %}border-top pt-3 mt-3{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>{{ 'القرار:' if current_locale == 'ar' else 'Decision:' }}</span>
+                            {% if mt.decision == 'ACCEPT' %}
+                            <span class="badge bg-success">ACCEPT</span>
+                            {% elif mt.decision == 'REJECT' %}
+                            <span class="badge bg-danger">REJECT</span>
+                            {% elif mt.decision == 'HOLD' %}
+                            <span class="badge bg-warning text-dark">HOLD</span>
+                            {% elif mt.decision %}
+                            <span class="badge bg-secondary">{{ mt.decision }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">N/A</span>
+                            {% endif %}
+                        </div>
+                        <table class="table table-sm table-borderless mb-2 small">
+                            <tr>
+                                <th width="55%">{{ 'إجهاد الشد' if current_locale == 'ar' else 'Tensile (MPa)' }}</th>
+                                <td>{{ mt.tensile_mpa|round(1) if mt.tensile_mpa else '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>{{ 'الاستطالة %' if current_locale == 'ar' else 'Elongation %' }}</th>
+                                <td>{{ mt.elongation|round(2) if mt.elongation else '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>{{ 'الصلابة' if current_locale == 'ar' else 'Hardness' }}</th>
+                                <td>{{ mt.hardness|round(0) if mt.hardness else '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>{{ 'الكروية %' if current_locale == 'ar' else 'Nodularity %' }}</th>
+                                <td>{{ mt.nodularity_percent|round(1) if mt.nodularity_percent else '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>{{ 'تاريخ الفحص' if current_locale == 'ar' else 'Test Date' }}</th>
+                                <td>{{ mt.test_date.strftime('%Y-%m-%d') if mt.test_date else '-' }}</td>
+                            </tr>
+                        </table>
+                        {% if mt.reason %}
+                        <div class="small text-muted mb-2">
+                            <i class="bi bi-info-circle"></i> {{ mt.reason }}
+                        </div>
+                        {% endif %}
+                        <a href="{{ url_for('mechanical.detail', id=mt.id) }}" class="btn btn-sm btn-outline-primary w-100">
+                            <i class="bi bi-eye"></i>
+                            {{ 'عرض التفاصيل' if current_locale == 'ar' else 'View Details' }}
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
         </div>
 
         <!-- Right Column - Production Stages -->
@@ -195,7 +374,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% set stage_names = ['Melting Ladle', 'CCM', 'Annealing', 'Lab', 'Zinc', 'Cutting', 'Hydrotest', 'Cement', 'Coating', 'Finish'] %}
+                    {% set stage_names = production_stages | reject('equalto', 'Delivery') | list %}
                     {% set stage_map = {} %}
                     {% for stage in pipe.stages %}
                         {% set _ = stage_map.update({stage.stage_name: stage}) %}
@@ -204,28 +383,45 @@
                     <!-- Stage Progress Bar -->
                     <div class="d-flex justify-content-between mb-4">
                         {% for stage_name in stage_names %}
+                        {# A row that records nothing a person did is not a
+                           started stage — see PipeStage.records_work. Rows
+                           written for the band or an unticked checklist lit
+                           this tracker on pipes nobody had touched. #}
                         {% set stage = stage_map.get(stage_name) %}
+                        {% set stage = stage if stage and stage.records_work() else none %}
+                        {# Case-insensitive decision class — prod had lowercase
+                           'accept' from a misconfigured option, which the old
+                           exact-case checks rendered as in-progress (blue). #}
+                        {% set dclass = (stage.decision or '')|lower if stage else '' %}
                         <div class="text-center flex-fill">
                             <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-2"
                                  style="width: 50px; height: 50px;
-                                 {% if stage and stage.decision == 'ACCEPT' %}
+                                 {% if dclass == 'accept' %}
                                  background-color: #198754;
-                                 {% elif stage and stage.decision == 'REJECT' %}
+                                 {% elif dclass == 'reject' %}
                                  background-color: #dc3545;
+                                 {% elif dclass == 'hold' %}
+                                 background-color: #f97316;
                                  {% elif stage and stage.has_defect %}
                                  background-color: #ffc107;
+                                 {% elif stage and stage.decision %}
+                                 background-color: #0dcaf0;
                                  {% elif stage %}
                                  background-color: #0dcaf0;
                                  {% else %}
                                  background-color: #e9ecef;
                                  {% endif %}
                                  color: {{ '#fff' if stage else '#6c757d' }};">
-                                {% if stage and stage.decision == 'ACCEPT' %}
+                                {% if dclass == 'accept' %}
                                 <i class="bi bi-check-lg"></i>
-                                {% elif stage and stage.decision == 'REJECT' %}
+                                {% elif dclass == 'reject' %}
                                 <i class="bi bi-x-lg"></i>
+                                {% elif dclass == 'hold' %}
+                                <i class="bi bi-pause-fill"></i>
                                 {% elif stage and stage.has_defect %}
                                 <i class="bi bi-exclamation-lg"></i>
+                                {% elif stage and stage.decision %}
+                                <i class="bi bi-arrow-right"></i>
                                 {% elif stage %}
                                 <i class="bi bi-arrow-right"></i>
                                 {% else %}
@@ -254,13 +450,15 @@
                                     <th>{{ 'القياس' if current_locale == 'ar' else 'Measurement' }}</th>
                                     <th>{{ 'عيب' if current_locale == 'ar' else 'Defect' }}</th>
                                     <th>{{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}</th>
+                                    <th>{{ 'اعتمده' if current_locale == 'ar' else 'Approved By' }}</th>
                                     <th>{{ 'إجراء' if current_locale == 'ar' else 'Action' }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for stage_name in stage_names %}
                                 {% set stage = stage_map.get(stage_name) %}
-                                <tr class="{{ 'table-danger' if stage and stage.decision == 'REJECT' else 'table-success' if stage and stage.decision == 'ACCEPT' }}">
+                                {% set dclass = (stage.decision or '')|lower if stage else '' %}
+                                <tr class="{{ 'table-danger' if dclass == 'reject' else 'table-success' if dclass == 'accept' else 'table-warning' if dclass == 'hold' else '' }}">
                                     <td><strong>{{ stage_name }}</strong></td>
                                     <td>
                                         {% if stage and stage.machine %}
@@ -271,18 +469,22 @@
                                     </td>
                                     <td>
                                         {% if stage %}
-                                            {% if stage.decision == 'ACCEPT' %}
+                                            {% if dclass == 'accept' %}
                                             <span class="badge bg-success">{{ 'مقبول' if current_locale == 'ar' else 'ACCEPT' }}</span>
-                                            {% elif stage.decision == 'REJECT' %}
+                                            {% elif dclass == 'reject' %}
                                             <span class="badge bg-danger">{{ 'مرفوض' if current_locale == 'ar' else 'REJECT' }}</span>
-                                            {% elif stage.decision == 'HOLD' %}
+                                            {% elif dclass == 'hold' %}
                                             <span class="badge bg-warning text-dark">{{ 'انتظار' if current_locale == 'ar' else 'HOLD' }}</span>
-                                            {% elif stage.decision == 'REWORK' %}
+                                            {% elif dclass == 'rework' %}
                                             <span class="badge bg-info">{{ 'إعادة تشغيل' if current_locale == 'ar' else 'REWORK' }}</span>
                                             {% elif stage.decision %}
                                             <span class="badge bg-secondary">{{ stage.decision }}</span>
-                                            {% else %}
+                                            {% elif stage.records_work() %}
                                             <span class="badge bg-info">{{ 'جاري' if current_locale == 'ar' else 'In Progress' }}</span>
+                                            {% else %}
+                                            {# The row exists but records nothing a person did — a
+                                               band off the order, or an unticked checklist. #}
+                                            <span class="text-muted">-</span>
                                             {% endif %}
                                         {% else %}
                                         <span class="text-muted">-</span>
@@ -303,22 +505,197 @@
                                         <small class="text-muted">({{ stage.measurement_type }})</small>
                                         {% endif %}
                                         {% else %}-{% endif %}
+                                        {% if stage and stage.temperature is not none %}
+                                        <br><small class="text-muted"><i class="bi bi-thermometer-half"></i> {{ stage.temperature }} °C</small>
+                                        {% endif %}
+                                        {% if stage and stage.thickness_profile %}
+                                        {% for layer, lbl in [('cement', 'Cem'), ('coating', 'Coat')] %}
+                                        {% set vals = stage.thickness_profile.get(layer) %}
+                                        {% if vals %}
+                                        <br><small class="text-muted"><i class="bi bi-rulers"></i> {{ lbl }}: {% for v in vals %}{{ v if v is not none else '–' }}{{ ' / ' if not loop.last }}{% endfor %}</small>
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% endif %}
+                                        {% if stage and stage.dimension_profile %}
+                                        <br><details class="small">
+                                            <summary class="text-muted" style="cursor: pointer;"><i class="bi bi-rulers"></i> {{ 'الأبعاد' if current_locale == 'ar' else 'Dimensions' }}</summary>
+                                            {% set dpd = stage.dimension_profile.get('diameter', {}) %}
+                                            {# thickness_matrix normalises both the current "positions"
+                                               shape and the legacy flat 21-cell row, so old and new
+                                               records render in the same grid. #}
+                                            {% set tmatrix = thickness_matrix(stage.dimension_profile) %}
+                                            {% if tmatrix %}
+                                            <div class="table-responsive mt-1">
+                                                <table class="table table-sm table-bordered mb-1 text-center" style="font-size: 0.75rem;">
+                                                    <thead>
+                                                        <tr class="table-secondary">
+                                                            <th>{{ 'سماكة (م)' if current_locale == 'ar' else 'Thick (m)' }}</th>
+                                                            {% for pos in tmatrix.keys() %}<th>{{ pos }}</th>{% endfor %}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for r in range(thickness_readings) %}
+                                                        <tr>
+                                                            <td class="fw-bold">{{ ('قراية ' ~ (r + 1)) if current_locale == 'ar' else ('R' ~ (r + 1)) }}</td>
+                                                            {% for pos, vals in tmatrix.items() %}
+                                                            <td>{{ vals[r] if vals and vals|length > r and vals[r] is not none else '–' }}</td>
+                                                            {% endfor %}
+                                                        </tr>
+                                                        {% endfor %}
+                                                        {% set tstats = measurement_stats(stage.dimension_profile) %}
+                                                        {% if tstats %}
+                                                        <tr class="table-info">
+                                                            <td class="fw-bold">{{ 'المتوسط' if current_locale == 'ar' else 'Avg' }}</td>
+                                                            {% for pos in tmatrix.keys() %}
+                                                            {% set st = tstats.by_position.get(pos) %}
+                                                            <td class="fw-bold">{{ st.mean if st and st.mean is not none else '–' }}</td>
+                                                            {% endfor %}
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="fw-bold">{{ 'الانحراف' if current_locale == 'ar' else 'Std dev' }}</td>
+                                                            {% for pos in tmatrix.keys() %}
+                                                            {% set st = tstats.by_position.get(pos) %}
+                                                            <td>{{ st.stdev if st and st.stdev is not none else '–' }}</td>
+                                                            {% endfor %}
+                                                        </tr>
+                                                        {% endif %}
+                                                    </tbody>
+                                                </table>
+                                                {% if tstats and tstats.overall.n %}
+                                                <div class="text-muted mb-1">
+                                                    n={{ tstats.overall.n }} ·
+                                                    {{ 'متوسط' if current_locale == 'ar' else 'avg' }} {{ tstats.overall.mean }} ·
+                                                    σ {{ tstats.overall.stdev if tstats.overall.stdev is not none else '–' }} ·
+                                                    {{ tstats.overall.min }}–{{ tstats.overall.max }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            {% endif %}
+                                            {# TA 1012 symbol readings with their deviation from the DN nominal. #}
+                                            {% set dsyms = stage.dimension_profile.get('symbols', {}) %}
+                                            {% if dsyms %}
+                                            {% set std_entries = dimension_standard_for_dn(pipe.diameter) if pipe.diameter else {} %}
+                                            <div class="table-responsive mt-1">
+                                                <table class="table table-sm table-bordered mb-1 text-center" style="font-size: 0.75rem;">
+                                                    <thead><tr class="table-secondary"><th>{{ 'الرمز' if current_locale == 'ar' else 'Symbol' }}</th><th>{{ 'المقاس' if current_locale == 'ar' else 'Actual' }}</th><th>{{ 'الاستاندرد' if current_locale == 'ar' else 'Nominal' }}</th><th>{{ 'الفرق' if current_locale == 'ar' else 'Dev' }}</th></tr></thead>
+                                                    <tbody>
+                                                        {% for symbol, actual in dsyms|dictsort %}
+                                                        {% set e = std_entries.get(symbol) %}
+                                                        {% set out_of_tol = e and actual is not none and (
+                                                            (e.lsl is not none and actual < e.lsl) or
+                                                            (e.usl is not none and actual > e.usl)) %}
+                                                        <tr>
+                                                            <td class="fw-bold">{{ symbol }}</td>
+                                                            <td>{{ actual }}</td>
+                                                            <td>{{ e.nominal if e and e.nominal is not none else '–' }}</td>
+                                                            <td class="fw-bold {{ 'text-danger' if out_of_tol }}">
+                                                                {% if e and e.nominal is not none and actual is not none %}{{ (actual - e.nominal)|round(2) }}{% else %}–{% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {% endif %}
+                                            {% if dpd and dpd.get('samples') %}
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered mb-0 text-center" style="font-size: 0.75rem;">
+                                                    <thead><tr class="table-warning"><th>{{ 'قطر' if current_locale == 'ar' else 'Dia' }}</th>{% for n in range(1, 16) %}<th>D{{ n }}</th>{% endfor %}</tr></thead>
+                                                    <tbody>
+                                                        {% for label, vals in dpd.get('samples', {})|dictsort %}
+                                                        {% if vals %}
+                                                        <tr><td class="fw-bold">{{ label }}</td>{% for v in vals %}<td>{{ v if v is not none else '–' }}</td>{% endfor %}</tr>
+                                                        {% endif %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {% endif %}
+                                        </details>
+                                        {% endif %}
+                                        {# Ovality (Annealing) — read-only mirror of the edit-form popup.
+                                           Ovality % is stored at save time; X/Y are the raw measurements. #}
+                                        {% if stage and stage.ovality_profile %}
+                                        {% set ovp_points = ovality_readings(stage.ovality_profile, stage.dimension_profile) %}
+                                        {% set ov_points = ovality_columns_for(pipe.diameter if pipe else none, {'points': ovp_points}) %}
+                                        {% if ovp_points %}
+                                        <br><details class="small">
+                                            <summary class="text-muted" style="cursor: pointer;"><i class="bi bi-rulers"></i> {{ 'الأوفاليتي' if current_locale == 'ar' else 'Ovality' }}</summary>
+                                            <div class="table-responsive mt-1">
+                                                <table class="table table-sm table-bordered mb-0 text-center" style="font-size: 0.75rem;">
+                                                    <thead><tr class="table-secondary"><th></th>{% for p in ov_points %}<th>{{ p }}</th>{% endfor %}</tr></thead>
+                                                    <tbody>
+                                                        <tr><td class="fw-bold">X</td>{% for p in ov_points %}{% set pv = ovp_points.get(p) %}<td>{{ pv.x if pv and pv.x is not none else '–' }}</td>{% endfor %}</tr>
+                                                        <tr><td class="fw-bold">Y</td>{% for p in ov_points %}{% set pv = ovp_points.get(p) %}<td>{{ pv.y if pv and pv.y is not none else '–' }}</td>{% endfor %}</tr>
+                                                        <tr class="table-warning"><td class="fw-bold">{{ 'الأوفاليتي' if current_locale == 'ar' else 'Ovality' }}</td>{% for p in ov_points %}{% set pv = ovp_points.get(p) %}<td class="fw-bold">{{ (pv.ovality ~ '%') if pv and pv.ovality is not none else '–' }}</td>{% endfor %}</tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div class="text-muted mt-1">Ovality = (X - Y) / (X + Y)</div>
+                                        </details>
+                                        {% endif %}
+                                        {% endif %}
+                                        {# Visual checklist (Finish) — read-only mirror of the edit-form popup. #}
+                                        {% if stage and stage.visual_profile %}
+                                        <br><details class="small">
+                                            <summary class="text-muted" style="cursor: pointer;"><i class="bi bi-eye"></i> {{ 'الفحص البصري' if current_locale == 'ar' else 'Visual' }}</summary>
+                                            <ul class="list-unstyled mb-0 mt-1">
+                                                {% for key, label_ar, label_en in [
+                                                    ('marking', 'الترقيم', 'Marking'),
+                                                    ('ovality', 'البيضاوية', 'Ovality'),
+                                                    ('straightness', 'الاستقامة', 'Straightness'),
+                                                    ('internal_finish', 'التشطيب الداخلي', 'Internal finish'),
+                                                    ('external_finish', 'التشطيب الخارجي', 'External finish')] %}
+                                                {% set ok = stage.visual_profile.get(key, false) %}
+                                                <li>
+                                                    {% if ok %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %}
+                                                    {{ label_ar if current_locale == 'ar' else label_en }}
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </details>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if stage and stage.has_defect %}
                                         <span class="badge bg-warning text-dark">
                                             <i class="bi bi-exclamation-triangle"></i>
-                                            {% if stage.defect_reason %}{{ stage.defect_reason }}{% else %}Yes{% endif %}
+                                            {{ stage.defect_type or ('عيب' if current_locale == 'ar' else 'Defect') }}
                                         </span>
+                                        {% if stage.defect_reason %}
+                                        <small class="d-block text-danger">{{ stage.defect_reason }}</small>
+                                        {% endif %}
+                                        {% if stage.reason %}
+                                        <small class="d-block text-muted">{{ stage.reason }}</small>
+                                        {% endif %}
                                         {% else %}
                                         <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                     <td>{{ stage.notes if stage and stage.notes else '-' }}</td>
                                     <td>
+                                        {% if stage and stage.approved_by_id %}
+                                            {% set approver = stage.approved_by if stage.approved_by is defined else None %}
+                                            {# Fallback: approved_by not loaded, show "User #N" #}
+                                            <small class="text-muted">
+                                                <i class="bi bi-person-check"></i>
+                                                {% if approver %}
+                                                    {{ approver.full_name or approver.username }}
+                                                {% else %}
+                                                    User #{{ stage.approved_by_id }}
+                                                {% endif %}
+                                                {% if stage.updated_at %}
+                                                <br><span class="small">{{ stage.updated_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                                                {% endif %}
+                                            </small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         <div class="btn-group btn-group-sm">
                                             <button type="button" class="btn btn-outline-primary"
-                                                    onclick="openStageModal('{{ stage_name }}', {{ stage.id if stage else 'null' }}, '{{ stage.decision if stage else '' }}', {{ 'true' if stage and stage.has_defect else 'false' }}, '{{ stage.notes if stage else '' }}', '{{ stage.defect_type if stage and stage.defect_type else '' }}', '{{ stage.defect_reason if stage and stage.defect_reason else '' }}', {{ stage.machine_id if stage and stage.machine_id else 'null' }}, '{{ stage.stage_date if stage and stage.stage_date else '' }}', '{{ stage.stage_time if stage and stage.stage_time else '' }}', {{ stage.measurement_value if stage and stage.measurement_value else 'null' }})">
+                                                    onclick="openStageModal('{{ stage_name }}', {{ stage.id if stage else 'null' }}, '{{ stage.decision if stage else '' }}', {{ 'true' if stage and stage.has_defect else 'false' }}, '{{ stage.notes if stage else '' }}', '{{ stage.defect_type if stage and stage.defect_type else '' }}', '{{ stage.defect_reason if stage and stage.defect_reason else '' }}', {{ stage.machine_id if stage and stage.machine_id else 'null' }}, '{{ stage.stage_date if stage and stage.stage_date else '' }}', '{{ stage.stage_time if stage and stage.stage_time else '' }}', {{ stage.measurement_value if stage and stage.measurement_value else 'null' }}, '{{ stage.bundle_number if stage and stage.bundle_number else '' }}', '{{ stage.sales_order if stage and stage.sales_order else '' }}', '{{ stage.delivery_customer if stage and stage.delivery_customer else '' }}', '{{ stage.delivery_receipt if stage and stage.delivery_receipt else '' }}', '{{ stage.delivery_date if stage and stage.delivery_date else '' }}', {{ stage.temperature if stage and stage.temperature is not none else 'null' }})">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             <button type="button" class="btn btn-outline-info"
@@ -335,8 +712,93 @@
                     </div>
                 </div>
             </div>
+            <!-- Lab Decision Engine Status -->
+            {% if pipe.lab_decision or pipe.mechanical_test_role %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear"></i>
+                        {{ 'محرك قرار المعمل' if current_locale == 'ar' else 'Lab Decision Engine' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless mb-0">
+                        <tr>
+                            <th width="40%">{{ 'دور الفحص' if current_locale == 'ar' else 'Test Role' }}</th>
+                            <td>
+                                {% if pipe.mechanical_test_role == 'FIRST' %}
+                                <span class="badge bg-primary">FIRST ⭐</span>
+                                {% elif pipe.mechanical_test_role == 'LAST' %}
+                                <span class="badge bg-purple" style="background-color: #7c5cbf;">LAST ⭐</span>
+                                {% elif pipe.mechanical_test_role == 'ALL' %}
+                                <span class="badge bg-info">ALL ⭐ 100%</span>
+                                {% elif pipe.mechanical_test_role == 'ANY' %}
+                                <span class="badge bg-secondary">ANY</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'قرار المعمل' if current_locale == 'ar' else 'Lab Decision' }}</th>
+                            <td>
+                                {% if pipe.lab_decision == 'ACCEPT' %}
+                                <span class="badge bg-success fs-6">ACCEPT</span>
+                                {% elif pipe.lab_decision == 'REJECT' %}
+                                <span class="badge bg-danger fs-6">REJECT</span>
+                                {% elif pipe.lab_decision == 'HOLD' %}
+                                <span class="badge bg-warning text-dark fs-6">HOLD</span>
+                                {% elif pipe.lab_decision == 'BLOCKED' %}
+                                <span class="badge bg-danger fs-6"><i class="bi bi-x-octagon"></i> BLOCKED</span>
+                                {% elif pipe.lab_decision == 'WAITING' %}
+                                <span class="badge bg-secondary fs-6" title="{{ 'بانتظار الاختبار الميكانيكي' if current_locale == 'ar' else 'Waiting for mechanical test' }}">
+                                    <i class="bi bi-hourglass-split"></i>
+                                    WAITING — {{ 'اختبار ميكانيكي مطلوب' if current_locale == 'ar' else 'mechanical test required' }}
+                                </span>
+                                {% elif pipe.lab_decision == 'FROZEN' %}
+                                <span class="badge bg-primary fs-6" title="Recoverable mechanical freeze — lift via retest">❄️ FROZEN</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if pipe.lab_decision_reason %}
+                        <tr>
+                            <th>{{ 'السبب' if current_locale == 'ar' else 'Reason' }}</th>
+                            <td><small>{{ pipe.lab_decision_reason }}</small></td>
+                        </tr>
+                        {% endif %}
+                        {% if pipe.final_decision_value %}
+                        <tr>
+                            <th>{{ 'القرار النهائي' if current_locale == 'ar' else 'Final Decision' }}</th>
+                            <td>
+                                {% if pipe.final_decision_value == 'ACCEPT' %}
+                                <span class="badge bg-success fs-6">ACCEPT</span>
+                                {% elif pipe.final_decision_value == 'REJECT' %}
+                                <span class="badge bg-danger fs-6">REJECT</span>
+                                {% elif pipe.final_decision_value == 'HOLD' %}
+                                <span class="badge bg-warning text-dark fs-6">HOLD</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
         </div>
     </div>
+</div>
+
+<!-- Attachments (screen-only — excluded from the one-page print) -->
+<div class="d-print-none">
+    {% include 'components/attachments.html' %}
+</div>
+
+<!-- Change History (screen-only — excluded from the one-page print) -->
+<div class="d-print-none">
+    {% include 'components/audit_log.html' %}
 </div>
 
 <!-- Stage Edit Modal -->
@@ -370,15 +832,17 @@
                             <!-- Options will be populated dynamically by JavaScript -->
                         </select>
                     </div>
-                    <!-- Date and Time fields (shown for Annealing) -->
+                    <!-- Date and Time fields (shown for Annealing — system-stamped, read-only) -->
                     <div class="row" id="dateTimeDiv" style="display: none;">
                         <div class="col-6 mb-3">
                             <label class="form-label">{{ 'التاريخ' if current_locale == 'ar' else 'Date' }}</label>
-                            <input type="date" name="stage_date" class="form-control" id="modalStageDate">
+                            <input type="date" name="stage_date" class="form-control" id="modalStageDate" readonly
+                                   title="{{ 'يُسجَّل تلقائياً عند الحفظ' if current_locale == 'ar' else 'Stamped automatically on save' }}">
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label">{{ 'الوقت' if current_locale == 'ar' else 'Time' }}</label>
-                            <input type="time" name="stage_time" class="form-control" id="modalStageTime">
+                            <input type="time" name="stage_time" class="form-control" id="modalStageTime" readonly
+                                   title="{{ 'يُسجَّل تلقائياً عند الحفظ' if current_locale == 'ar' else 'Stamped automatically on save' }}">
                         </div>
                     </div>
                     <!-- Length field (shown for Finish) -->
@@ -389,6 +853,11 @@
                     <div class="mb-3" id="measurementDiv">
                         <label class="form-label">{{ 'القياس' if current_locale == 'ar' else 'Measurement' }}</label>
                         <input type="number" name="measurement_value" class="form-control" step="0.001" id="modalMeasurement">
+                    </div>
+                    <!-- Temperature field (shown for CCM only, optional) -->
+                    <div class="mb-3" id="temperatureDiv" style="display: none;">
+                        <label class="form-label">{{ 'درجة الحرارة (°م)' if current_locale == 'ar' else 'Temperature (°C)' }}</label>
+                        <input type="number" name="temperature" class="form-control" step="0.1" min="0" id="modalTemperature" placeholder="1450">
                     </div>
                     <div class="form-check mb-3">
                         <input type="checkbox" name="has_defect" class="form-check-input" id="modalHasDefect">
@@ -405,14 +874,54 @@
                     </div>
                     <div class="mb-3" id="defectReasonDiv" style="display: none;">
                         <label class="form-label">{{ 'سبب العيب' if current_locale == 'ar' else 'Defect Reason' }}</label>
+                        {{ reason_picker('modalDefectReason') }}
                         <textarea name="defect_reason" class="form-control" rows="2" id="modalDefectReason"></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">{{ 'ملاحظات' if current_locale == 'ar' else 'Notes' }}</label>
                         <textarea name="notes" class="form-control" rows="2" id="modalNotes"></textarea>
                     </div>
+                    <!-- Bundle # — visible for Finish and Delivery stages -->
+                    <div id="finishBundleDiv" style="display: none;">
+                        <hr>
+                        <div class="row g-2">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">{{ 'رقم الباندل' if current_locale == 'ar' else 'Bundle #' }}</label>
+                                <input type="text" name="bundle_number" class="form-control form-control-sm" id="modalBundleNumberFinish">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delivery-specific fields -->
+                    <div id="deliveryDiv" style="display: none;">
+                        <hr>
+                        <h6 class="text-primary"><i class="bi bi-truck"></i> {{ 'بيانات التوريد' if current_locale == 'ar' else 'Delivery Information' }}</h6>
+                        <div class="row g-2">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">{{ 'أمر البيع' if current_locale == 'ar' else 'Sales Order' }}</label>
+                                <input type="text" name="sales_order" class="form-control form-control-sm" id="modalSalesOrder">
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">{{ 'العميل' if current_locale == 'ar' else 'Customer' }}</label>
+                                <input type="text" name="delivery_customer" class="form-control form-control-sm" id="modalDeliveryCustomer">
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">{{ 'رقم الإذن' if current_locale == 'ar' else 'Receipt No.' }}</label>
+                                <input type="text" name="delivery_receipt" class="form-control form-control-sm" id="modalDeliveryReceipt">
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">{{ 'تاريخ التوريد' if current_locale == 'ar' else 'Delivery Date' }}</label>
+                                <input type="date" name="delivery_date" class="form-control form-control-sm" id="modalDeliveryDate">
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">{{ 'رقم الباندل' if current_locale == 'ar' else 'Bundle #' }}</label>
+                                <input type="text" name="bundle_number" class="form-control form-control-sm" id="modalBundleNumber">
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
+                    {% include 'components/_audit_reason.html' %}
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         {{ 'إلغاء' if current_locale == 'ar' else 'Cancel' }}
                     </button>
@@ -512,12 +1021,21 @@ const stageMachines = {
     {% endfor %}
 };
 
-function openStageModal(stageName, stageId, decision, hasDefect, notes, defectType, defectReason, machineId, stageDate, stageTime, measurementValue) {
+// Display name of the built-in CCM stage (dynamic — user can rename stages)
+const CCM_STAGE = {{ ccm_stage|tojson }};
+
+function openStageModal(stageName, stageId, decision, hasDefect, notes, defectType, defectReason, machineId, stageDate, stageTime, measurementValue, bundleNumber, salesOrder, deliveryCustomer, deliveryReceipt, deliveryDate, temperature) {
     document.getElementById('modalStageName').value = stageName;
     document.getElementById('modalStageTitle').textContent = stageName;
     document.getElementById('modalHasDefect').checked = hasDefect;
     document.getElementById('modalNotes').value = notes || '';
     document.getElementById('modalDefectReason').value = defectReason || '';
+    document.getElementById('modalBundleNumberFinish').value = bundleNumber || '';
+    document.getElementById('modalBundleNumber').value = bundleNumber || '';
+    document.getElementById('modalSalesOrder').value = salesOrder || '';
+    document.getElementById('modalDeliveryCustomer').value = deliveryCustomer || '';
+    document.getElementById('modalDeliveryReceipt').value = deliveryReceipt || '';
+    document.getElementById('modalDeliveryDate').value = deliveryDate || '';
 
     // Populate decision dropdown based on stage
     const decisionSelect = document.getElementById('modalDecision');
@@ -598,11 +1116,39 @@ function openStageModal(stageName, stageId, decision, hasDefect, notes, defectTy
         measurementInput.value = measurementValue || '';
     }
 
+    // Show/hide Temperature field for CCM stage (optional — empty is fine)
+    const temperatureDiv = document.getElementById('temperatureDiv');
+    const temperatureInput = document.getElementById('modalTemperature');
+    if (stageName === CCM_STAGE) {
+        temperatureDiv.style.display = 'block';
+        temperatureInput.value = (temperature !== null && temperature !== undefined) ? temperature : '';
+    } else {
+        temperatureDiv.style.display = 'none';
+        temperatureInput.value = '';
+    }
+
     // Show/hide defect fields based on hasDefect
     toggleDefectFields(hasDefect);
 
+    // Show/hide Bundle # for Finish stage
+    var finishBundleDiv = document.getElementById('finishBundleDiv');
+    if (stageName === 'Finish') {
+        finishBundleDiv.style.display = 'block';
+    } else {
+        finishBundleDiv.style.display = 'none';
+    }
+
+    // Show/hide Delivery fields (includes its own Bundle #)
+    var deliveryDiv = document.getElementById('deliveryDiv');
+    if (stageName === 'Delivery') {
+        deliveryDiv.style.display = 'block';
+        finishBundleDiv.style.display = 'none'; // Delivery has its own bundle field
+    } else {
+        deliveryDiv.style.display = 'none';
+    }
+
     // Set the form action URL dynamically
-    document.getElementById('stageForm').action = '/stages/{{ pipe.id }}/stage/' + stageName;
+    document.getElementById('stageForm').action = window.APP_ROOT + '/stages/{{ pipe.id }}/stage/' + stageName;
 
     new bootstrap.Modal(document.getElementById('stageModal')).show();
 }
@@ -641,19 +1187,38 @@ document.getElementById('stageForm').addEventListener('submit', function(e) {
         measurementVal = formData.get('length_value');
     }
 
-    fetch('/stages/{{ pipe.id }}/stage/' + stageName, {
+    // Build request body
+    var requestBody = {
+        decision: formData.get('decision'),
+        machine_id: formData.get('machine_id'),
+        measurement_value: measurementVal,
+        stage_date: formData.get('stage_date'),
+        stage_time: formData.get('stage_time'),
+        has_defect: formData.get('has_defect') === 'on',
+        defect_type: formData.get('defect_type'),
+        defect_reason: formData.get('defect_reason'),
+        notes: formData.get('notes'),
+        audit_reason: formData.get('audit_reason')
+    };
+    // Temperature only applies to the CCM stage (optional — '' clears it)
+    if (stageName === CCM_STAGE) {
+        requestBody.temperature = formData.get('temperature');
+    }
+    // Add delivery fields if Delivery stage
+    if (stageName === 'Finish') {
+        requestBody.bundle_number = document.getElementById('modalBundleNumberFinish').value || '';
+    }
+    if (stageName === 'Delivery') {
+        requestBody.sales_order = document.getElementById('modalSalesOrder').value || '';
+        requestBody.delivery_customer = document.getElementById('modalDeliveryCustomer').value || '';
+        requestBody.delivery_receipt = document.getElementById('modalDeliveryReceipt').value || '';
+        requestBody.delivery_date = document.getElementById('modalDeliveryDate').value || '';
+        requestBody.bundle_number = document.getElementById('modalBundleNumber').value || '';
+    }
+
+    fetch(window.APP_ROOT + '/stages/{{ pipe.id }}/stage/' + stageName, {
         method: 'POST',
-        body: JSON.stringify({
-            decision: formData.get('decision'),
-            machine_id: formData.get('machine_id'),
-            measurement_value: measurementVal,
-            stage_date: formData.get('stage_date'),
-            stage_time: formData.get('stage_time'),
-            has_defect: formData.get('has_defect') === 'on',
-            defect_type: formData.get('defect_type'),
-            defect_reason: formData.get('defect_reason'),
-            notes: formData.get('notes')
-        }),
+        body: JSON.stringify(requestBody),
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': formData.get('csrf_token')
@@ -687,7 +1252,7 @@ function viewStageHistory(stageName) {
     new bootstrap.Modal(document.getElementById('historyModal')).show();
 
     // Fetch history
-    fetch('/stages/{{ pipe.id }}/stage/' + encodeURIComponent(stageName) + '/history')
+    fetch(window.APP_ROOT + '/stages/{{ pipe.id }}/stage/' + encodeURIComponent(stageName) + '/history')
         .then(response => response.json())
         .then(data => {
             document.getElementById('historyLoading').style.display = 'none';

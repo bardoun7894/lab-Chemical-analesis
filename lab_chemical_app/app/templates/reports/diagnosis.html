@@ -1,0 +1,49 @@
+{% extends 'reports/_analytics_base.html' %}
+
+{% block filters %}
+<div class="col-12 text-muted small">
+    Deterministic rules over current-month and trailing 3-month data — no AI calls, no filters.
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center"><div class="card-body">
+            <div class="text-muted small">Plant health score</div>
+            <div class="display-4 fw-bold {{ 'text-success' if data.score >= 80 else ('text-warning' if data.score >= 50 else 'text-danger') }}">
+                {{ data.score }}
+            </div>
+            <div class="text-muted small">{{ data.problems | length }} problem(s) detected</div>
+        </div></div>
+    </div>
+    <div class="col-md-9">
+        {% for p in data.problems %}
+        <div class="card border-0 shadow-sm mb-2 border-start border-4 {{ 'border-danger' if p.severity == 'high' else ('border-warning' if p.severity == 'medium' else 'border-info') }}">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between">
+                    <strong>{{ p.title }}</strong>
+                    <span class="badge {{ 'bg-danger' if p.severity == 'high' else ('bg-warning text-dark' if p.severity == 'medium' else 'bg-info') }}">
+                        {{ p.severity }}
+                    </span>
+                </div>
+                <div class="small text-muted">{{ p.detail }}</div>
+                {% if p.rca_hint %}
+                <div class="small mt-1"><i class="bi bi-search"></i> <em>{{ p.rca_hint }}</em></div>
+                {% endif %}
+                {% if p.drill_url %}
+                <a href="{{ p.drill_url }}" class="btn btn-outline-primary btn-sm mt-1">
+                    Drill in <i class="bi bi-arrow-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0 shadow-sm"><div class="card-body text-center py-4">
+            <i class="bi bi-check-circle text-success" style="font-size: 2rem"></i>
+            <div class="mt-2">No problems detected by any rule. All clear.</div>
+        </div></div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

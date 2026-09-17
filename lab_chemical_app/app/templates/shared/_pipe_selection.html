@@ -1,0 +1,168 @@
+{% set selector_id = selection_id|default('pipeSelection') %}
+{% set ar = selection_is_ar|default(false) %}
+{% set rows = selection_rows|default([]) %}
+{% set chosen_orders = selected_order_ids|default([]) %}
+{% set order_hidden = selection_order_hidden_fields|default([]) %}
+{% set lookup_hidden = selection_lookup_hidden_fields|default([]) %}
+{% set selected_rows = rows|selectattr('selected')|selectattr('selectable')|list %}
+<section class="pipe-selection" id="{{ selector_id }}"
+         data-pipe-selection
+         data-lookup-url="{{ selection_lookup_url }}"
+         data-target-form="{{ selection_target_form }}"
+         data-field-name="pipe_ids"
+         data-storage-key="{{ selection_storage_key|default('') }}"
+         data-selection-reconcile-url="{{ selection_reconcile_url|default('') }}"
+         data-is-ar="{{ 'true' if ar else 'false' }}">
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-light">
+            <i class="bi bi-box-seam" aria-hidden="true"></i>
+            {{ 'اختيار المواسير' if ar else 'Pipe selection' }}
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-lg-7">
+                    <form method="get" action="{{ selection_order_action }}">
+                        {% for name, value in order_hidden %}
+                        <input type="hidden" name="{{ name }}" value="{{ value }}">
+                        {% endfor %}
+                        <label class="form-label fw-semibold" for="{{ selector_id }}Orders">
+                            {{ 'أوامر الإنتاج (يمكن اختيار أكثر من أمر)' if ar else 'Production orders (choose one or more)' }}
+                        </label>
+                        <div class="input-group">
+                            <select class="form-select" id="{{ selector_id }}Orders" name="order_ids"
+                                    multiple size="4" aria-describedby="{{ selector_id }}OrderHelp">
+                                {% for order in orders %}
+                                <option value="{{ order.id }}" {{ 'selected' if order.id in chosen_orders }}>
+                                    {{ order.order_number }}{% if order.customer_name %} — {{ order.customer_name }}{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-outline-primary" type="submit">
+                                <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+                                {{ 'تحميل' if ar else 'Load' }}
+                            </button>
+                        </div>
+                        <div class="form-text" id="{{ selector_id }}OrderHelp">
+                            {{ 'استخدم Ctrl أو ⌘ لاختيار أكثر من أمر.' if ar else 'Use Ctrl or ⌘ to choose more than one order.' }}
+                        </div>
+                    </form>
+                </div>
+                <div class="col-lg-5">
+                    <form method="{{ selection_lookup_method|default('get') }}"
+                          action="{{ selection_lookup_fallback_action|default(selection_order_action) }}"
+                          data-selection-lookup-form>
+                        {% for name, value in lookup_hidden %}
+                        <input type="hidden" name="{{ name }}" value="{{ value }}">
+                        {% endfor %}
+                        {% if selection_lookup_method|default('get')|lower == 'post' %}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% endif %}
+                        <label class="form-label fw-semibold" for="{{ selector_id }}Term">
+                            {{ 'مسح الباركود أو إدخال رقم الماسورة' if ar else 'Scan barcode or enter pipe number' }}
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-upc-scan" aria-hidden="true"></i></span>
+                            <input class="form-control" id="{{ selector_id }}Term"
+                                   name="{{ selection_lookup_name|default('q') }}"
+                                   autocomplete="off" data-selection-term
+                                   placeholder="{{ 'باركود، كود الماسورة، أو رقم الدفعة' if ar else 'Barcode, pipe code, or batch number' }}">
+                            <button class="btn btn-primary" type="submit">
+                                {{ 'إضافة' if ar else 'Add' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="mt-3" role="status" aria-live="polite" data-selection-message></div>
+            <div class="list-group mt-2 d-none" data-selection-candidates></div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span>
+                <i class="bi bi-list-check" aria-hidden="true"></i>
+                {{ 'المواسير المتاحة' if ar else 'Available pipes' }}
+                <span class="badge bg-secondary">{{ rows|length }}</span>
+            </span>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-select-visible>
+                {{ 'اختيار كل الظاهر' if ar else 'Select all visible' }}
+            </button>
+        </div>
+        <div class="table-responsive" style="max-height: 32rem; overflow-y: auto;">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th scope="col"><span class="visually-hidden">{{ 'اختيار' if ar else 'Select' }}</span></th>
+                        <th scope="col">{{ 'أمر الإنتاج' if ar else 'Order' }}</th>
+                        <th scope="col">{{ 'رقم الماسورة' if ar else 'Pipe no.' }}</th>
+                        <th scope="col">DN</th>
+                        <th scope="col">{{ 'الفئة' if ar else 'Class' }}</th>
+                        <th scope="col">{{ 'الحالة' if ar else 'Status' }}</th>
+                        <th scope="col">{{ 'السبب / التفاصيل' if ar else 'Reason / details' }}</th>
+                    </tr>
+                </thead>
+                <tbody data-selection-table>
+                    {% for pipe in rows %}
+                    <tr class="{{ 'table-warning' if not pipe.selectable else '' }}" data-visible-pipe="{{ pipe.id }}">
+                        <td>
+                            <input class="form-check-input" type="checkbox" name="pipe_ids"
+                                   value="{{ pipe.id }}" form="{{ selection_target_form }}"
+                                   data-selection-check
+                                   {{ 'checked' if pipe.selected|default(false) and pipe.selectable }}
+                                   {{ 'disabled' if not pipe.selectable }}
+                                   aria-label="{{ ('اختيار ' if ar else 'Select ') ~ pipe.code }}">
+                        </td>
+                        <td>{{ pipe.order or '—' }}</td>
+                        <td><a href="{{ pipe.url }}"><code>{{ pipe.code }}</code></a></td>
+                        <td>{{ pipe.dn or '—' }}</td>
+                        <td>{{ pipe.pipe_class or '—' }}</td>
+                        <td><span class="badge {{ 'bg-success' if pipe.selectable else 'bg-warning text-dark' }}">{{ pipe.status }}</span></td>
+                        <td class="small {{ 'text-danger' if not pipe.selectable else 'text-muted' }}">
+                            {{ pipe.reason or '—' }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">
+                        {{ 'اختر أوامر إنتاج أو امسح ماسورة.' if ar else 'Choose production orders or scan a pipe.' }}
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi bi-basket" aria-hidden="true"></i>
+                {{ 'المواسير المختارة' if ar else 'Selected pipes' }}
+                <span class="badge bg-primary" data-selection-count>{{ selected_rows|length }}</span>
+            </span>
+            <button class="btn btn-sm btn-outline-danger" type="button" data-selection-clear>
+                {{ 'إفراغ القائمة' if ar else 'Clear basket' }}
+            </button>
+        </div>
+        <div class="list-group list-group-flush" data-selection-basket>
+            {% for pipe in selected_rows %}
+            <div class="list-group-item d-flex justify-content-between align-items-start gap-2"
+                 data-server-selected="{{ pipe.id }}">
+                <div>
+                    <strong>{{ pipe.code }}</strong>
+                    <div class="small text-muted">
+                        {{ [pipe.order, pipe.dn, pipe.pipe_class, pipe.status]|select|join(' · ') }}
+                    </div>
+                    {% if pipe.reason %}<div class="small text-muted">{{ pipe.reason }}</div>{% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="list-group-item text-muted" data-selection-empty>
+                {{ 'لا توجد مواسير مختارة.' if ar else 'No pipes selected.' }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script type="application/json" data-selection-rows>{{ rows|tojson }}</script>
+</section>
+<script src="{{ url_for('static', filename='js/pipe_selection.js') }}" defer></script>

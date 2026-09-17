@@ -1,4 +1,4 @@
-# Lab Chemical Analysis Application Dependencies
+# GCP QC Pipes Traceability Application Dependencies
 # Flask Web Application
 
 # Flask Core
@@ -7,9 +7,21 @@ Flask-SQLAlchemy>=3.1.0
 Flask-Login>=0.6.3
 Flask-WTF>=1.2.0
 Flask-Bcrypt>=1.0.1
+Flask-Babel>=4.0.0
+
+# Schema migrations. Until this was added the only mechanism was
+# app/services/migration_service.py, a hand-maintained list of ALTER TABLE ADD
+# COLUMN statements run at boot — which can only ever add a column, never
+# rename, drop, retype, index or backfill one.
+Flask-Migrate>=4.0.7
 
 # Database
 SQLAlchemy>=2.0.0
+
+# PostgreSQL driver. The app reads DATABASE_URL (app/config.py) and falls back
+# to SQLite, so this is only exercised when that variable points at Postgres —
+# but it has to be in the image before the cutover, not after.
+psycopg2-binary>=2.9.9
 
 # Excel Import/Export
 openpyxl>=3.1.0
@@ -24,6 +36,15 @@ python-bidi>=0.4.2
 qrcode>=7.4.0
 Pillow>=10.0.0
 
+# Code128 barcode on the pipe sticker (app/routes/stickers.py). Imported since
+# dab2e39 but never declared, so it existed only in local virtualenvs and the
+# barcode silently never rendered in the Docker image.
+python-barcode>=0.15.0
+
+# Data Matrix symbols for configurable pipe stickers
+pylibdmtx>=0.1.10
+setuptools>=70.0.0
+
 # Utilities
 python-dateutil>=2.8.0
 Werkzeug>=3.0.0
@@ -31,3 +52,6 @@ Werkzeug>=3.0.0
 # AI Integration (GLM API)
 requests>=2.31.0
 python-dotenv>=1.0.0
+
+# Production Server
+gunicorn>=21.2.0

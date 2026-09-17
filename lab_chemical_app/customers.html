@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'إدارة العملاء' if current_locale == 'ar' else 'Customers' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-people"></i>
+            {{ 'إدارة العملاء' if current_locale == 'ar' else 'Customer Management' }}
+        </h2>
+        <div>
+            <a href="{{ url_for('admin.add_customer') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i>
+                {{ 'إضافة عميل' if current_locale == 'ar' else 'Add Customer' }}
+            </a>
+            <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                {{ 'رجوع' if current_locale == 'ar' else 'Back' }}
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ 'الرمز' if current_locale == 'ar' else 'Code' }}</th>
+                            <th>{{ 'الاسم (إنجليزي)' if current_locale == 'ar' else 'Name EN' }}</th>
+                            <th>{{ 'الاسم (عربي)' if current_locale == 'ar' else 'Name AR' }}</th>
+                            <th>{{ 'الحالة' if current_locale == 'ar' else 'Active' }}</th>
+                            <th>{{ 'إجراءات' if current_locale == 'ar' else 'Actions' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in customers %}
+                        <tr>
+                            <td><code>{{ customer.code }}</code></td>
+                            <td>{{ customer.name_en or '-' }}</td>
+                            <td>{{ customer.name_ar or '-' }}</td>
+                            <td>
+                                {% if customer.is_active %}
+                                <span class="badge bg-success">{{ 'نشط' if current_locale == 'ar' else 'Active' }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ 'غير نشط' if current_locale == 'ar' else 'Inactive' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if can('admin', 'customers_edit') %}<a href="{{ url_for('admin.edit_customer', id=customer.id) }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>{% endif %}
+                                    {% if can('admin', 'customers_delete') %}<form method="POST" action="{{ url_for('admin.delete_customer', id=customer.id) }}"
+                                          onsubmit="return confirm('{{ 'هل أنت متأكد من الحذف؟' if current_locale == 'ar' else 'Are you sure you want to delete?' }}');" style="display: inline;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        {% if can('admin', 'customers_delete') %}<button type="submit" class="btn btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>{% endif %}
+                                    </form>{% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if not customers %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-3">{{ 'لا يوجد عملاء' if current_locale == 'ar' else 'No customers found' }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

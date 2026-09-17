@@ -1,0 +1,48 @@
+{# The note under a measurement grid when there is nothing to judge against.
+
+   Until 2026-08-27 the CCM wall thickness, cement and coating standards came
+   from Settings > Dimension Standards, keyed by DN, and this file rendered the
+   whole Standard/Deviation block. They now come from the product's Application
+   table for the standard the order was built to, and the grids render three
+   editable Min/Nominal/Max boxes instead. What survived the change is the part
+   that mattered: an empty band must say it is empty. A grid that silently
+   judges nothing looks exactly like a grid where everything passed.
+
+   A nominal with no Min and no Max is the second case. The deviation is still
+   worth showing, but no pass/fail verdict can be given — under exact equality
+   every reading would be red, which tells the operator nothing.
+
+   Callers pass:
+     cols     - table width, for the colspan
+     prefix   - the band inputs’ shared name prefix, so the note re-evaluates
+                itself as the operator types (<prefix>_std, _std_min, _std_max)
+     label    - what the row measures (Wall thickness, Cement, Coating)
+     nominal  - the band's nominal, or none
+     minimum  - the band's min, or none
+     maximum  - the band's max, or none
+     is_ar    - locale flag
+#}
+{% macro spec_note(cols, prefix, label, nominal, minimum, maximum, is_ar) %}
+{% set has_band = nominal is not none or minimum is not none or maximum is not none %}
+{% set has_tol = minimum is not none or maximum is not none %}
+<tr class="spec-note spec-note-missing{{ ' d-none' if has_band }}" data-spec-for="{{ prefix }}">
+    <td colspan="{{ cols }}" class="small text-muted text-start">
+        <i class="bi bi-exclamation-triangle text-warning"></i>
+        {{ 'مفيش استاندرد مسجل لـ' if is_ar else 'No standard on file for' }}
+        <strong>{{ label }}</strong> —
+        {{ 'حطه في جدول الـ Application بتاع المنتج تحت الاستاندرد اللي الأمر اتعمل عليه، أو اكتبه هنا.'
+           if is_ar else
+           "set it on the product's Application table under the standard this order was built to, or type it here." }}
+    </td>
+</tr>
+<tr class="spec-note spec-note-notol{{ ' d-none' if not has_band or has_tol }}" data-spec-for="{{ prefix }}">
+    <td colspan="{{ cols }}" class="small text-muted text-start">
+        <i class="bi bi-info-circle"></i>
+        {{ 'مفيش سماح مسجل لـ' if is_ar else 'No tolerance on file for' }}
+        <strong>{{ label }}</strong> —
+        {{ 'الفرق بيتعرض بس من غير حكم مطابق/مرفوض. حط Min و Max.'
+           if is_ar else
+           'the deviation is shown but no pass/fail verdict is given. Set Min and Max.' }}
+    </td>
+</tr>
+{% endmacro %}

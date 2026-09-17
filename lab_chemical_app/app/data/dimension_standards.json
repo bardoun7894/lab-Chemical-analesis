@@ -1,0 +1,1639 @@
+{
+  "source": "TA 1012 - Januar 2001, Seite 3 von 4. TYTON(R) Muffe fuer Rohre DN 80 bis 1000, Form A. Masse in mm.",
+  "verified": false,
+  "verification_note": "Nominal values transcribed from the scanned standard sheet. Tolerance cells in the scan are merged across DN groups and several were unreadable - those are left null and must be filled in Settings > Dimension Standards before Cp/Cpk is trusted. A null tolerance means the symbol still charts in SPC but produces no capability index.",
+  "symbols": [
+    {
+      "key": "d1",
+      "label": "d1 (DE)",
+      "label_ar": "القطر الخارجي (DE)"
+    },
+    {
+      "key": "d2",
+      "label": "d2",
+      "label_ar": "d2"
+    },
+    {
+      "key": "d3",
+      "label": "d3",
+      "label_ar": "d3"
+    },
+    {
+      "key": "d4",
+      "label": "d4",
+      "label_ar": "d4"
+    },
+    {
+      "key": "d5",
+      "label": "d5",
+      "label_ar": "d5"
+    },
+    {
+      "key": "d7",
+      "label": "d7",
+      "label_ar": "d7"
+    },
+    {
+      "key": "S1",
+      "label": "S1 (e)",
+      "label_ar": "سمك الجدار (e)"
+    },
+    {
+      "key": "S2",
+      "label": "S2",
+      "label_ar": "سمك الجرس"
+    },
+    {
+      "key": "C",
+      "label": "C",
+      "label_ar": "C"
+    },
+    {
+      "key": "t1",
+      "label": "t1",
+      "label_ar": "t1"
+    },
+    {
+      "key": "t2",
+      "label": "t2",
+      "label_ar": "t2"
+    },
+    {
+      "key": "t3",
+      "label": "t3",
+      "label_ar": "t3"
+    },
+    {
+      "key": "t4",
+      "label": "t4",
+      "label_ar": "t4"
+    },
+    {
+      "key": "t5",
+      "label": "t5",
+      "label_ar": "t5"
+    },
+    {
+      "key": "t6",
+      "label": "t6",
+      "label_ar": "t6"
+    },
+    {
+      "key": "r1",
+      "label": "r1",
+      "label_ar": "r1"
+    },
+    {
+      "key": "r2",
+      "label": "r2",
+      "label_ar": "r2"
+    },
+    {
+      "key": "r3",
+      "label": "r3",
+      "label_ar": "r3"
+    },
+    {
+      "key": "cement",
+      "label": "Cement lining",
+      "label_ar": "سماكة الأسمنت"
+    },
+    {
+      "key": "coating",
+      "label": "Coating",
+      "label_ar": "سماكة الكوتنج"
+    }
+  ],
+  "by_dn": {
+    "80": {
+      "d1": {
+        "nominal": 98.0,
+        "tol_plus": 1.0,
+        "tol_minus": 2.7
+      },
+      "d2": {
+        "nominal": 123.0,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 103.5,
+        "tol_plus": 2.0,
+        "tol_minus": 2.0
+      },
+      "d4": {
+        "nominal": 100.5,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 119.1,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 142.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 6.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 8.1,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 3.5,
+        "tol_plus": 0.0,
+        "tol_minus": 0.5
+      },
+      "t1": {
+        "nominal": 84.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 40.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 12.0,
+        "tol_plus": null,
+        "tol_minus": 0.01
+      },
+      "t4": {
+        "nominal": 6.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t5": {
+        "nominal": 5.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 8.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": 4.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 4.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "100": {
+      "d1": {
+        "nominal": 118,
+        "tol_plus": 1.0,
+        "tol_minus": 2.8
+      },
+      "d2": {
+        "nominal": 143.0,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 123.4,
+        "tol_plus": 2.0,
+        "tol_minus": 2.0
+      },
+      "d4": {
+        "nominal": 120.5,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 138.9,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 163,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 6.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 8.4,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 3.5,
+        "tol_plus": 0.0,
+        "tol_minus": 0.5
+      },
+      "t1": {
+        "nominal": 88,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 40,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 12.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 6.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t5": {
+        "nominal": 5,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 8,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 4,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "125": {
+      "d1": {
+        "nominal": 144,
+        "tol_plus": 1.0,
+        "tol_minus": 2.8
+      },
+      "d2": {
+        "nominal": 169.0,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 149.4,
+        "tol_plus": 2.0,
+        "tol_minus": 2.0
+      },
+      "d4": {
+        "nominal": 146.5,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 164.8,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 190,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 6.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 8.8,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 3.5,
+        "tol_plus": 0.0,
+        "tol_minus": 0.5
+      },
+      "t1": {
+        "nominal": 91,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 40,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 12.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 6.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t5": {
+        "nominal": 5,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 8,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": 4,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": 5,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 4,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "150": {
+      "d1": {
+        "nominal": 170,
+        "tol_plus": 1.0,
+        "tol_minus": 2.9
+      },
+      "d2": {
+        "nominal": 195.0,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 175.3,
+        "tol_plus": 2.0,
+        "tol_minus": 2.0
+      },
+      "d4": {
+        "nominal": 172.5,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 190.6,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 217,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 6.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 9.1,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 3.5,
+        "tol_plus": 0.0,
+        "tol_minus": 0.5
+      },
+      "t1": {
+        "nominal": 94,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 40,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 12.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 6.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t5": {
+        "nominal": 5,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 8,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": 4,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": 5,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 4,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "200": {
+      "d1": {
+        "nominal": 222,
+        "tol_plus": 1.0,
+        "tol_minus": 3.0
+      },
+      "d2": {
+        "nominal": 250.0,
+        "tol_plus": 1.5,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 227.8,
+        "tol_plus": 2.0,
+        "tol_minus": 2.0
+      },
+      "d4": {
+        "nominal": 224.5,
+        "tol_plus": 1.5,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 245.2,
+        "tol_plus": 1.5,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 278,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 6.3,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 10.6,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 4.0,
+        "tol_plus": 0.0,
+        "tol_minus": 0.8
+      },
+      "t1": {
+        "nominal": 100,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 45,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 15.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 7.0,
+        "tol_plus": 0.0,
+        "tol_minus": 0.5
+      },
+      "t5": {
+        "nominal": 6,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 10,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": 6,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "250": {
+      "d1": {
+        "nominal": 274,
+        "tol_plus": 1.0,
+        "tol_minus": 3.1
+      },
+      "d2": {
+        "nominal": 301.5,
+        "tol_plus": 1.5,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 279.7,
+        "tol_plus": 2.0,
+        "tol_minus": 2.0
+      },
+      "d4": {
+        "nominal": 276.5,
+        "tol_plus": 1.5,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 296.9,
+        "tol_plus": 1.5,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 336,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 6.8,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 11.5,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 4.0,
+        "tol_plus": 0.0,
+        "tol_minus": 0.8
+      },
+      "t1": {
+        "nominal": 105,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 47,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 15.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 7.0,
+        "tol_plus": 0.0,
+        "tol_minus": 0.5
+      },
+      "t5": {
+        "nominal": 6,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 10,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": 6,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 5,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "300": {
+      "d1": {
+        "nominal": 326,
+        "tol_plus": 1.0,
+        "tol_minus": 3.3
+      },
+      "d2": {
+        "nominal": 356.5,
+        "tol_plus": 1.8,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 332.1,
+        "tol_plus": 2.0,
+        "tol_minus": 2.0
+      },
+      "d4": {
+        "nominal": 328.5,
+        "tol_plus": 1.8,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 351.7,
+        "tol_plus": 1.8,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 393,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 7.2,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 12.1,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 4.5,
+        "tol_plus": 0.0,
+        "tol_minus": 0.8
+      },
+      "t1": {
+        "nominal": 110,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 50,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 17.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 8.5,
+        "tol_plus": 0.0,
+        "tol_minus": 0.5
+      },
+      "t5": {
+        "nominal": 7,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 12,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": 7,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "350": {
+      "d1": {
+        "nominal": 378,
+        "tol_plus": 1.0,
+        "tol_minus": 3.4
+      },
+      "d2": {
+        "nominal": 408.0,
+        "tol_plus": 1.8,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 383.8,
+        "tol_plus": 2.0,
+        "tol_minus": 2.0
+      },
+      "d4": {
+        "nominal": 380.5,
+        "tol_plus": 1.8,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 403.4,
+        "tol_plus": 1.8,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 448,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 7.7,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 11.9,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 4.5,
+        "tol_plus": 0.0,
+        "tol_minus": 0.8
+      },
+      "t1": {
+        "nominal": 110,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 50,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 17.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 8.5,
+        "tol_plus": 0.0,
+        "tol_minus": 0.5
+      },
+      "t5": {
+        "nominal": 7,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 12,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": 7,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 6,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "400": {
+      "d1": {
+        "nominal": 429,
+        "tol_plus": 1.0,
+        "tol_minus": 3.5
+      },
+      "d2": {
+        "nominal": 462.0,
+        "tol_plus": 2.1,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 435.8,
+        "tol_plus": 2.5,
+        "tol_minus": 2.5
+      },
+      "d4": {
+        "nominal": 431.5,
+        "tol_plus": 2.1,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 457.2,
+        "tol_plus": 2.1,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 500,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 8.1,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 12.6,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 5.0,
+        "tol_plus": 0.0,
+        "tol_minus": 1.0
+      },
+      "t1": {
+        "nominal": 110,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 55,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 19.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 9.5,
+        "tol_plus": 0.0,
+        "tol_minus": 0.8
+      },
+      "t5": {
+        "nominal": 8,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 14,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": 6,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": 8,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 6,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "500": {
+      "d1": {
+        "nominal": 532,
+        "tol_plus": 1.0,
+        "tol_minus": 3.8
+      },
+      "d2": {
+        "nominal": 568.0,
+        "tol_plus": 2.4,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 539.4,
+        "tol_plus": 3.0,
+        "tol_minus": 3.0
+      },
+      "d4": {
+        "nominal": 534.5,
+        "tol_plus": 2.4,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 562.6,
+        "tol_plus": 2.4,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 604,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 9.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 14.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 5.5,
+        "tol_plus": 0.0,
+        "tol_minus": 1.0
+      },
+      "t1": {
+        "nominal": 120,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 60,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 21.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 11.0,
+        "tol_plus": 0.0,
+        "tol_minus": 0.8
+      },
+      "t5": {
+        "nominal": 9,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 16,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": 10,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 7,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "600": {
+      "d1": {
+        "nominal": 635,
+        "tol_plus": 1.0,
+        "tol_minus": 4.0
+      },
+      "d2": {
+        "nominal": 673.4,
+        "tol_plus": 2.7,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 642.6,
+        "tol_plus": 3.0,
+        "tol_minus": 3.0
+      },
+      "d4": {
+        "nominal": 637.5,
+        "tol_plus": 2.7,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 668.0,
+        "tol_plus": 2.7,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 713,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 9.9,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 15.4,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 6.0,
+        "tol_plus": 0.0,
+        "tol_minus": 1.0
+      },
+      "t1": {
+        "nominal": 120,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 65,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 21.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 12.0,
+        "tol_plus": 0.0,
+        "tol_minus": 0.8
+      },
+      "t5": {
+        "nominal": 10,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 16,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": 10,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 7,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "700": {
+      "d1": {
+        "nominal": 738,
+        "tol_plus": 1.0,
+        "tol_minus": 4.3
+      },
+      "d2": {
+        "nominal": 788.0,
+        "tol_plus": 3.5,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 745.8,
+        "tol_plus": 3.5,
+        "tol_minus": 3.5
+      },
+      "d4": {
+        "nominal": 740.5,
+        "tol_plus": 3.5,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 779.3,
+        "tol_plus": 3.5,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 849,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 10.8,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 16.8,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 7,
+        "tol_plus": 0.0,
+        "tol_minus": 1.2
+      },
+      "t1": {
+        "nominal": 150,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 80,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 18.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 18,
+        "tol_plus": 0.0,
+        "tol_minus": 0.8
+      },
+      "t5": {
+        "nominal": 12,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 12,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 11,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "800": {
+      "d1": {
+        "nominal": 842.0,
+        "tol_plus": 1.0,
+        "tol_minus": 4.5
+      },
+      "d2": {
+        "nominal": 894.0,
+        "tol_plus": 3.8,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 850.0,
+        "tol_plus": 3.8,
+        "tol_minus": 3.8
+      },
+      "d4": {
+        "nominal": 844.5,
+        "tol_plus": 3.8,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 885.9,
+        "tol_plus": 3.8,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 960.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 11.7,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 18.2,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 8.0,
+        "tol_plus": 0.0,
+        "tol_minus": 1.2
+      },
+      "t1": {
+        "nominal": 160.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 85.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 19.5,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 18.0,
+        "tol_plus": 0.0,
+        "tol_minus": 0.8
+      },
+      "t5": {
+        "nominal": 14.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 13.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": 8.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": 12.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 11.0,
+        "tol_plus": 1.0,
+        "tol_minus": 1.0
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "900": {
+      "d1": {
+        "nominal": 945,
+        "tol_plus": 1.0,
+        "tol_minus": 4.8
+      },
+      "d2": {
+        "nominal": 1000.0,
+        "tol_plus": 4.1,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 953.2,
+        "tol_plus": 4.1,
+        "tol_minus": 4.1
+      },
+      "d4": {
+        "nominal": 947.5,
+        "tol_plus": 4.1,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 991.3,
+        "tol_plus": 4.1,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 1042,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 12.6,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 19.6,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 9,
+        "tol_plus": 0.0,
+        "tol_minus": 1.2
+      },
+      "t1": {
+        "nominal": 175,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 90,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 21.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 20,
+        "tol_plus": 0.0,
+        "tol_minus": 0.8
+      },
+      "t5": {
+        "nominal": 16,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 14,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 13,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    },
+    "1000": {
+      "d1": {
+        "nominal": 1048,
+        "tol_plus": 1.0,
+        "tol_minus": 5.0
+      },
+      "d2": {
+        "nominal": 1105.0,
+        "tol_plus": 4.4,
+        "tol_minus": 1.0
+      },
+      "d3": {
+        "nominal": 1056.4,
+        "tol_plus": 4.4,
+        "tol_minus": 4.4
+      },
+      "d4": {
+        "nominal": 1050.5,
+        "tol_plus": 4.4,
+        "tol_minus": 1.0
+      },
+      "d5": {
+        "nominal": 1097.1,
+        "tol_plus": 4.4,
+        "tol_minus": 1.0
+      },
+      "d7": {
+        "nominal": 1150,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S1": {
+        "nominal": 13.5,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "S2": {
+        "nominal": 21.0,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "C": {
+        "nominal": 9,
+        "tol_plus": 0.0,
+        "tol_minus": 1.2
+      },
+      "t1": {
+        "nominal": 185,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t2": {
+        "nominal": 95,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t3": {
+        "nominal": 22.5,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t4": {
+        "nominal": 20,
+        "tol_plus": 0.0,
+        "tol_minus": 0.8
+      },
+      "t5": {
+        "nominal": 16,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "t6": {
+        "nominal": 15,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r1": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r2": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "r3": {
+        "nominal": 13,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "cement": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      },
+      "coating": {
+        "nominal": null,
+        "tol_plus": null,
+        "tol_minus": null
+      }
+    }
+  }
+}

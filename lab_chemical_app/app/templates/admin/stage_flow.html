@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Stage Flow{% endblock %}
+{% block content %}
+{% set is_ar = current_locale == 'ar' %}
+<div class="container">
+  <h2><i class="bi bi-diagram-3"></i>
+    {{ 'ترتيب المراحل' if is_ar else 'Stage Flow' }}</h2>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('admin.settings') }}">{{ 'الإعدادات' if is_ar else 'Settings' }}</a>
+      </li>
+      <li class="breadcrumb-item active">{{ 'ترتيب المراحل' if is_ar else 'Stage Flow' }}</li>
+    </ol>
+  </nav>
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" role="switch"
+                 id="requirePrev" name="require_previous_approval" value="1"
+                 {{ 'checked' if enabled }}>
+          <label class="form-check-label fw-bold" for="requirePrev">
+            {{ 'لا يُسجَّل قرار مرحلة قبل اعتماد المرحلة التي قبلها'
+               if is_ar else
+               'A stage decision requires the previous stage to be accepted' }}
+          </label>
+        </div>
+
+        <div class="alert alert-info small">
+          <div class="fw-bold mb-1">
+            <i class="bi bi-info-circle"></i>
+            {{ 'إيه اللي بيتمنع بالظبط' if is_ar else 'Exactly what this blocks' }}
+          </div>
+          <ul class="mb-2">
+            <li>
+              {{ 'يمنع تسجيل <strong>قرار</strong> على مرحلة لو المرحلة اللي قبلها مش متقبولة.'
+                 if is_ar else
+                 'Blocks recording a <strong>decision</strong> on a stage whose predecessor is not accepted.' | safe }}
+            </li>
+            <li>
+              {{ 'ما بيمنعش إدخال القياسات أو التواريخ أو الملاحظات — دي بتتسجل عادي.'
+                 if is_ar else
+                 'Does not block measurements, dates or notes — those still save.' }}
+            </li>
+            <li>
+              {{ 'حجز أو إعادة عمل أو إعادة عينة مش اعتماد، فبيفضل مانع.'
+                 if is_ar else
+                 'Hold, rework and resample are not an acceptance, so they keep blocking.' }}
+            </li>
+            <li>
+              {{ 'أول مرحلة في الترتيب مالهاش مرحلة قبلها، فمش متأثرة.'
+                 if is_ar else
+                 'The first stage has no predecessor and is never blocked.' }}
+            </li>
+          </ul>
+          <div class="text-danger">
+            {{ 'ملحوظة: التفعيل بيسري على الماسورات القديمة كمان — لو ماسورة اتسجل لها قرار متأخر من غير اللي قبله، تعديلها هيتمنع لحد ما المرحلة السابقة تتعتمد.'
+               if is_ar else
+               'Note: this applies to existing pipes too. A pipe whose later stage was decided out of order cannot be edited until the earlier stage is accepted.' }}
+          </div>
+        </div>
+
+        <button class="btn btn-primary">
+          <i class="bi bi-save"></i> {{ 'حفظ' if is_ar else 'Save' }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+      <h6 class="mb-0">{{ 'الترتيب الحالي' if is_ar else 'Current order' }}</h6>
+    </div>
+    <div class="card-body">
+      {# Read from Stage Management, so renaming or deactivating a stage moves
+         the gate with it rather than leaving a stale hard-coded chain. #}
+      <ol class="mb-2">
+        {% for st in stages %}<li>{{ st }}</li>{% endfor %}
+      </ol>
+      <div class="small text-muted">
+        {{ 'الترتيب من إدارة المراحل — أي تغيير هناك بيغيّر البوابة تلقائياً.'
+           if is_ar else
+           'Order comes from Stage Management; changing it there moves the gate too.' }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

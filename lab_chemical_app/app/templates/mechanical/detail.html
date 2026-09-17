@@ -161,21 +161,27 @@
                 </div>
                 <div class="card-body">
                     <!-- Tensile Strength -->
+                    {% set tensile_mpa = test.tensile_mpa if test.tensile_mpa else (test.tensile_strength * 9.8 if test.tensile_strength else None) %}
                     <div class="border rounded p-3 mb-3">
                         <div class="d-flex justify-content-between align-items-center">
                             <h6 class="text-muted mb-1">{{ 'قوة الشد' if current_locale == 'ar' else 'Tensile Strength' }}</h6>
-                            {% if test.tensile_strength %}
-                                {% if test.tensile_strength >= 420 %}
+                            {% if tensile_mpa %}
+                                {% if tensile_mpa >= 420 %}
                                 <span class="badge bg-success"><i class="bi bi-check"></i> OK</span>
                                 {% else %}
                                 <span class="badge bg-danger"><i class="bi bi-x"></i> Low</span>
                                 {% endif %}
                             {% endif %}
                         </div>
-                        <h3 class="{{ 'text-danger' if test.tensile_strength and test.tensile_strength < 420 else 'text-success' if test.tensile_strength else '' }}">
-                            {{ '%.1f'|format(test.tensile_strength) if test.tensile_strength else '-' }} MPa
+                        <h3 class="{{ 'text-danger' if tensile_mpa and tensile_mpa < 420 else 'text-success' if tensile_mpa else '' }}">
+                            {{ '%.1f'|format(tensile_mpa) if tensile_mpa else '-' }} MPa
                         </h3>
-                        <small class="text-muted">Spec: min 420 MPa</small>
+                        <small class="text-muted">
+                            Spec: min 420 MPa
+                            {% if test.tensile_strength %}
+                            &middot; σ = {{ '%.2f'|format(test.tensile_strength) }} KgF/mm² × 9.8
+                            {% endif %}
+                        </small>
                     </div>
 
                     <!-- Elongation -->
@@ -361,5 +367,11 @@
         {{ 'تم الإنشاء:' if current_locale == 'ar' else 'Created:' }}
         {{ test.created_at }}
     </div>
+
+    <!-- Attachments -->
+    {% include 'components/attachments.html' %}
+
+    <!-- Change History -->
+    {% include 'components/audit_log.html' %}
 </div>
 {% endblock %}

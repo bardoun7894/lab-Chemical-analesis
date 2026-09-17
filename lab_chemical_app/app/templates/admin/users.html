@@ -17,10 +17,12 @@
                         {{ 'إضافة وتعديل وحذف المستخدمين' if current_locale == 'ar' else 'Add, edit and delete users' }}
                     </p>
                 </div>
+                {% if can('admin', 'users_add') %}
                 <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary">
                     <i class="bi bi-person-plus"></i>
                     {{ 'إضافة مستخدم' if current_locale == 'ar' else 'Add User' }}
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -42,7 +44,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for user in users %}
+                        {% for user in users.items %}
                         <tr class="{{ 'table-secondary' if not user.is_active }}">
                             <td>
                                 <strong>{{ user.username }}</strong>
@@ -87,18 +89,22 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-outline-primary" title="Edit">
+                                    {% if can('admin', 'users_edit') %}
+                                    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-outline-primary" title="{{ 'تعديل' if current_locale == 'ar' else 'Edit' }}">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    {% if user.id != current_user.id %}
+                                    {% endif %}
+                                    {% if user.id != current_user.id and can('admin', 'users_edit') %}
                                     <button type="button" class="btn btn-outline-{{ 'danger' if user.is_active else 'success' }}"
                                             onclick="toggleUserStatus({{ user.id }}, {{ 'true' if user.is_active else 'false' }})"
                                             title="{{ 'Deactivate' if user.is_active else 'Activate' }}">
                                         <i class="bi bi-{{ 'person-dash' if user.is_active else 'person-check' }}"></i>
                                     </button>
+                                    {% endif %}
+                                    {% if user.id != current_user.id and can('admin', 'users_delete') %}
                                     <button type="button" class="btn btn-outline-danger"
                                             onclick="confirmDelete({{ user.id }}, '{{ user.username }}')"
-                                            title="Delete">
+                                            title="{{ 'حذف' if current_locale == 'ar' else 'Delete' }}">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                     {% endif %}
@@ -116,12 +122,57 @@
                 </table>
             </div>
         </div>
+        {% if users.total > 0 %}
+        {% set base_args = request.args.to_dict() %}
+        {% set _ = base_args.pop('page', None) %}
+        {% set _ = base_args.pop('per_page', None) %}
         <div class="card-footer bg-white">
-            <small class="text-muted">
-                {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ users|length }}
-                {{ 'مستخدم' if current_locale == 'ar' else 'users' }}
-            </small>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <small class="text-muted">
+                    {{ 'إجمالي:' if current_locale == 'ar' else 'Total:' }} {{ users.total }}
+                    {{ 'مستخدم' if current_locale == 'ar' else 'users' }}
+                    {% if users.pages > 1 %}
+                    &middot;
+                    {{ 'صفحة' if current_locale == 'ar' else 'Page' }}
+                    {{ users.page }} / {{ users.pages }}
+                    {% endif %}
+                </small>
+                {% if users.pages > 1 %}
+                <nav aria-label="{{ 'ترقيم الصفحات' if current_locale == 'ar' else 'Pagination' }}">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item {{ 'disabled' if not users.has_prev }}">
+                            <a class="page-link" href="{{ url_for('admin.users', page=users.prev_num, per_page=per_page, **base_args) }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% for p in users.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+                            {% if p %}
+                            <li class="page-item {{ 'active' if p == users.page }}">
+                                <a class="page-link" href="{{ url_for('admin.users', page=p, per_page=per_page, **base_args) }}">{{ p }}</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        <li class="page-item {{ 'disabled' if not users.has_next }}">
+                            <a class="page-link" href="{{ url_for('admin.users', page=users.next_num, per_page=per_page, **base_args) }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                {% endif %}
+                <div class="d-flex align-items-center gap-1">
+                    <small class="text-muted">{{ 'لكل صفحة' if current_locale == 'ar' else 'Per page' }}</small>
+                    <select class="form-select form-select-sm" style="width: auto;" onchange="window.location.href = this.value;">
+                        {% for opt in per_page_options %}
+                        <option value="{{ url_for('admin.users', page=1, per_page=opt, **base_args) }}" {{ 'selected' if opt == per_page }}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
         </div>
+        {% endif %}
     </div>
 </div>
 
@@ -157,12 +208,12 @@
 <script>
 function confirmDelete(userId, username) {
     document.getElementById('deleteUsername').textContent = username;
-    document.getElementById('deleteForm').action = '/admin/users/' + userId + '/delete';
+    document.getElementById('deleteForm').action = window.APP_ROOT + '/admin/users/' + userId + '/delete';
     new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
 
 function toggleUserStatus(userId, isActive) {
-    fetch('/admin/users/' + userId + '/toggle-active', {
+    fetch(window.APP_ROOT + '/admin/users/' + userId + '/toggle-active', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

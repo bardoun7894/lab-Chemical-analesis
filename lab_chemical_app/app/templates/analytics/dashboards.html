@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Designer{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-grid-3x3-gap"></i> Custom Dashboards</h2>
+        <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Reports
+        </a>
+    </div>
+
+    {% if can('analytics', 'dashboards_manage') %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="bi bi-plus-circle"></i> Create Dashboard</h6>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('analytics.add_dashboard') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Name</label>
+                        <input type="text" name="name" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Description</label>
+                        <input type="text" name="description" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">KPIs (ctrl+click)</label>
+                        <select name="kpi_ids" class="form-select form-select-sm" multiple size="4">
+                            {% for k in available_kpis %}
+                            <option value="{{ k.id }}">{{ k.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button class="btn btn-primary btn-sm">Create Dashboard</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% for d in dashboards %}
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">{{ d.name }}</h5>
+            {% if d.description %}<small class="text-white-50">{{ d.description }}</small>{% endif %}
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% for tile in d.tiles %}
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <small class="text-muted">{{ tile.name }}</small>
+                            <h2 class="mb-0">{{ tile.current_value if tile.current_value is not none else '-' }}</h2>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12"><p class="text-muted">No KPIs linked to this dashboard.</p></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">No dashboards yet. Admins can create one above.</div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,203 @@
+{# Zinc coating-mass sheet, laid out for the printer.
+
+   Reproduces the TA paper form: the run header across the top, the
+   M1/M2/A/C row with the formula worked out beside it, then the final
+   decision and the two signature blocks. Everything but the signatures
+   comes from the Zinc stage row, so nothing is copied by hand.
+
+   Fits one A4 portrait page. #}
+<!doctype html>
+<html lang="{{ 'ar' if is_ar else 'en' }}" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <title>{{ 'شهادة وزن الزنك' if is_ar else 'Zinc mass sheet' }} — {{ pipe.no_code or pipe.pipe_code or pipe.id }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+            margin: 14mm;
+            color: #111;
+            font-size: 12px;
+        }
+        h1 { font-size: 17px; margin: 0 0 2px; text-align: center; }
+        .sub { text-align: center; color: #555; font-size: 11px; margin-bottom: 14px; }
+
+        .toolbar { margin-bottom: 14px; text-align: center; }
+        .btn {
+            font: inherit; padding: 6px 14px; margin-inline-end: 8px; cursor: pointer;
+            border: 1px solid #888; border-radius: 4px; background: #fff;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #333; padding: 5px 7px; vertical-align: middle; }
+        .head-grid th { background: #f2f2f2; font-weight: 600; width: 100px; white-space: nowrap; }
+        .head-grid td { min-width: 90px; }
+
+        .sheet th { background: #fff; font-weight: 600; text-align: center; font-size: 11px; }
+        .sheet td { text-align: center; height: 30px; }
+        .sheet .shaded { background: #d9d9d9; }
+        .sheet .formula { text-align: right; font-size: 12px; line-height: 2; }
+        .val { font-weight: 700; font-size: 14px; }
+
+        .frac { display: inline-block; text-align: center; vertical-align: middle; margin: 0 2px; }
+        .frac .num { border-bottom: 1px solid #111; padding: 0 5px; display: block; }
+        .frac .den { padding: 0 5px; display: block; }
+
+        .decision th { background: #f2f2f2; width: 110px; }
+        .decision .mark { font-size: 16px; font-weight: 700; }
+
+        .sign { margin-top: 22px; width: 100%; border: 0; }
+        .sign td { border: 0; padding: 4px 8px; font-size: 12px; }
+        .sign .line { border-bottom: 1px dotted #555; display: inline-block; min-width: 150px; }
+
+        .mt { margin-top: 12px; }
+        .muted { color: #666; }
+
+        @media print {
+            .toolbar { display: none !important; }
+            body { margin: 0; padding: 10mm; }
+        }
+        @page { size: A4 portrait; margin: 10mm; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="btn" onclick="window.print()">{{ 'طباعة' if is_ar else 'Print' }}</button>
+        <button class="btn" onclick="window.close()">{{ 'إغلاق' if is_ar else 'Close' }}</button>
+    </div>
+
+    <h1>{{ 'شهادة اختبار وزن الزنك' if is_ar else 'Zinc coating-mass test sheet' }}</h1>
+    <div class="sub">{{ 'ماسورة' if is_ar else 'Pipe' }} {{ pipe.no_code or pipe.pipe_code or pipe.id }}{% if pipe.ladle_id %} — {{ 'بوتقة' if is_ar else 'Ladle' }} {{ pipe.ladle_id }}{% endif %}</div>
+
+    {# ---- Run header: order, shift, dates, line, DN, class, machine ---- #}
+    <table class="head-grid">
+        <tr>
+            <th>{{ 'رقم أمر التشغيل' if is_ar else 'Order #' }}</th>
+            <td>{{ pipe.production_order.order_number if pipe.production_order else (pipe.manufacturing_order or '—') }}</td>
+            <th>{{ 'نوبة' if is_ar else 'Shift' }}</th>
+            <td>{{ pipe.shift if pipe.shift else '—' }}</td>
+            <th>{{ 'التاريخ' if is_ar else 'Date' }}</th>
+            <td>{{ (stage.stage_date or pipe.production_date).strftime('%Y-%m-%d') if (stage and stage.stage_date) or pipe.production_date else '—' }}</td>
+        </tr>
+        <tr>
+            <th>{{ 'اليوم' if is_ar else 'Day' }}</th>
+            <td>{{ (stage.stage_date or pipe.production_date).strftime('%A') if (stage and stage.stage_date) or pipe.production_date else '—' }}</td>
+            <th>{{ 'خط التشغيل' if is_ar else 'Line / machine' }}</th>
+            <td>{{ stage.machine.name if stage and stage.machine else (pipe.machine.name if pipe.machine else '—') }}</td>
+            <th>{{ 'مهندس النوبة' if is_ar else 'Shift engineer' }}</th>
+            <td>{{ pipe.shift_engineer or '—' }}</td>
+        </tr>
+        <tr>
+            <th>{{ 'القطر' if is_ar else 'Diameter' }}</th>
+            <td>{{ ('DN' ~ pipe.diameter) if pipe.diameter else '—' }}</td>
+            <th>{{ 'الكلاس' if is_ar else 'Class' }}</th>
+            <td>{{ pipe.pipe_class or '—' }}</td>
+            <th>{{ 'المنتج' if is_ar else 'Product' }}</th>
+            <td>{{ pipe.product.product_code if pipe.product else '—' }}</td>
+        </tr>
+        <tr>
+            <th>{{ 'تمت الموافقة بواسطة' if is_ar else 'Approved by' }}</th>
+            <td>{{ stage.approved_by.username if stage and stage.approved_by else '—' }}</td>
+            <th>{{ 'تاريخ الموافقة' if is_ar else 'Approved on' }}</th>
+            <td>{{ stage.updated_at.strftime('%Y-%m-%d %H:%M') if stage and stage.updated_at else '—' }}</td>
+            <th>{{ 'سجّلها' if is_ar else 'Recorded by' }}</th>
+            <td>{{ stage.updated_by.username if stage and stage.updated_by else '—' }}</td>
+        </tr>
+    </table>
+
+    {# ---- The sheet itself: M1, M2, A, C and the worked formula ---- #}
+    <table class="sheet mt">
+        <thead>
+            <tr>
+                <th style="width: 24%;">{{ 'وزن الشريحة قبل دهان الزنك' if is_ar else 'Sample weight before stripping' }} M1</th>
+                <th style="width: 24%;">{{ 'وزن الشريحة بعد دهان الزنك' if is_ar else 'Sample weight after stripping' }} M2</th>
+                <th style="width: 14%;">{{ 'مساحة الشريحة' if is_ar else 'Sample area' }} A</th>
+                <th style="width: 8%;" class="shaded">C</th>
+                <th style="width: 30%;">{{ 'معادلة التحقق' if is_ar else 'Working' }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="muted">gm</td>
+                <td class="muted">gm</td>
+                <td class="muted">m&sup2;</td>
+                <td class="shaded" rowspan="2">
+                    <span class="val">{{ zp.c if zp.c is not none else '1.2' }}</span>
+                </td>
+                <td class="formula">
+                    {{ 'وزن الزنك' if is_ar else 'Zinc mass' }}
+                    M =
+                    <span class="frac">
+                        <span class="num">C (M2 − M1)</span>
+                        <span class="den">A</span>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td><span class="val">{{ zp.m1 if zp.m1 is not none else '' }}</span></td>
+                <td><span class="val">{{ zp.m2 if zp.m2 is not none else '' }}</span></td>
+                <td><span class="val">{{ zp.area if zp.area is not none else '0.025' }}</span></td>
+                <td class="formula">
+                    M =
+                    <span class="frac">
+                        <span class="num">{{ zp.c if zp.c is not none else '1.2' }} ({{ zp.m2 if zp.m2 is not none else '……' }} − {{ zp.m1 if zp.m1 is not none else '……' }})</span>
+                        <span class="den">{{ zp.area if zp.area is not none else '0.025' }}</span>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="4" style="text-align: {{ 'right' if is_ar else 'left' }};">
+                    {{ 'وزن الزنك الناتج' if is_ar else 'Resulting coating mass' }}
+                </td>
+                <td class="formula">
+                    M = <span class="val">{{ zp.mass if zp.mass is not none else '……' }}</span> g/m&sup2;
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    {# ---- Final decision + notes ---- #}
+    {% set dec = (stage.decision if stage and stage.decision else '')|lower %}
+    <table class="decision mt">
+        <tr>
+            <th rowspan="2">{{ 'القرار النهائي' if is_ar else 'Final decision' }}</th>
+            <th style="width: 90px;">{{ 'مقبول' if is_ar else 'Accepted' }}</th>
+            <th style="width: 90px;">{{ 'مرفوض' if is_ar else 'Rejected' }}</th>
+            <th>{{ 'ملاحظات' if is_ar else 'Notes' }}</th>
+        </tr>
+        <tr>
+            <td class="mark" style="text-align: center;">{{ '✓' if 'accept' in dec or 'قبول' in dec else '' }}</td>
+            <td class="mark" style="text-align: center;">{{ '✓' if 'reject' in dec or 'رفض' in dec or 'تالف' in dec else '' }}</td>
+            <td style="height: 34px;">
+                {{ stage.notes if stage and stage.notes else '' }}
+                {%- if stage and stage.decision and not ('accept' in dec or 'قبول' in dec or 'reject' in dec or 'رفض' in dec or 'تالف' in dec) %}
+                <span class="muted">({{ stage.decision }})</span>
+                {%- endif %}
+            </td>
+        </tr>
+    </table>
+
+    {# ---- Signatures: left blank for the paper copy ---- #}
+    <table class="sign">
+        <tr>
+            <td style="width: 50%;">
+                <strong>{{ 'مفتش الجودة' if is_ar else 'Quality inspector' }}</strong><br>
+                {{ 'الاسم' if is_ar else 'Name' }}: <span class="line">{{ stage.approved_by.username if stage and stage.approved_by else '' }}</span><br>
+                {{ 'التوقيع' if is_ar else 'Signature' }}: <span class="line"></span>
+            </td>
+            <td style="width: 50%;">
+                <strong>{{ 'مشرف القسم' if is_ar else 'Section supervisor' }}</strong><br>
+                {{ 'الاسم' if is_ar else 'Name' }}: <span class="line"></span><br>
+                {{ 'التوقيع' if is_ar else 'Signature' }}: <span class="line"></span>
+            </td>
+        </tr>
+    </table>
+
+    <script>
+        // Auto-open the print dialog once rendered (skip with ?noauto=1).
+        if (!new URLSearchParams(location.search).has('noauto')) {
+            window.addEventListener('load', function () { window.print(); });
+        }
+    </script>
+</body>
+</html>

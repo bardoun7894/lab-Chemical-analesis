@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% set ar = current_locale == 'ar' %}
+
+{% block title %}{{ 'إدارة الأذونات' if ar else 'Permissions' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h1 class="mb-2">{{ 'إدارة الأذونات' if ar else 'Permissions Management' }}</h1>
+      <p class="text-muted mb-0">
+        {% if ar %}
+          قم بتعيين الأذونات للأدوار بالضغط على الدوائر
+        {% else %}
+          Assign permissions to roles by toggling checkboxes
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card perm-card">
+        <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <h5 class="mb-0">{{ 'مصفوفة الأذونات' if ar else 'Permission Matrix' }}</h5>
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+            <span class="text-muted small">
+              <i class="bi bi-shield-lock"></i>
+              {% if ar %}
+                دور «المالك» ثابت ولا يمكن تعديله
+              {% else %}
+                The owner role is absolute and cannot be edited
+              {% endif %}
+            </span>
+            <button type="button" id="restore-defaults" class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-arrow-counterclockwise"></i>
+              {{ 'استعادة الافتراضي' if ar else 'Restore defaults' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle mb-0 perm-table">
+            <thead>
+              <tr>
+                <th class="perm-screen-col">{{ 'الشاشة' if ar else 'Screen' }}</th>
+                {% for role in roles %}
+                  <th class="text-center">
+                    <span class="badge role-pill {{ 'role-owner' if role == 'super_admin' }}">
+                      {{ role.replace('_', ' ') }}
+                    </span>
+                  </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% if matrix %}
+                {% for module, rows in matrix.items() %}
+                  <tr class="perm-module-row">
+                    <th colspan="{{ roles|length + 1 }}">
+                      <i class="bi bi-folder2-open"></i> {{ module }}
+                      <span class="text-muted fw-normal small">({{ rows|length }})</span>
+                      <button type="button" class="btn btn-link btn-sm p-0 ms-2 module-grant-all"
+                              data-module="{{ module }}">
+                        {{ 'منح الكل' if ar else 'Grant all' }}
+                      </button>
+                      <span class="text-muted">·</span>
+                      <button type="button" class="btn btn-link btn-sm p-0 module-revoke-all"
+                              data-module="{{ module }}">
+                        {{ 'سحب الكل' if ar else 'Revoke all' }}
+                      </button>
+                    </th>
+                  </tr>
+                  {% for row in rows %}
+                    <tr>
+                      <td class="perm-screen-col">
+                        <code class="perm-module">{{ row.module }}</code>
+                        <span class="badge perm-screen">{{ row.screen }}</span>
+                      </td>
+                      {% for role in roles %}
+                        {% set locked = role == 'super_admin' %}
+                        {% set granted = row.roles.get(role, False) %}
+                        <td class="text-center">
+                          <label class="perm-cell {{ 'is-on' if granted }} {{ 'is-locked' if locked }}"
+                                 title="{{ row.module }}.{{ row.screen }} — {{ role }}">
+                            <input type="checkbox"
+                                   class="permission-toggle"
+                                   data-module="{{ row.module }}"
+                                   data-screen="{{ row.screen }}"
+                                   data-role="{{ role }}"
+                                   {% if granted %}checked{% endif %}
+                                   {% if locked %}disabled{% endif %}>
+                            <span class="perm-ring"></span>
+                            <span class="perm-label">
+                              {{ row.action_label_ar if ar else row.action_label }}
+                            </span>
+                          </label>
+                        </td>
+                      {% endfor %}
+                    </tr>
+                  {% endfor %}
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="{{ roles|length + 1 }}" class="text-center text-muted py-4">
+                    {{ 'لا توجد أذونات محددة' if ar else 'No permissions defined' }}
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="status-alert" class="alert mt-3" style="display: none;" role="alert"></div>
+
+      <div class="card bg-light mt-3">
+        <div class="card-body py-2 d-flex flex-wrap align-items-center gap-4 small">
+          <span class="d-inline-flex align-items-center gap-2">
+            <span class="perm-ring perm-ring--on"></span>
+            {{ 'ممنوح' if ar else 'Granted' }}
+          </span>
+          <span class="d-inline-flex align-items-center gap-2">
+            <span class="perm-ring"></span>
+            {{ 'غير ممنوح' if ar else 'Not granted' }}
+          </span>
+          <span class="d-inline-flex align-items-center gap-2">
+            <span class="perm-ring perm-ring--locked"></span>
+            {{ 'ثابت (المالك)' if ar else 'Locked (owner)' }}
+          </span>
+          <span class="text-muted">
+            {{ 'تُحفظ التغييرات تلقائياً' if ar else 'Changes save automatically' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .perm-table { border-color: #e9ecef; }
+  .perm-table thead th {
+    background: #fff;
+    border-bottom: 2px solid #e9ecef;
+    font-size: .7rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #6c757d;
+    font-weight: 600;
+  }
+  .perm-screen-col { min-width: 15rem; }
+  .perm-module { color: #d63384; font-size: .8rem; }
+  .perm-screen {
+    background: #f1f3f5;
+    color: #495057;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: .25em .7em;
+  }
+  .role-pill {
+    background: #0d6efd;
+    border-radius: 999px;
+    padding: .35em .9em;
+    font-size: .68rem;
+    letter-spacing: .05em;
+  }
+  .role-pill.role-owner { background: #6f42c1; }
+
+  .perm-module-row th {
+    background: #f8f9fa;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #495057;
+  }
+
+  /* Cell: circle ring + action verb, per the design mockup. */
+  .perm-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    cursor: pointer;
+    user-select: none;
+    color: #6c757d;
+    font-size: .875rem;
+  }
+  .perm-cell input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .perm-ring {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 1.05rem;
+    height: 1.05rem;
+    border-radius: 50%;
+    border: 1px solid #ced4da;
+    background: #e9ecef;
+    transition: border-color .12s ease, background-color .12s ease, box-shadow .12s ease;
+  }
+  .perm-cell.is-on .perm-ring,
+  .perm-ring--on {
+    border: 2px solid #0d6efd;
+    background: transparent;
+  }
+  .perm-cell.is-on .perm-label { color: #212529; font-weight: 500; }
+  .perm-cell:not(.is-locked):hover .perm-ring { box-shadow: 0 0 0 3px rgba(13, 110, 253, .12); }
+  .perm-cell:focus-within .perm-ring { box-shadow: 0 0 0 3px rgba(13, 110, 253, .25); }
+
+  .perm-cell.is-locked { cursor: not-allowed; }
+  .perm-cell.is-locked .perm-ring,
+  .perm-ring--locked {
+    border: 2px solid #6f42c1;
+    background: #6f42c1;
+  }
+  .perm-cell.is-locked .perm-label { color: #6f42c1; }
+
+  .perm-cell.is-busy { opacity: .5; pointer-events: none; }
+
+  .perm-table tbody tr:hover td { background-color: rgba(0, 0, 0, .015); }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const statusAlert = document.getElementById('status-alert');
+  const ar = {{ 'true' if ar else 'false' }};
+  const TOGGLE_URL = '{{ url_for("admin.toggle_permission") }}';
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+  function showAlert(type, message) {
+    statusAlert.className = 'alert alert-' + type + ' mt-3';
+    statusAlert.textContent = message;
+    statusAlert.style.display = 'block';
+    clearTimeout(showAlert._t);
+    showAlert._t = setTimeout(() => { statusAlert.style.display = 'none'; }, 3000);
+  }
+
+  // Sends one toggle. The server owns the truth, so the cell only repaints
+  // once the write is acknowledged.
+  async function toggle(input) {
+    const cell = input.closest('.perm-cell');
+    const wasOn = cell.classList.contains('is-on');
+    cell.classList.add('is-busy');
+    try {
+      const res = await fetch(TOGGLE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': csrf
+        },
+        body: new URLSearchParams({
+          role: input.dataset.role,
+          module: input.dataset.module,
+          screen: input.dataset.screen
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || (ar ? 'حدث خطأ' : 'Error occurred'));
+      }
+      cell.classList.toggle('is-on', data.granted);
+      input.checked = data.granted;
+      return true;
+    } catch (err) {
+      cell.classList.toggle('is-on', wasOn);
+      input.checked = wasOn;
+      showAlert('danger', err.message || (ar ? 'حدث خطأ في الاتصال' : 'Connection error'));
+      return false;
+    } finally {
+      cell.classList.remove('is-busy');
+    }
+  }
+
+  document.querySelectorAll('.permission-toggle').forEach(input => {
+    input.addEventListener('change', async function () {
+      const ok = await toggle(this);
+      if (ok) {
+        showAlert('success', ar ? 'تم حفظ التغيير بنجاح' : 'Permission updated successfully');
+      }
+    });
+  });
+
+  // Bulk: grant/revoke every editable cell in one module.
+  async function bulk(module, grant) {
+    const inputs = [...document.querySelectorAll('.permission-toggle')].filter(
+      i => i.dataset.module === module && !i.disabled && i.checked !== grant
+    );
+    if (!inputs.length) return;
+    let failed = 0;
+    for (const input of inputs) {
+      if (!(await toggle(input))) failed++;
+    }
+    if (!failed) {
+      showAlert('success', ar
+        ? `تم تحديث ${inputs.length} إذن في «${module}»`
+        : `Updated ${inputs.length} permission(s) in "${module}"`);
+    }
+  }
+
+  document.querySelectorAll('.module-grant-all').forEach(btn =>
+    btn.addEventListener('click', () => bulk(btn.dataset.module, true)));
+  document.querySelectorAll('.module-revoke-all').forEach(btn =>
+    btn.addEventListener('click', () => bulk(btn.dataset.module, false)));
+
+  // Reset the entire matrix to the code-defined ROLE_DEFAULTS. Destructive to
+  // any customization, so it confirms first; the server is owner-only.
+  const restoreBtn = document.getElementById('restore-defaults');
+  restoreBtn.addEventListener('click', async function () {
+    if (!confirm(ar
+      ? 'سيتم إعادة تعيين جميع الأذونات إلى الإعدادات الافتراضية وفقدان أي تخصيص. هل أنت متأكد؟'
+      : 'This resets ALL role permissions to the defaults and any customization is lost. Are you sure?')) {
+      return;
+    }
+    this.disabled = true;
+    try {
+      const res = await fetch('{{ url_for("admin.restore_permission_defaults") }}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || (ar ? 'حدث خطأ' : 'Error occurred'));
+      }
+      showAlert('success', ar ? 'تمت استعادة الإعدادات الافتراضية' : 'Defaults restored');
+      setTimeout(() => location.reload(), 800);
+    } catch (err) {
+      showAlert('danger', err.message || (ar ? 'حدث خطأ في الاتصال' : 'Connection error'));
+      this.disabled = false;
+    }
+  });
+});
+</script>
+{% endblock %}

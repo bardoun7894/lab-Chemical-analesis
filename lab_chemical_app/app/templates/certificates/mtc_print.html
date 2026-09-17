@@ -1,0 +1,304 @@
+{# Material Test Certificate (MTC), form LAB-DOC-8.1.1.
+
+   Unlike the two QC forms this one is bilingual throughout, carries its own
+   letterhead, and lists one row per heat — so it runs to more than one page
+   when a delivery covers many ladles. The heat table's chemical columns print
+   either the standard limits or the ladle's own results, depending on the mode
+   chosen when the certificate was saved. #}
+{% set application_standard_text = standards_text if standards_text is defined else '' %}
+{% if not application_standard_text and order %}
+    {% set application_standard_text = order.standard_labels() | join(' / ') %}
+{% endif %}
+{% if not application_standard_text %}
+    {% set application_standard_text = 'ISO 2531 / EN 545' %}
+{% endif %}
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8">
+    <title>MTC — {{ cert.certificate_no }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+            margin: 0; padding: 10mm 8mm;
+            color: #000; font-size: 11px;
+        }
+        .toolbar { margin-bottom: 12px; text-align: center; }
+        .btn {
+            font: inherit; padding: 6px 14px; margin-inline-end: 8px; cursor: pointer;
+            border: 1px solid #888; border-radius: 4px; background: #fff;
+            text-decoration: none; color: inherit;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        td, th { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; }
+
+        .head td { text-align: center; border: 1px solid #000; }
+        .head img { max-height: 66px; max-width: 100%; }
+        .head .logo, .head .badge { width: 150px; }
+        .head .title { font-size: 22px; font-weight: 700; line-height: 1.4; }
+        .head .title .ar { display: block; font-size: 17px; }
+
+        .refs th {
+            width: 220px; text-align: left; font-weight: 600;
+            background: #f2f2f2; white-space: nowrap;
+        }
+        .refs td { height: 24px; }
+        .refs .ref-value { text-align: right; direction: ltr; }
+        .print-warning {
+            border: 1px solid #8a6d00; background: #fff7cc;
+            padding: 5px 7px; font-weight: 700; text-align: center;
+        }
+
+        .intro { border: 1px solid #000; padding: 7px; line-height: 1.55; text-align: justify; }
+        .intro .ar { display: block; direction: rtl; text-align: right; padding-top: 5px; }
+
+        .band {
+            background: #f2f2f2; font-weight: 700; text-align: center; padding: 5px;
+        }
+        .band-left { text-align: left; }
+
+        .grid th { background: #f2f2f2; text-align: center; font-weight: 600; }
+        .grid td { text-align: center; }
+        .grid .desc { text-align: left; }
+
+        .heats th, .heats td { text-align: center; font-size: 10px; padding: 2px 3px; }
+        .heats .heat-no { white-space: nowrap; }
+        .heats thead { display: table-header-group; }
+        .heats tr { break-inside: avoid; }
+
+        .mode-note { padding: 4px 5px; font-style: italic; }
+
+        .closing { border: 1px solid #000; padding: 7px; line-height: 1.55; text-align: justify; }
+        .closing .ar { display: block; direction: rtl; text-align: right; padding-top: 5px; }
+
+        .sign { margin-top: 8px; }
+        .sign td { height: 58px; vertical-align: top; }
+        .sign .role { font-weight: 700; }
+
+        @media print {
+            .toolbar { display: none !important; }
+            body { padding: 8mm; }
+            .print-warning { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        }
+        @page { size: A4 portrait; margin: 8mm; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="btn" onclick="window.print()">Print</button>
+        <a class="btn" href="{{ url_for('certificates.edit', id=cert.id) }}">Edit</a>
+        <button class="btn" onclick="window.close()">Close</button>
+    </div>
+
+    <table class="head">
+        <tr>
+            <td class="logo">
+                <img src="{{ url_for('static', filename='images/gcp_logo.jpg') }}" alt="GCP">
+            </td>
+            <td class="title">
+                MTC
+                <span class="ar">شهادة فحص المواد</span>
+            </td>
+            <td class="badge">
+                <img src="{{ url_for('static', filename='images/bv_iso9001.png') }}" alt="ISO 9001:2015">
+            </td>
+        </tr>
+    </table>
+
+    {% if application_fallback_warning %}
+    <div class="print-warning">{{ application_fallback_warning }}</div>
+    {% endif %}
+
+    <table class="refs">
+        <tr>
+            <td>{{ cert.certificate_no }}</td>
+            <th>CERTIFICATE NO. / رقم الشهادة</th>
+        </tr>
+        <tr>
+            <td>{{ cert.issue_date.strftime('%d / %m / %Y') if cert.issue_date else '' }}</td>
+            <th>DATE / التاريخ</th>
+        </tr>
+    </table>
+
+    <table>
+        <tr><td class="intro">
+            This Certificate certifies that the Centrifugally Cast (Spun) Ductile Iron
+            Pipes (suitable for socket &amp; spigot push-on joint as detailed below) have
+            been manufactured and tested by our factory in accordance with
+            {{ application_standard_text }}, and
+            all test results were satisfactory.
+            <span class="ar">تشهد شركة جي سي بي أن مواسير الزهر المرن المصنوعة بالطرد
+            المركزي قد تم تصنيعها واختبارها وفقاً للمواصفة
+            {{ application_standard_text }} وأن جميع نتائج
+            الاختبارات كانت مُرضية .</span>
+        </td></tr>
+    </table>
+
+    <table class="refs">
+        <tr>
+            <td class="ref-value">{{ customer or '' }}</td>
+            <th>Customer Name / اسم العميل</th>
+        </tr>
+        <tr>
+            <td class="ref-value">{{ cert.customer_order_no or '' }}</td>
+            <th>Job Order No. / رقم أمر التوريد</th>
+        </tr>
+        <tr>
+            <td class="ref-value">{{ cert.project_name or '' }}</td>
+            <th>Project Name / اسم المشروع</th>
+        </tr>
+    </table>
+
+    {# General notes live here; Annealing batches remain in their heat rows. #}
+    <table class="grid">
+        <tr><td class="band" colspan="6">MATERIAL DETAILS&nbsp; /&nbsp; بيانات المواد</td></tr>
+        <tr>
+            <th style="width:38%">Description / الوصف</th>
+            <th>DN (mm)</th>
+            <th>Class / الفئة</th>
+            <th>Length (m)<br>الطول</th>
+            <th>QTY / الكمية</th>
+            <th style="width:16%">Notes / ملاحظات</th>
+        </tr>
+        <tr>
+            <td class="desc">{{ description }}</td>
+            <td>{{ dn_range }}</td>
+            <td>{{ class_label }}</td>
+            <td>{{ total_metres }}</td>
+            <td>{{ total_qty }}</td>
+            <td>{{ cert.notes or '' }}</td>
+        </tr>
+    </table>
+
+    <table>
+        <tr><td class="band">INSPECTION &amp; TEST RESULTS&nbsp; /&nbsp; نتائج الفحص والاختبار</td></tr>
+    </table>
+
+    {# ---- 1. Chemical analysis ---- #}
+    <table class="grid">
+        <tr><td class="band band-left" colspan="{{ mtc_elements|length + 3 }}">
+            1.&nbsp; CHEMICAL ANALYSIS&nbsp; /&nbsp; التحليل الكيميائي
+        </td></tr>
+        <tr>
+            <th style="width:26px">1</th>
+            <th style="width:150px">Elements</th>
+            {% for code, field in mtc_elements %}
+            <th>{{ code }}</th>
+            {% endfor %}
+            <th style="width:110px">Standard</th>
+        </tr>
+        <tr>
+            <td></td>
+            <td class="desc">
+                {{ 'Actual Values (average)' if cert.shows_actuals else 'Standard Values' }}
+            </td>
+            {% for code, field in mtc_elements %}
+            <td>{{ chem_summary.get(code, '') }}</td>
+            {% endfor %}
+            <td>{{ chem_source }}</td>
+        </tr>
+    </table>
+
+    {# ---- 2. Mechanical properties ---- #}
+    <table class="grid">
+        <tr><td class="band band-left" colspan="6">
+            2.&nbsp; Mechanical properties&nbsp; الخواص الميكانيكية
+        </td></tr>
+        <tr>
+            <th style="width:26px">2</th>
+            <th style="width:150px">Test</th>
+            <th>Elongation (%)</th>
+            <th>Tensile Strength (MPa )</th>
+            <th>Hardnes (HB)</th>
+            <th style="width:110px">Standard</th>
+        </tr>
+        <tr>
+            <td></td>
+            <td class="desc">Standard Values</td>
+            <td>{{ mech_standards.elongation }}</td>
+            <td>{{ mech_standards.tensile }}</td>
+            <td>{{ mech_standards.hardness }}</td>
+            <td>{{ application_standard_text }}</td>
+        </tr>
+    </table>
+
+    {# ---- Per-heat results ---- #}
+    <table class="grid heats" data-mtc-heat-results>
+        <thead>
+        <tr>
+            <th rowspan="2" style="width:26px">م</th>
+            <th rowspan="2" style="width:100px">heat no</th>
+            <th rowspan="2" style="width:90px">Batch No.</th>
+            {% if cert.show_pipe_numbers %}
+            <th rowspan="2" style="width:110px">Pipe No.</th>
+            {% endif %}
+            <th colspan="{{ mtc_elements|length }}">CHEMICAL ANALYSIS&nbsp; /&nbsp; التحليل الكيميائي</th>
+            <th colspan="3">Mechanical properties&nbsp; الخواص الميكانيكية</th>
+            <th rowspan="2" style="width:90px">Notes - ملاحظات</th>
+        </tr>
+        <tr>
+            {% for code, field in mtc_elements %}
+            <th>{{ code }}</th>
+            {% endfor %}
+            <th>Tensile strength(Mpa)</th>
+            <th>Elongtion %</th>
+            <th>Hardnes(HB)</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for heat in heats %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td class="heat-no">{{ heat.heat_no }}</td>
+            <td class="heat-no">{{ heat.batch_no }}</td>
+            {% if cert.show_pipe_numbers %}
+            <td>{{ heat.pipe_numbers | join(', ') }}</td>
+            {% endif %}
+            {% for code, field in mtc_elements %}
+            <td>{{ heat.chemistry.get(code, '') }}</td>
+            {% endfor %}
+            <td>{{ heat.tensile if heat.tensile is not none else '' }}</td>
+            <td>{{ heat.elongation if heat.elongation is not none else '' }}</td>
+            <td>{{ heat.hardness if heat.hardness is not none else '' }}</td>
+            <td></td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="{{ mtc_elements|length + 7 + (1 if cert.show_pipe_numbers else 0) }}" class="mode-note">
+                No heats recorded for the selected pipes.
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <table>
+        <tr><td class="closing">
+            We hereby certify that the above results comply with the requirements of
+            {{ application_standard_text }} and the specified customer requirements. This certificate
+            is issued in accordance with EN 10204 Type 3.1.
+            <span class="ar">نشهد بأن النتائج أعلاه تتوافق مع متطلبات {{ application_standard_text }}
+            ومتطلبات العميل المحددة.</span>
+        </td></tr>
+    </table>
+
+    <table class="sign">
+        <tr>
+            <td class="role" style="width:50%">Quality Assurance Manager / مدير ضمان الجودة</td>
+            <td class="role" style="width:50%">Quality Director / مدير الجودة</td>
+        </tr>
+        <tr>
+            <td>Name:<br><br>Signature : _____________________</td>
+            <td>Name:<br><br>Signature : _____________________</td>
+        </tr>
+    </table>
+
+    <script>
+        if (!new URLSearchParams(location.search).has('noauto')) {
+            window.addEventListener('load', function () { window.print(); });
+        }
+    </script>
+</body>
+</html>

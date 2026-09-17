@@ -1,0 +1,82 @@
+{#
+  Table toolbar: Columns/field picker + Print + (optional) Export Excel.
+
+  Usage:
+    {% from 'components/table_tools.html' import table_tools %}
+    {{ table_tools('chemical',
+                   export_url=url_for('chemical.export_excel'),
+                   columns=picker_columns) }}
+
+  columns: [(key, label, default_bool)] from
+           export_service.picker_meta(<registry>()). Fields flagged default are
+           checked (and in the default export/print set); the rest are extra
+           DB fields available for the file / print view. A checkbox whose key
+           matches a th[data-col] on the page also shows/hides that column on
+           screen; extra keys only affect the export / print view.
+
+  Pair with a table that carries the matching id:
+      <table data-table-tools="chemical" data-row-select> ...
+  where selectable <th>/<td> carry data-col and data rows carry data-row-id.
+
+  export_url: base .xlsx URL. The Print button opens export_url?format=print.
+              Omit both columns and export_url for a plain window.print() button.
+#}
+{% macro table_tools(table_id, export_url=None, columns=None) %}
+<div class="btn-group table-tools d-print-hide" role="group"
+     data-table-tools-for="{{ table_id }}"
+     {% if export_url %}data-print-view="{{ export_url }}"{% endif %}>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle"
+                data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                aria-expanded="false">
+            <i class="bi bi-layout-three-columns"></i>
+            {{ 'الحقول' if current_locale == 'ar' else 'Fields' }}
+        </button>
+        <div class="dropdown-menu dropdown-menu-end p-2" data-col-panel
+             style="max-height:360px;overflow-y:auto;min-width:240px"
+             {% if current_locale == 'ar' %}dir="rtl"{% endif %}>
+            <div class="d-flex gap-2 mb-2 pb-2 border-bottom">
+                <button type="button" class="btn btn-sm btn-outline-primary flex-fill" data-select-all>
+                    {{ 'تحديد الكل' if current_locale == 'ar' else 'Select all' }}
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" data-select-none>
+                    {{ 'إلغاء الكل' if current_locale == 'ar' else 'None' }}
+                </button>
+            </div>
+            {% if columns %}
+                {% set defaults = columns | selectattr('2') | list %}
+                {% set extras = columns | rejectattr('2') | list %}
+                {% for key, label, is_default in defaults %}
+                <label class="dropdown-item d-flex align-items-center gap-2 mb-0" style="cursor:pointer" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="form-check-input mt-0 tt-field" value="{{ key }}" checked>
+                    <span>{{ label }}</span>
+                </label>
+                {% endfor %}
+                {% if extras %}
+                <div class="text-muted small px-2 pt-2 pb-1 border-top mt-1">
+                    {{ 'حقول إضافية' if current_locale == 'ar' else 'More fields' }}
+                </div>
+                {% for key, label, is_default in extras %}
+                <label class="dropdown-item d-flex align-items-center gap-2 mb-0" style="cursor:pointer" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="form-check-input mt-0 tt-field" value="{{ key }}">
+                    <span>{{ label }}</span>
+                </label>
+                {% endfor %}
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    <button type="button" class="btn btn-outline-secondary" data-print-btn>
+        <i class="bi bi-printer"></i>
+        {{ 'طباعة' if current_locale == 'ar' else 'Print' }}
+    </button>
+    {% if export_url %}
+    <a class="btn btn-outline-success" data-export-link
+       data-export-base="{{ export_url }}"
+       href="{{ export_url }}?{{ request.query_string.decode() }}">
+        <i class="bi bi-file-earmark-excel"></i>
+        {{ 'تصدير' if current_locale == 'ar' else 'Export' }}
+    </a>
+    {% endif %}
+</div>
+{% endmacro %}

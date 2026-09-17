@@ -19,6 +19,27 @@
 
     <!-- Settings Cards -->
     <div class="row">
+        <!-- Backups -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-shield-check display-4 text-success"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'النسخ الاحتياطي' if current_locale == 'ar' else 'Backups' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'أخذ وعرض وتنزيل نسخة كاملة من قاعدة البيانات والإعدادات' if current_locale == 'ar' else 'Take, view and download a full copy of the database and settings' }}
+                    </p>
+                    <a href="{{ url_for('admin.backups') }}" class="btn btn-success">
+                        <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة النسخ' if current_locale == 'ar' else 'Manage Backups' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- Element Rules -->
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
@@ -35,6 +56,75 @@
                     <a href="{{ url_for('admin.element_rules') }}" class="btn btn-primary">
                         <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
                         {{ 'إدارة القواعد' if current_locale == 'ar' else 'Manage Rules' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI targets -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-bullseye display-4 text-success"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'أهداف المؤشرات' if current_locale == 'ar' else 'KPI Targets' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'حدّد هدف كل مؤشر في لوحة التحليلات ليظهر الحكم بجانب الرقم'
+                           if current_locale == 'ar'
+                           else 'Set a target per dashboard KPI so each tile shows how it is doing against plan' }}
+                    </p>
+                    <a href="{{ url_for('admin.kpi_target_settings') }}" class="btn btn-primary">
+                        <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
+                        {{ 'ضبط الأهداف' if current_locale == 'ar' else 'Configure' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage flow -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-diagram-3 display-4 text-secondary"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'ترتيب المراحل' if current_locale == 'ar' else 'Stage Flow' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'منع تسجيل قرار مرحلة قبل اعتماد المرحلة التي قبلها'
+                           if current_locale == 'ar'
+                           else 'Require the previous stage to be accepted before a decision is recorded' }}
+                    </p>
+                    <a href="{{ url_for('admin.stage_flow_settings') }}" class="btn btn-primary">
+                        <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
+                        {{ 'ضبط الترتيب' if current_locale == 'ar' else 'Configure' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dimensional standard (TA 1012) -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-rulers display-4 text-info"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'الاستاندرد الأبعادي' if current_locale == 'ar' else 'Dimension Standards' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'الأبعاد الاسمية والسماح لكل قطر — تغذي مقارنة القراية بالاستاندرد وحساب القدرة'
+                           if current_locale == 'ar'
+                           else 'Nominal dimensions and tolerances per DN — feed the reading-vs-standard check and capability' }}
+                    </p>
+                    <a href="{{ url_for('admin.dimension_standards') }}" class="btn btn-primary">
+                        <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة الاستاندرد' if current_locale == 'ar' else 'Manage Standard' }}
                     </a>
                 </div>
             </div>
@@ -207,6 +297,27 @@
                 </div>
             </div>
         </div>
+
+        <!-- Product Code Ordering -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-sort-numeric-down display-4 text-info"></i>
+                    </div>
+                    <h5 class="card-title">
+                        {{ 'ترتيب كود المنتج' if current_locale == 'ar' else 'Product Code Ordering' }}
+                    </h5>
+                    <p class="card-text text-muted">
+                        {{ 'إعادة ترتيب حقول المعاملات لتوليد كود المنتج' if current_locale == 'ar' else 'Reorder parameter fields used to generate the product code' }}
+                    </p>
+                    <a href="{{ url_for('admin.product_code_order') }}" class="btn btn-info">
+                        <i class="bi bi-arrow-{{ 'left' if current_locale == 'ar' else 'right' }}"></i>
+                        {{ 'إدارة الترتيب' if current_locale == 'ar' else 'Manage Order' }}
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Quick Stats -->
@@ -221,25 +332,25 @@
             <div class="row text-center">
                 <div class="col-md-3 mb-3">
                     <div class="border rounded p-3">
-                        <h3 class="text-primary" id="totalElements">-</h3>
+                        <h3 class="text-primary" id="totalElements">{{ summary.elements }}</h3>
                         <small class="text-muted">{{ 'عناصر كيميائية' if current_locale == 'ar' else 'Chemical Elements' }}</small>
                     </div>
                 </div>
                 <div class="col-md-3 mb-3">
                     <div class="border rounded p-3">
-                        <h3 class="text-success" id="totalUsers">-</h3>
+                        <h3 class="text-success" id="totalUsers">{{ summary.users }}</h3>
                         <small class="text-muted">{{ 'مستخدمين' if current_locale == 'ar' else 'Users' }}</small>
                     </div>
                 </div>
                 <div class="col-md-3 mb-3">
                     <div class="border rounded p-3">
-                        <h3 class="text-info" id="totalAnalyses">-</h3>
+                        <h3 class="text-info" id="totalAnalyses">{{ summary.analyses }}</h3>
                         <small class="text-muted">{{ 'تحليلات' if current_locale == 'ar' else 'Analyses' }}</small>
                     </div>
                 </div>
                 <div class="col-md-3 mb-3">
                     <div class="border rounded p-3">
-                        <h3 class="text-warning" id="totalPipes">-</h3>
+                        <h3 class="text-warning" id="totalPipes">{{ summary.pipes }}</h3>
                         <small class="text-muted">{{ 'أنابيب مسجلة' if current_locale == 'ar' else 'Registered Pipes' }}</small>
                     </div>
                 </div>
@@ -320,34 +431,4 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
-<script>
-// Load stats on page load
-document.addEventListener('DOMContentLoaded', function() {
-    // Load element rules count
-    fetch('/admin/api/element-rules')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('totalElements').textContent = data.rules ? data.rules.length : 0;
-        })
-        .catch(() => {
-            document.getElementById('totalElements').textContent = '-';
-        });
 
-    // Load summary stats from API
-    fetch('/api/ai-summary')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('totalAnalyses').textContent = data.total_analyses || 0;
-            document.getElementById('totalPipes').textContent = data.total_pipes || 0;
-        })
-        .catch(() => {
-            document.getElementById('totalAnalyses').textContent = '-';
-            document.getElementById('totalPipes').textContent = '-';
-        });
-
-    // Note: User count would need a separate API endpoint
-    document.getElementById('totalUsers').textContent = '-';
-});
-</script>
-{% endblock %}

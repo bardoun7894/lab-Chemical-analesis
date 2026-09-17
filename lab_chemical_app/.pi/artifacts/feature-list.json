@@ -1,0 +1,59 @@
+{
+  "project": "GCP QC Pipes Traceability — Flask web app for lab chemical analysis, mechanical testing, production tracking, and quality control at a ductile iron pipe foundry. Multi-user with auth, bilingual (AR/EN), chatbot AI integration.",
+  "tasks": [
+    {
+      "id": "task-001",
+      "title": "Start the development server and verify it runs",
+      "status": "pending",
+      "files": ["run.py", "app/__init__.py", "app/config.py"],
+      "acceptance": [
+        "Flask dev server starts on 0.0.0.0:9999",
+        "Home page returns 200",
+        "Login page renders"
+      ],
+      "dependencies": [],
+      "estimatedSteps": 3
+    },
+    {
+      "id": "task-002",
+      "title": "Review project specs and KB knowledge",
+      "status": "pending",
+      "files": ["specs/", "ai-knowledge-base/"],
+      "acceptance": [
+        "Read existing specs (003-008) for feature context",
+        "Check KB for prior decisions and architecture notes",
+        "Document current feature state"
+      ],
+      "dependencies": [],
+      "estimatedSteps": 3
+    },
+    {
+      "id": "task-003",
+      "title": "Run test suite and verify current state",
+      "status": "pending",
+      "files": ["tests/"],
+      "acceptance": [
+        "All existing tests pass",
+        "Lint checks pass (ruff)",
+        "No database migration issues"
+      ],
+      "dependencies": [],
+      "estimatedSteps": 3
+    },
+    {
+      "id": "task-004",
+      "title": "Audit and fix any startup/config issues",
+      "status": "pending",
+      "files": [".env", "app/config.py", "app/__init__.py"],
+      "acceptance": [
+        "No missing env var warnings on startup",
+        "Secret key properly configured",
+        "Database migrations applied cleanly",
+        "Application boots without errors"
+      ],
+      "dependencies": ["task-001", "task-002", "task-003"],
+      "estimatedSteps": 4
+    }
+  ],
+  "doneCondition": "Server runs on :9999, all tests pass, lint clean, no startup errors, known issues documented in progress.md"
+}

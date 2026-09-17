@@ -1,13 +1,15 @@
 """
 Stage Decision Type Model - Configurable decision types for each production stage
 """
+
 from datetime import datetime
 from app import db
 
 
 class StageDecisionType(db.Model):
     """Configurable decision types for production stages"""
-    __tablename__ = 'stage_decision_types'
+
+    __tablename__ = "stage_decision_types"
 
     id = db.Column(db.Integer, primary_key=True)
     stage_name = db.Column(db.String(50), nullable=False, index=True)
@@ -18,7 +20,18 @@ class StageDecisionType(db.Model):
 
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "stage_name", "decision_name_en", name="uix_stage_decision_en"
+        ),
+        db.UniqueConstraint(
+            "stage_name", "decision_name_ar", name="uix_stage_decision_ar"
+        ),
+    )
 
     def __repr__(self):
-        return f'<StageDecisionType {self.stage_name}: {self.decision_name_en}>'
+        return f"<StageDecisionType {self.stage_name}: {self.decision_name_en}>"

@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Dimension Standards{% endblock %}
+{% block content %}
+{% set is_ar = current_locale == 'ar' %}
+<div class="container">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <h2><i class="bi bi-rulers"></i>
+        {{ 'الاستاندرد الأبعادي' if is_ar else 'Dimension Standards' }}</h2>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item">
+            <a href="{{ url_for('admin.settings') }}">{{ 'الإعدادات' if is_ar else 'Settings' }}</a>
+          </li>
+          <li class="breadcrumb-item active">{{ 'الاستاندرد الأبعادي' if is_ar else 'Dimension Standards' }}</li>
+        </ol>
+      </nav>
+      <div class="text-muted small">{{ doc.source }}</div>
+    </div>
+    <form method="post" action="{{ url_for('admin.verify_dimension_standards') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="verified" value="{{ '0' if doc.verified else '1' }}">
+      <button class="btn btn-{{ 'outline-secondary' if doc.verified else 'success' }}">
+        <i class="bi bi-{{ 'x-circle' if doc.verified else 'check2-circle' }}"></i>
+        {% if doc.verified %}
+        {{ 'إلغاء الاعتماد' if is_ar else 'Un-verify' }}
+        {% else %}
+        {{ 'اعتماد الجدول' if is_ar else 'Mark verified' }}
+        {% endif %}
+      </button>
+    </form>
+  </div>
+
+  {% if not doc.verified %}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i>
+    <strong>{{ 'الجدول لم يُراجع بعد.' if is_ar else 'This table has not been checked yet.' }}</strong>
+    {{ 'الأرقام الاسمية منقولة من صورة ورقة الاستاندرد، وبعض خانات السماح كانت غير واضحة وسيبت فاضية. الرمز اللي سماحه فاضي بيوري الفرق عن الاستاندرد لكن مش بيقول مطابق أو خارج، ومش بيدخل حساب Cp/Cpk.'
+       if is_ar else
+       'Nominals were transcribed from a scan of the standard sheet; several tolerance cells were unreadable and left blank. A symbol with no tolerance still shows its deviation but never a verdict, and is excluded from Cp/Cpk.' }}
+  </div>
+  {% endif %}
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0 table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>DN</th>
+            <th class="text-end">{{ 'رموز معرّفة' if is_ar else 'Symbols defined' }}</th>
+            <th class="text-end">{{ 'بسماح' if is_ar else 'With tolerance' }}</th>
+            <th class="text-end">{{ 'سماح ناقص' if is_ar else 'Tolerance missing' }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in summary %}
+          <tr>
+            <td><strong>DN{{ row.dn }}</strong></td>
+            <td class="text-end">{{ row.symbols }}</td>
+            <td class="text-end">{{ row.with_tolerance }}</td>
+            <td class="text-end">
+              {% if row.missing %}
+              <span class="badge bg-warning text-dark">{{ row.missing }}</span>
+              {% else %}
+              <span class="badge bg-success">0</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{{ url_for('admin.edit_dimension_standard', dn=row.dn) }}"
+                 class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil"></i> {{ 'تعديل' if is_ar else 'Edit' }}
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

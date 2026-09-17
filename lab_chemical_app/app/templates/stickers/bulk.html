@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% set is_ar = current_locale == 'ar' %}
+{% block title %}{{ 'طباعة جماعية' if is_ar else 'Bulk Sticker Printing' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-printer" aria-hidden="true"></i> {{ 'طباعة الاستيكرات جماعياً' if is_ar else 'Bulk Sticker Printing' }}</h2>
+        <a href="{{ url_for('stickers.index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ 'رجوع' if is_ar else 'Back' }}
+        </a>
+    </div>
+
+    {% include 'stickers/_verdict_legend.html' %}
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-funnel" aria-hidden="true"></i> {{ 'فلاتر الاستيكر' if is_ar else 'Sticker filters' }}</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                {% for order_id in filters.order_ids %}<input type="hidden" name="order_ids" value="{{ order_id }}">{% endfor %}
+                {% if filters.mode %}<input type="hidden" name="mode" value="{{ filters.mode }}">{% endif %}
+                <div class="col-md-3">
+                    <label class="form-label" for="dateFrom">{{ 'من تاريخ' if is_ar else 'From Date' }}</label>
+                    <input type="date" id="dateFrom" name="date_from" class="form-control" value="{{ filters.date_from or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="dateTo">{{ 'إلى تاريخ' if is_ar else 'To Date' }}</label>
+                    <input type="date" id="dateTo" name="date_to" class="form-control" value="{{ filters.date_to or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="ladleId">{{ 'معرف المغرفة' if is_ar else 'Ladle ID' }}</label>
+                    <input type="text" id="ladleId" name="ladle_id" class="form-control" value="{{ filters.ladle_id or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="salesOrderFilter">{{ 'أمر البيع' if is_ar else 'Sales Order' }}</label>
+                    <input type="text" id="salesOrderFilter" name="sales_order" class="form-control" value="{{ filters.sales_order or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="customerFilter">{{ 'العميل' if is_ar else 'Customer' }}</label>
+                    <input type="text" id="customerFilter" name="customer" class="form-control" value="{{ filters.customer or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="decisionFilter">{{ 'القرار النهائي' if is_ar else 'Final Decision' }}</label>
+                    <select id="decisionFilter" name="final_decision" class="form-select">
+                        <option value="">— {{ 'الكل' if is_ar else 'All' }} —</option>
+                        {% for decision in ['ACCEPT', 'REJECT', 'HOLD', 'PENDING'] %}
+                        <option value="{{ decision }}" {{ 'selected' if filters.final_decision == decision }}>{{ decision }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary w-100"><i class="bi bi-search" aria-hidden="true"></i> {{ 'تطبيق الفلاتر' if is_ar else 'Apply filters' }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% set selection_id = 'stickerPipeSelection' %}
+    {% set selection_is_ar = is_ar %}
+    {% set selected_order_ids = filters.order_ids %}
+    {% set selection_lookup_url = url_for('stickers.search_pipe') %}
+    {% set selection_lookup_fallback_action = url_for('stickers.bulk_print') %}
+    {% set selection_lookup_method = 'get' %}
+    {% set selection_lookup_name = 'pipe_lookup' %}
+    {% set selection_order_action = url_for('stickers.bulk_print') %}
+    {% set selection_target_form = 'stickerPrintForm' %}
+    {% set selection_storage_key = '' %}
+    {% include 'shared/_pipe_selection.html' %}
+
+    <form method="post" action="{{ url_for('stickers.bulk_generate') }}" id="stickerPrintForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <i class="bi bi-sliders" aria-hidden="true"></i> {{ 'خيارات الطباعة' if is_ar else 'Print options' }}
+            </div>
+            <div class="card-body d-flex flex-wrap gap-3 align-items-end">
+                <div>
+                    <label class="form-label" for="printMode">{{ 'الطباعة' if is_ar else 'Print mode' }}</label>
+                    <select id="printMode" name="mode" class="form-select">
+                        <option value="internal" {{ 'selected' if internal }}>{{ 'داخلي — مع المرحلة' if is_ar else 'Internal — with stage' }}</option>
+                        <option value="external" {{ 'selected' if not internal }}>{{ 'خارجي — القرار فقط' if is_ar else 'External — decision only' }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" for="stickerSize">{{ 'الحجم' if is_ar else 'Size' }}</label>
+                    <select id="stickerSize" name="size" class="form-select">
+                        <option value="card" selected>Card — 100×90mm</option>
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                        <option value="gcp">GCP Pro</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary"
+                        formaction="{{ url_for('stickers.bulk_print_sheet') }}" formtarget="_blank">
+                    <i class="bi bi-printer" aria-hidden="true"></i> {{ 'طباعة' if is_ar else 'Print' }}
+                </button>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-file-pdf" aria-hidden="true"></i> {{ 'حفظ PDF' if is_ar else 'Save PDF' }}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

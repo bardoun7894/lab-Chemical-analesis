@@ -1,6 +1,9 @@
 """
 User Model for Authentication
 """
+
+import os
+import secrets
 from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,7 +12,8 @@ from app import db
 
 class User(UserMixin, db.Model):
     """User model for authentication and authorization"""
-    __tablename__ = 'users'
+
+    __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False, index=True)
@@ -17,26 +21,40 @@ class User(UserMixin, db.Model):
     full_name = db.Column(db.String(100))
     full_name_ar = db.Column(db.String(100))  # Arabic name
     email = db.Column(db.String(120), unique=True)
-    role = db.Column(db.String(20), nullable=False, default='viewer')
+    role = db.Column(db.String(20), nullable=False, default="viewer")
     department = db.Column(db.String(50))  # Lab, Production, QC
     is_active = db.Column(db.Boolean, default=True)
     last_login = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     # User roles
-    ROLE_ADMIN = 'admin'
-    ROLE_SUPERVISOR = 'supervisor'
-    ROLE_OPERATOR = 'operator'
-    ROLE_VIEWER = 'viewer'
+    ROLE_SUPER_ADMIN = "super_admin"
+    ROLE_ADMIN = "admin"
+    ROLE_SUPERVISOR = "supervisor"
+    ROLE_OPERATOR = "operator"
+    ROLE_VIEWER = "viewer"
+    # The storekeeper. Receives finished pipes into the warehouse system and
+    # nothing else: deliberately absent from can_edit and can_approve below,
+    # so the matrix grant for `warehouse.*` is the whole of their access.
+    ROLE_WAREHOUSE = "warehouse"
 
-    ROLES = [ROLE_ADMIN, ROLE_SUPERVISOR, ROLE_OPERATOR, ROLE_VIEWER]
+    ROLES = [
+        ROLE_SUPER_ADMIN,
+        ROLE_ADMIN,
+        ROLE_SUPERVISOR,
+        ROLE_OPERATOR,
+        ROLE_WAREHOUSE,
+        ROLE_VIEWER,
+    ]
 
     # Departments
-    DEPT_LAB = 'Lab'
-    DEPT_PRODUCTION = 'Production'
-    DEPT_QC = 'QC'
-    DEPT_ADMIN = 'Admin'
+    DEPT_LAB = "Lab"
+    DEPT_PRODUCTION = "Production"
+    DEPT_QC = "QC"
+    DEPT_ADMIN = "Admin"
 
     DEPARTMENTS = [DEPT_LAB, DEPT_PRODUCTION, DEPT_QC, DEPT_ADMIN]
 
@@ -53,22 +71,36 @@ class User(UserMixin, db.Model):
         self.last_login = datetime.utcnow()
 
     @property
+    def is_super_admin(self):
+        """App owner. Bypasses the permission matrix and cannot be demoted."""
+        return self.role == self.ROLE_SUPER_ADMIN
+
+    @property
     def is_admin(self):
-        return self.role == self.ROLE_ADMIN
+        return self.role in [self.ROLE_SUPER_ADMIN, self.ROLE_ADMIN]
 
     @property
     def is_supervisor(self):
-        return self.role in [self.ROLE_ADMIN, self.ROLE_SUPERVISOR]
+        return self.role in [self.ROLE_SUPER_ADMIN, self.ROLE_ADMIN, self.ROLE_SUPERVISOR]
 
     @property
     def can_edit(self):
         """Can user edit data"""
-        return self.role in [self.ROLE_ADMIN, self.ROLE_SUPERVISOR, self.ROLE_OPERATOR]
+        return self.role in [
+            self.ROLE_SUPER_ADMIN,
+            self.ROLE_ADMIN,
+            self.ROLE_SUPERVISOR,
+            self.ROLE_OPERATOR,
+        ]
 
     @property
     def can_approve(self):
         """Can user approve decisions"""
-        return self.role in [self.ROLE_ADMIN, self.ROLE_SUPERVISOR]
+        return self.role in [
+            self.ROLE_SUPER_ADMIN,
+            self.ROLE_ADMIN,
+            self.ROLE_SUPERVISOR,
+        ]
 
     @property
     def display_name(self):
@@ -76,23 +108,42 @@ class User(UserMixin, db.Model):
         return self.full_name or self.username
 
     def __repr__(self):
-        return f'<User {self.username}>'
+        return f"<User {self.username}>"
 
     @staticmethod
-    def create_default_admin():
-        """Create default admin user if none exists"""
+    def create_default_owner():
+        """Guarantee exactly one app owner (super_admin) exists.
+
+        Idempotent. On a database that predates the super_admin role, the oldest
+        existing admin is promoted rather than adding a second privileged account.
+        """
         from app import db
-        if not User.query.filter_by(role=User.ROLE_ADMIN).first():
-            admin = User(
-                username='admin',
-                full_name='Administrator',
-                full_name_ar='مدير النظام',
-                role=User.ROLE_ADMIN,
-                department=User.DEPT_ADMIN,
-                is_active=True
-            )
-            admin.set_password('admin123')  # Change in production!
-            db.session.add(admin)
+
+        if User.query.filter_by(role=User.ROLE_SUPER_ADMIN).first():
+            return None
+
+        legacy_admin = (
+            User.query.filter_by(role=User.ROLE_ADMIN)
+            .order_by(User.created_at.asc())
+            .first()
+        )
+        if legacy_admin:
+            legacy_admin.role = User.ROLE_SUPER_ADMIN
             db.session.commit()
-            return admin
-        return None
+            return legacy_admin
+
+        owner = User(
+            username="admin",
+            full_name="Administrator",
+            full_name_ar="مدير النظام",
+            role=User.ROLE_SUPER_ADMIN,
+            department=User.DEPT_ADMIN,
+            is_active=True,
+        )
+        default_pw = os.environ.get("ADMIN_DEFAULT_PASSWORD") or secrets.token_urlsafe(12)
+        owner.set_password(default_pw)
+        if not os.environ.get("ADMIN_DEFAULT_PASSWORD"):
+            print(f"[SECURITY] Generated owner password: {default_pw}")
+        db.session.add(owner)
+        db.session.commit()
+        return owner

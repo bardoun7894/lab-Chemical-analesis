@@ -1,0 +1,247 @@
+{# TA 1012 dimension + ovality grid — one table per station.
+
+   Until 2026-08-23 this was two stacked tables: an ovality grid whose columns
+   were an invented ID/D1..D15 run, and a separate standard grid keyed by the
+   sheet's own symbols. The operator had to match an unnamed box in the first
+   against a symbol in the second by eye. DrAlaa, holding the TA 1012 page next
+   to the popup: the columns are the ones on the sheet, the standard belongs
+   beside X and Y, and ovality is a diameter's property — not a thickness's.
+
+   So: columns are ID plus the symbols the pipe's DN actually defines, and the
+   rows read top to bottom as target, allowance, the two readings, how far off
+   the mean is, and roundness where roundness means something.
+
+   Callers pass:
+     stage_name  - the stage the inputs post under (Annealing)
+     dn          - pipe.diameter
+     entries     - dimension_standard_for_dn(dn)
+     points      - ovality_columns_for(dn, stage.ovality_profile)
+     saved       - stage.ovality_profile.points, or {}
+     is_ar       - locale flag
+#}
+{% macro ovality_standard_grid(stage_name, dn, entries, points, saved, is_ar) %}
+{% set entries = entries or {} %}
+{% set saved = saved or {} %}
+{% set has_std = entries.values() | selectattr('nominal', 'ne', None) | list %}
+{% if not has_std %}
+<div class="alert alert-warning small mb-2">
+    <i class="bi bi-exclamation-triangle"></i>
+    {% if dn %}
+    {{ 'لا يوجد استاندرد مسجل لـ' if is_ar else 'No standard on file for' }} DN{{ dn }} —
+    {{ 'أضفه من الإعدادات > الاستاندرد الأبعادي' if is_ar else 'add it in Settings > Dimension Standards' }}.
+    {{ 'القطر الداخلي (ID) فقط هو المتاح للقياس.' if is_ar else 'Only the internal diameter (ID) can be recorded.' }}
+    {% else %}
+    {{ 'حدد القطر الاسمي (DN) للماسورة أولاً' if is_ar else 'Set the pipe DN first' }}.
+    {% endif %}
+</div>
+{% endif %}
+<div class="table-responsive">
+    <table class="table table-sm table-bordered mb-0 text-center align-middle bg-white ovg-table">
+        <thead>
+            <tr class="table-secondary">
+                <th style="min-width: 92px;"></th>
+                {% for p in points %}
+                <th title="{{ dimension_symbol_label(p, 'ar' if is_ar else 'en') }}">{{ p }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="table-light">
+                <td class="fw-bold text-start">{{ 'الاستاندرد' if is_ar else 'Nominal' }}</td>
+                {% for p in points %}
+                {% set e = entries.get(p) %}
+                <td>{{ e.nominal if e and e.nominal is not none else '—' }}</td>
+                {% endfor %}
+            </tr>
+            <tr class="table-light">
+                <td class="fw-bold text-start">{{ 'السماح' if is_ar else 'Tolerance' }}</td>
+                {% for p in points %}
+                {% set e = entries.get(p) %}
+                <td class="small text-muted">
+                    {% if e and (e.tol_plus is not none or e.tol_minus is not none) %}
+                    {{ '+%s'|format(e.tol_plus) if e.tol_plus is not none else '' }}{{ ' / -%s'|format(e.tol_minus) if e.tol_minus is not none else '' }}
+                    {% else %}—{% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {# X and Y are the two perpendicular readings. Most symbols on the
+               sheet take one, so Y may legitimately stay empty. #}
+            {% for axis in ['x', 'y'] %}
+            <tr>
+                <td class="fw-bold text-start">{{ axis | upper }}</td>
+                {% for p in points %}
+                {% set e = entries.get(p) %}
+                {% set pv = saved.get(p) %}
+                {% set val = pv.get(axis) if pv else none %}
+                {% set out_of_tol = val is not none and e and (
+                    (e.lsl is not none and val < e.lsl) or
+                    (e.usl is not none and val > e.usl)) %}
+                <td>
+                    <input type="number" name="stage_{{ stage_name }}_ov_{{ axis }}_{{ p }}"
+                           class="form-control form-control-sm text-center px-1 ovg-{{ axis }}{{ ' border-danger text-danger' if out_of_tol }}"
+                           step="0.01" min="0" style="min-width: 62px;"
+                           data-point="{{ p }}"
+                           data-nominal="{{ e.nominal if e and e.nominal is not none else '' }}"
+                           data-lsl="{{ e.lsl if e and e.lsl is not none else '' }}"
+                           data-usl="{{ e.usl if e and e.usl is not none else '' }}"
+                           data-oval="{{ '1' if is_ovality_point(p) else '0' }}"
+                           value="{{ val if val is not none else '' }}">
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+            {# Deviation is measured from the mean of the readings actually
+               taken, which is also the number the SPC and capability reports
+               receive — see _symbols_from_ovality. #}
+            <tr class="table-light">
+                <td class="fw-bold text-start">{{ 'الفرق' if is_ar else 'Deviation' }}</td>
+                {% for p in points %}
+                {% set e = entries.get(p) %}
+                {% set pv = saved.get(p) %}
+                {% set vals = [pv.get('x'), pv.get('y')] | reject('none') | list if pv else [] %}
+                {% set mean = (vals | sum / vals | length) if vals else none %}
+                {% set out_of_tol = mean is not none and e and (
+                    (e.lsl is not none and mean < e.lsl) or
+                    (e.usl is not none and mean > e.usl)) %}
+                <td class="fw-bold std-dim-diff{{ ' text-danger' if out_of_tol }}" data-point="{{ p }}">
+                    {% if mean is not none and e and e.nominal is not none %}
+                    {{ (mean - e.nominal) | round(2) }}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            <tr class="table-info">
+                <td class="fw-bold text-start">{{ 'المتوسط' if is_ar else 'Average' }}</td>
+                {% for p in points %}
+                {% set pv = saved.get(p) %}
+                {% set vals = [pv.get('x'), pv.get('y')] | reject('none') | list if pv else [] %}
+                {% set mean = (vals | sum / vals | length) if vals else none %}
+                <td class="fw-bold ovg-mean" data-point="{{ p }}">
+                    {% if mean is not none %}{{ mean | round(2) }}{% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            <tr class="table-warning">
+                <td class="fw-bold text-start">{{ 'الأوفاليتي' if is_ar else 'Ovality' }}</td>
+                {# A profile saved while the rule was widened can still carry an
+                   ovality under a thickness. It is not one, so it is not shown. #}
+                {% for p in points %}
+                {% set pv = saved.get(p) %}
+                {% set ov = pv.get('ovality') if pv else none %}
+                <td class="ovg-pct fw-bold text-primary" data-point="{{ p }}">
+                    {% if ov is not none and is_ovality_point(p) %}{{ ov }}%{% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div class="small text-muted mt-2">
+    <i class="bi bi-info-circle"></i>
+    {{ 'الفرق = متوسط (X، Y) − الاستاندرد، والخانة تبقى حمراء لو خرجت عن السماح. المتوسط = (X+Y)/2. الأوفاليتي = (X−Y)/(X+Y) × 100 — للأقطار بس، مش للسماكات.' if is_ar
+       else 'Deviation = mean(X, Y) − standard; the cell turns red when the reading falls outside the tolerance. Average = (X+Y)/2. Ovality = (X−Y)/(X+Y) × 100 — on the diameters only, not on a thickness.' }}
+</div>
+{% endmacro %}
+
+
+{# Live recalculation of the deviation and ovality rows as the operator types.
+
+   Emitted once per page and bound with a delegated listener, so it covers a
+   grid that is swapped in later (the Stage Console replaces the whole pane on
+   every pipe change) without rebinding.
+#}
+{% macro ovality_standard_grid_script() %}
+<script>
+(function () {
+    if (window.__ovgBound) { return; }
+    window.__ovgBound = true;
+
+    function num(el) {
+        if (!el || el.value === '') { return null; }
+        var v = parseFloat(el.value);
+        return isNaN(v) ? null : v;
+    }
+
+    function flag(el) {
+        if (!el) { return; }
+        var v = num(el);
+        var lsl = el.dataset.lsl === '' ? null : parseFloat(el.dataset.lsl);
+        var usl = el.dataset.usl === '' ? null : parseFloat(el.dataset.usl);
+        var bad = v !== null && ((lsl !== null && v < lsl) || (usl !== null && v > usl));
+        el.classList.toggle('border-danger', bad);
+        el.classList.toggle('text-danger', bad);
+    }
+
+    function recalc(table, point) {
+        var xEl = table.querySelector('.ovg-x[data-point="' + point + '"]');
+        var yEl = table.querySelector('.ovg-y[data-point="' + point + '"]');
+        var devEl = table.querySelector('.std-dim-diff[data-point="' + point + '"]');
+        var pctEl = table.querySelector('.ovg-pct[data-point="' + point + '"]');
+        var x = num(xEl), y = num(yEl);
+
+        flag(xEl);
+        flag(yEl);
+
+        var taken = [x, y].filter(function (v) { return v !== null; });
+        if (devEl) {
+            var nominal = xEl && xEl.dataset.nominal !== ''
+                ? parseFloat(xEl.dataset.nominal) : null;
+            if (taken.length && nominal !== null) {
+                var mean = taken.reduce(function (a, b) { return a + b; }, 0) / taken.length;
+                devEl.textContent = (mean - nominal).toFixed(2);
+                var lsl = xEl.dataset.lsl === '' ? null : parseFloat(xEl.dataset.lsl);
+                var usl = xEl.dataset.usl === '' ? null : parseFloat(xEl.dataset.usl);
+                var bad = (lsl !== null && mean < lsl) || (usl !== null && mean > usl);
+                devEl.classList.toggle('text-danger', bad);
+            } else {
+                devEl.textContent = '';
+                devEl.classList.remove('text-danger');
+            }
+        }
+
+        var meanEl = table.querySelector('.ovg-mean[data-point="' + point + '"]');
+        if (meanEl) {
+            meanEl.textContent = taken.length
+                ? (taken.reduce(function (a, b) { return a + b; }, 0) / taken.length).toFixed(2)
+                : '';
+        }
+
+        // Only the diameters get one. data-oval carries the server's ruling so
+        // the cell and the stored profile never disagree — see
+        // dimension_standard_service.is_ovality_point.
+        if (pctEl) {
+            var oval = xEl && xEl.dataset.oval === '1';
+            if (oval && x !== null && y !== null && (x + y) !== 0) {
+                pctEl.textContent = ((x - y) / (x + y) * 100).toFixed(2) + '%';
+            } else {
+                pctEl.textContent = '';
+            }
+        }
+    }
+
+    document.addEventListener('input', function (ev) {
+        var el = ev.target;
+        if (!el.classList || !(el.classList.contains('ovg-x') || el.classList.contains('ovg-y'))) {
+            return;
+        }
+        var table = el.closest('.ovg-table');
+        if (table) { recalc(table, el.dataset.point); }
+    });
+
+    function initAll() {
+        document.querySelectorAll('.ovg-table').forEach(function (table) {
+            var seen = {};
+            table.querySelectorAll('.ovg-x').forEach(function (el) {
+                var pt = el.dataset.point;
+                if (!seen[pt]) { seen[pt] = true; recalc(table, pt); }
+            });
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAll);
+    } else {
+        initAll();
+    }
+})();
+</script>
+{% endmacro %}

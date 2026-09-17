@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% set is_ar = current_locale == 'ar' %}
+
+{% block title %}{{ 'شجرة التتبع' if is_ar else 'Traceability Canvas' }}{% endblock %}
+
+{% block content %}
+<div class="trace-board" data-canvas-url="{{ url_for('reports.traceability_tree_canvas') }}">
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2 d-print-hide">
+        <h4 class="mb-0 me-1">
+            <i class="bi bi-diagram-3"></i>
+            {{ 'شجرة التتبع' if is_ar else 'Traceability' }}
+        </h4>
+
+        {# Three views over the same canvas. Live is the shift view and the
+           default; order and pipe need something picked first. #}
+        <div class="btn-group btn-group-sm trace-modes" role="group">
+            <a class="btn {{ 'btn-primary' if mode == 'live' else 'btn-outline-secondary' }}"
+               href="{{ url_for('reports.traceability_tree', mode='live', problems=('1' if problems_only else None)) }}">
+                <i class="bi bi-activity"></i>
+                {{ 'الصالة الآن' if is_ar else 'Live' }}
+            </a>
+            <a class="btn {{ 'btn-primary' if mode == 'order' else 'btn-outline-secondary' }}"
+               href="{{ url_for('reports.traceability_tree', mode='order', root=root_query, problems=('1' if problems_only else None)) }}">
+                <i class="bi bi-clipboard-check"></i>
+                {{ 'أمر إنتاج' if is_ar else 'Order' }}
+            </a>
+            <a class="btn {{ 'btn-primary' if mode == 'pipe' else 'btn-outline-secondary' }}"
+               href="{{ url_for('reports.traceability_tree', mode='pipe', root=root_query, problems=('1' if problems_only else None)) }}">
+                <i class="bi bi-upc-scan"></i>
+                {{ 'ماسورة' if is_ar else 'Pipe' }}
+            </a>
+        </div>
+
+        <form method="get" class="d-flex flex-wrap align-items-center gap-2" id="traceForm">
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <select class="form-select form-select-sm" style="max-width: 230px;"
+                    onchange="document.getElementById('traceSearch').value = this.value; this.form.mode.value = 'order'; this.form.submit();">
+                <option value="">-- {{ 'اختر أمر إنتاج' if is_ar else 'Pick an order' }} --</option>
+                {% for o in orders %}
+                <option value="{{ o.order_number }}"
+                        {{ 'selected' if order and order.id == o.id }}>
+                    {{ o.order_number }} — {{ o.customer_name or '' }}
+                </option>
+                {% endfor %}
+            </select>
+            <input type="search" name="root" class="form-control form-control-sm"
+                   style="max-width: 230px;" id="traceSearch"
+                   placeholder="{{ 'أمر / شحنة / كود ماسورة / باركود' if is_ar else 'order / ladle / pipe / barcode' }}"
+                   value="{{ root_query }}">
+            <input type="hidden" name="expand" value="{{ expand }}">
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="traceProblems"
+                       name="problems" value="1" {{ 'checked' if problems_only }}
+                       onchange="this.form.submit()">
+                <label class="form-check-label small" for="traceProblems">
+                    {{ 'المشاكل فقط' if is_ar else 'Problems only' }}
+                </label>
+            </div>
+        </form>
+
+        <div class="ms-auto d-flex align-items-center gap-1">
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-secondary" id="traceZoomOut">−</button>
+                <button type="button" class="btn btn-outline-secondary" id="traceZoomFit">
+                    {{ 'ملء' if is_ar else 'Fit' }}
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="traceZoomIn">+</button>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                <i class="bi bi-printer"></i>
+            </button>
+        </div>
+    </div>
+
+    {% if subject %}
+    <div class="trace-subject small text-muted mb-2 d-print-hide">
+        {{ 'يعرض' if is_ar else 'Showing' }}: <strong>{{ subject }}</strong>
+    </div>
+    {% endif %}
+
+    {% if mode == 'pipe' and not pipe %}
+    <div class="alert alert-info py-2 d-print-hide">
+        {{ 'اكتب كود ماسورة أو امسح الباركود' if is_ar
+           else 'Type a pipe code or scan a barcode to see one pipe end to end.' }}
+    </div>
+    {% elif mode == 'order' and not order %}
+    <div class="alert alert-info py-2 d-print-hide">
+        {{ 'اختر أمر إنتاج' if is_ar else 'Pick a production order above.' }}
+    </div>
+    {% endif %}
+
+    {% if not_found %}
+    <div class="alert alert-warning py-2">
+        {{ 'لا يوجد سجل بهذا الرقم' if is_ar else 'Nothing found for that code.' }}
+    </div>
+    {% endif %}
+
+    <div class="row g-2">
+        <div class="col-lg-9">
+            <div class="trace-canvas-wrap card border-0 shadow-sm" id="traceCanvasWrap"
+                 data-focus="{{ focus or '' }}">
+                {% include 'reports/_traceability_canvas.html' %}
+            </div>
+
+            {# Timeline — when each step was decided, in order #}
+            {% if graph.timeline %}
+            <div class="card border-0 shadow-sm mt-2 d-print-hide">
+                <div class="card-body py-2 trace-timeline">
+                    <div class="small fw-bold mb-1">
+                        {{ 'الخط الزمني' if is_ar else 'Timeline' }}
+                    </div>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for t in graph.timeline %}
+                        <span class="badge trace-tl state-{{ t.state }}"
+                              title="{{ t.when }}">{{ t.label }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm trace-dock">
+                <div class="card-header py-2 d-flex align-items-center justify-content-between">
+                    <span class="fw-bold small" id="traceDockTitle">
+                        {{ 'المشاكل' if is_ar else 'Issues' }}
+                        <span class="badge bg-danger">{{ graph.issues | length }}</span>
+                    </span>
+                    <button class="btn btn-sm btn-link p-0 d-none" id="traceDockBack">
+                        <i class="bi bi-arrow-left"></i>
+                        {{ 'رجوع' if is_ar else 'back' }}
+                    </button>
+                </div>
+                <div class="card-body p-2 trace-dock-body" id="traceIssues">
+                    {% if not graph.issues %}
+                    <div class="text-muted small p-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        {{ 'لا مشاكل في هذا الأمر' if is_ar else 'No issues in this order.' }}
+                    </div>
+                    {% endif %}
+                    {% for i in graph.issues %}
+                    <button type="button"
+                            class="trace-issue w-100 text-start state-{{ i.severity }}"
+                            data-node="{{ i.node }}">
+                        <div class="d-flex justify-content-between">
+                            <strong class="small">{{ i.title }}</strong>
+                            <span class="badge trace-sev-{{ i.severity }}">{{ i.severity }}</span>
+                        </div>
+                        <div class="small text-muted">
+                            {{ i.decision or '' }}
+                            {% if i.who %}· {{ i.who }}{% endif %}
+                            {% if i.when %}· {{ i.when }}{% endif %}
+                        </div>
+                    </button>
+                    {% endfor %}
+                </div>
+                <div class="card-body p-2 trace-dock-body d-none" id="traceNodePane"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/traceability.js') }}"></script>
+{% endblock %}

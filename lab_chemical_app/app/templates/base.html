@@ -3,7 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Lab Chemical Analysis{% endblock %}</title>
+    <!-- Read by fetch()-based POSTs (e.g. the permission matrix) to satisfy CSRFProtect -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- The app is served both bare on :9999 and mounted under
+         https://www.mbardouni.dev/lab_chemical. Jinja gets the prefix for free
+         from url_for(); hand-written fetch() paths in page scripts do not, so
+         they must be built from APP_ROOT. Empty string when mounted at root. -->
+    <script>window.APP_ROOT = "{{ request.script_root }}";</script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>{% block title %}GCP QC Pipes Traceability{% endblock %}</title>
 
     <!-- Bootstrap 5 CSS (RTL support) -->
     {% if current_locale == 'ar' %}
@@ -12,274 +22,918 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     {% endif %}
 
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <!-- Bootstrap Icons (1.13.1 — bi-flask and newer icons exist from this line) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
 
-    <!-- Custom CSS -->
+
+    <!-- Google Fonts: Inter (EN) + IBM Plex Sans Arabic (AR) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS (design system: tokens, layout, components, print) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('main.index') }}">
+
+<div class="dashboard-wrapper">
+    {# The collapsed state rides on a cookie rather than localStorage so the
+       class is already on the element in the served HTML. Restoring it from JS
+       after DOMContentLoaded painted a full-width sidebar first, on every
+       single page load. #}
+    <!-- Sidebar -->
+    <aside class="sidebar {{ 'collapsed' if request.cookies.get('sidebar_collapsed') == '1' }}" id="sidebar">
+        <div class="sidebar-brand">
+            <a href="{{ url_for('main.index') }}">
                 <i class="bi bi-flask"></i>
+                <span>
                 {% if current_locale == 'ar' %}
-                مختبر التحليل الكيميائي
+                نظام GCP
                 {% else %}
-                Lab Chemical Analysis
+                GCP QC Trace
                 {% endif %}
+                </span>
             </a>
-
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+            <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" type="button" aria-label="Toggle sidebar">
+                <i class="bi bi-chevron-left"></i>
             </button>
+        </div>
+        
+        {% if current_user.is_authenticated %}
+        {% set ep = request.endpoint or '' %}
+        {% set nav = {
+            'dashboard': ep == 'main.index',
+            'chemical': ep.startswith('chemical.'),
+            'orders': ep.startswith('production_orders.'),
+            'stages': ep.startswith('stages.'),
+            'mechanical': ep.startswith('mechanical.'),
+            'reports': ep.startswith('reports.') or ep.startswith('analytics.'),
+            'stickers': ep.startswith('stickers.'),
+            'chatbot': ep.startswith('chatbot.'),
+            'admin': ep.startswith('admin.'),
+        } %}
+        {# Group visibility. Each eyebrow is rendered only when at least one of
+           its children survives can(), otherwise an operator sees a heading
+           over nothing. #}
+        {% set g_lab      = can('chemical', 'list') or can('chemical', 'add')
+                            or can('mechanical', 'list') or can('mechanical', 'add') %}
+        {% set g_prod     = can('orders', 'list') or can('orders', 'add') or can('certificates', 'list')
+                            or can('stages', 'list') or can('stages', 'add') or can('stages', 'delivery')
+                            or can('warehouse', 'scan') %}
+        <ul class="nav flex-column sidebar-nav">
+            <!-- Dashboard -->
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if nav.dashboard }}" href="{{ url_for('main.index') }}">
+                    <i class="bi bi-house"></i>
+                    <span>{{ 'الرئيسية' if current_locale == 'ar' else 'Dashboard' }}</span>
+                </a>
+            </li>
 
-            <div class="collapse navbar-collapse" id="navbarNav">
-                {% if current_user.is_authenticated %}
-                <ul class="navbar-nav me-auto">
-                    <!-- Dashboard -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.index') }}">
-                            <i class="bi bi-house"></i>
-                            {{ 'الرئيسية' if current_locale == 'ar' else 'Dashboard' }}
-                        </a>
-                    </li>
+            {% if g_lab %}<li class="sidebar-group-label">{{ 'المختبر' if current_locale == 'ar' else 'Laboratory' }}</li>{% endif %}
 
-                    <!-- Chemical Analysis -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-flask"></i>
-                            {{ 'التحليل الكيميائي' if current_locale == 'ar' else 'Chemical' }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('chemical.list') }}">
-                                {{ 'القائمة' if current_locale == 'ar' else 'List' }}
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('chemical.add') }}">
-                                {{ 'إضافة جديد' if current_locale == 'ar' else 'Add New' }}
-                            </a></li>
-                        </ul>
-                    </li>
+            <!-- Chemical Analysis -->
+            {% if can('chemical', 'list') or can('chemical', 'add') %}
+            <li class="nav-item">
+                <a class="nav-link collapsed {{ 'group-active' if nav.chemical }}" data-bs-toggle="collapse" href="#chem-collapse" role="button" aria-expanded="{{ 'true' if nav.chemical else 'false' }}">
+                    <i class="bi bi-flask"></i>
+                    <span>{{ 'التحليل الكيميائي' if current_locale == 'ar' else 'Chemical' }}</span>
+                    <i class="bi bi-chevron-down ms-auto" style="font-size:0.8em;"></i>
+                </a>
+                <div class="collapse {{ 'show' if nav.chemical }}" id="chem-collapse">
+                    <ul class="nav flex-column">
+                        {% if can('chemical', 'list') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'chemical.list' }}" href="{{ url_for('chemical.list') }}">{{ 'القائمة' if current_locale == 'ar' else 'List' }}</a></li>
+                        {% endif %}
+                        {% if can('chemical', 'add') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'chemical.add' }}" href="{{ url_for('chemical.add') }}">{{ 'إضافة جديد' if current_locale == 'ar' else 'Add New' }}</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
 
-                    <!-- Production Orders -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-clipboard-check"></i>
-                            {{ 'أوامر الإنتاج' if current_locale == 'ar' else 'Orders' }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('production_orders.index') }}">
-                                {{ 'قائمة الأوامر' if current_locale == 'ar' else 'Orders List' }}
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('production_orders.add') }}">
-                                {{ 'أمر إنتاج جديد' if current_locale == 'ar' else 'New Order' }}
-                            </a></li>
-                        </ul>
-                    </li>
+            <!-- Mechanical Tests -->
+            {% if can('mechanical', 'list') or can('mechanical', 'add') %}
+            <li class="nav-item">
+                <a class="nav-link collapsed {{ 'group-active' if nav.mechanical }}" data-bs-toggle="collapse" href="#mech-collapse" role="button" aria-expanded="{{ 'true' if nav.mechanical else 'false' }}">
+                    <i class="bi bi-gear"></i>
+                    <span>{{ 'الاختبارات الميكانيكية' if current_locale == 'ar' else 'Mechanical' }}</span>
+                    <i class="bi bi-chevron-down ms-auto" style="font-size:0.8em;"></i>
+                </a>
+                <div class="collapse {{ 'show' if nav.mechanical }}" id="mech-collapse">
+                    <ul class="nav flex-column">
+                        {% if can('mechanical', 'list') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'mechanical.list' }}" href="{{ url_for('mechanical.list') }}">{{ 'القائمة' if current_locale == 'ar' else 'List' }}</a></li>
+                        {% endif %}
+                        {% if can('mechanical', 'add') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'mechanical.add' }}" href="{{ url_for('mechanical.add') }}">{{ 'إضافة اختبار' if current_locale == 'ar' else 'Add Test' }}</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
 
-                    <!-- Production Stages -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-diagram-3"></i>
-                            {{ 'مراحل الإنتاج' if current_locale == 'ar' else 'Stages' }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('stages.list') }}">
-                                {{ 'قائمة الأنابيب' if current_locale == 'ar' else 'Pipes List' }}
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('stages.add') }}">
-                                {{ 'تسجيل أنبوب' if current_locale == 'ar' else 'Register Pipe' }}
-                            </a></li>
-                        </ul>
-                    </li>
+            {% if g_prod %}<li class="sidebar-group-label">{{ 'الإنتاج' if current_locale == 'ar' else 'Production' }}</li>{% endif %}
 
-                    <!-- Mechanical Tests -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-gear"></i>
-                            {{ 'الاختبارات الميكانيكية' if current_locale == 'ar' else 'Mechanical' }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('mechanical.list') }}">
-                                {{ 'القائمة' if current_locale == 'ar' else 'List' }}
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('mechanical.add') }}">
-                                {{ 'إضافة اختبار' if current_locale == 'ar' else 'Add Test' }}
-                            </a></li>
-                        </ul>
-                    </li>
+            <!-- Production Orders -->
+            {% if can('orders', 'list') or can('orders', 'add') or can('certificates', 'list') %}
+            <li class="nav-item">
+                <a class="nav-link collapsed {{ 'group-active' if nav.orders }}" data-bs-toggle="collapse" href="#orders-collapse" role="button" aria-expanded="{{ 'true' if nav.orders else 'false' }}">
+                    <i class="bi bi-clipboard-check"></i>
+                    <span>{{ 'أوامر الإنتاج' if current_locale == 'ar' else 'Orders' }}</span>
+                    <i class="bi bi-chevron-down ms-auto" style="font-size:0.8em;"></i>
+                </a>
+                <div class="collapse {{ 'show' if nav.orders }}" id="orders-collapse">
+                    <ul class="nav flex-column">
+                        {% if can('orders', 'list') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'production_orders.index' }}" href="{{ url_for('production_orders.index') }}">{{ 'قائمة الأوامر' if current_locale == 'ar' else 'Orders List' }}</a></li>
+                        {% endif %}
+                        {% if can('orders', 'add') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'production_orders.add' }}" href="{{ url_for('production_orders.add') }}">{{ 'أمر إنتاج جديد' if current_locale == 'ar' else 'New Order' }}</a></li>
+                        {% endif %}
+                        {% if can('certificates', 'list') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep.startswith('certificates.') }}" href="{{ url_for('certificates.index') }}">{{ 'الشهادات' if current_locale == 'ar' else 'Certificates' }}</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
 
-                    <!-- Reports -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-file-earmark-bar-graph"></i>
-                            {{ 'التقارير' if current_locale == 'ar' else 'Reports' }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('reports.index') }}">
-                                {{ 'لوحة التقارير' if current_locale == 'ar' else 'Reports Dashboard' }}
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('reports.daily_production') }}">
-                                {{ 'الإنتاج اليومي' if current_locale == 'ar' else 'Daily Production' }}
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('reports.chemical_analysis') }}">
-                                {{ 'تقرير التحليل الكيميائي' if current_locale == 'ar' else 'Chemical Report' }}
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('reports.defect_summary') }}">
-                                {{ 'ملخص العيوب' if current_locale == 'ar' else 'Defect Summary' }}
-                            </a></li>
-                        </ul>
-                    </li>
+            <!-- Production Stages -->
+            {% if can('stages', 'list') or can('stages', 'add') or can('stages', 'delivery') %}
+            <li class="nav-item">
+                <a class="nav-link collapsed {{ 'group-active' if nav.stages }}" data-bs-toggle="collapse" href="#stages-collapse" role="button" aria-expanded="{{ 'true' if nav.stages else 'false' }}">
+                    <i class="bi bi-diagram-3"></i>
+                    <span>{{ 'مراحل الإنتاج' if current_locale == 'ar' else 'Stages' }}</span>
+                    <i class="bi bi-chevron-down ms-auto" style="font-size:0.8em;"></i>
+                </a>
+                <div class="collapse {{ 'show' if nav.stages }}" id="stages-collapse">
+                    <ul class="nav flex-column">
+                        {% if can('stages', 'list') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep in ['stages.list', 'stages.detail'] }}" href="{{ url_for('stages.list') }}">{{ 'قائمة الأنابيب' if current_locale == 'ar' else 'Pipes List' }}</a></li>
+                        {% endif %}
+                        {% if can('stages', 'add') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'stages.add' }}" href="{{ url_for('stages.add') }}">{{ 'تسجيل أنبوب' if current_locale == 'ar' else 'Register Pipe' }}</a></li>
+                        {% endif %}
+                        {% if can('stages', 'edit') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'stages.console' }}" href="{{ url_for('stages.console') }}"><i class="bi bi-lightning-charge"></i> {{ 'وحدة تسجيل المراحل' if current_locale == 'ar' else 'Stage Console' }}</a></li>
+                        {% endif %}
+                        {% if can('stages', 'delivery') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'stages.delivery_list' }}" href="{{ url_for('stages.delivery_list') }}"><i class="bi bi-truck"></i> {{ 'سجل التسليم' if current_locale == 'ar' else 'Deliveries' }}</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
 
-                    <!-- Stickers -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('stickers.index') }}">
-                            <i class="bi bi-qr-code"></i>
-                            {{ 'الملصقات' if current_locale == 'ar' else 'Stickers' }}
-                        </a>
-                    </li>
+            <!-- Warehouse receiving -->
+            {% if can('warehouse', 'scan') %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if ep in ['warehouse.scan', 'warehouse.receive'] }}" href="{{ url_for('warehouse.scan') }}">
+                    <i class="bi bi-upc-scan"></i>
+                    <span>{{ 'استلام المخزن' if current_locale == 'ar' else 'Warehouse' }}</span>
+                </a>
+            </li>
+            {% endif %}
 
-                    <!-- AI Chatbot -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('chatbot.index') }}">
-                            <i class="bi bi-robot"></i>
-                            {{ 'المساعد الذكي' if current_locale == 'ar' else 'AI Assistant' }}
-                        </a>
-                    </li>
+            <!-- Reports -->
+            {# Each sidebar report carries its own permission key, so the group is
+               driven by a table rather than one blanket 'view'. Reports that live
+               only inside the CCM BI hub (Non-Conformance, Heat Traceability, Mold
+               Performance) are intentionally absent here — the hub is their entry
+               point and repeating them duplicated the same page in two places. #}
+            {% set report_links = [
+                ('list',                   'reports.index',                  'bi-house',           'لوحة التقارير',    'Reports Dash',             none),
+                ('bi_dashboard',           'reports.bi_dashboard',           'bi-bar-chart-steps', 'لوحة CCM',         'CCM BI Dashboard',         none),
+                ('management_dashboard',   'reports.management_dashboard',   'bi-speedometer2',    'لوحة الإدارة',     'Management Dash',          none),
+                ('andon',                  'reports.andon',                  'bi-broadcast-pin',   'لوحة الصالة',      'Andon Board',              none),
+                ('production_summary',     'reports.production_summary',     '',                   'ملخص الإنتاج',     'Production Summary',       'Production'),
+                ('order_performance',      'reports.order_performance',      '',                   'أداء الطلبيات',    'Order Performance',        'Production'),
+                ('customer_production',    'reports.customer_production',    '',                   'إنتاج العملاء',    'Customer Production',      'Production'),
+                ('delivery_report',        'reports.delivery_report',        '',                   'تقرير التسليم',    'Delivery Report',          'Production'),
+                ('rft_report',             'reports.rft_report',             '',                   'تقرير RFT',        'RFT Report',               'Quality'),
+                ('defect_analysis',        'reports.defect_analysis',        '',                   'تحليل العيوب',     'Defect Analysis (Pareto)', 'Quality'),
+                ('mechanical_statistical', 'reports.mechanical_statistical', '',                   'إحصاء ميكانيكي',   'Mechanical Statistical',   'Quality'),
+                ('traceability_tree',      'reports.traceability_tree',      '',                   'شجرة التتبع',      'Traceability Canvas',      'Quality'),
+                ('stage_performance',      'reports.stage_performance_v2',   '',                   'أداء المراحل',     'Stage Performance',        'Performance'),
+                ('machine_performance',    'reports.machine_performance_v2', '',                   'أداء الماكينات',   'Machine Performance',      'Performance'),
+                ('weight_saving',          'reports.weight_saving',          '',                   'توفير الوزن',      'Weight Saving',            'Performance'),
+                ('annealing_hourly',       'reports.annealing_hourly',       '',                   'التلدين بالساعة',  'Annealing Hourly',         'Performance')
+            ] %}
+            {% set section_labels = {'Production': 'الإنتاج', 'Quality': 'الجودة', 'Performance': 'الأداء'} %}
+            {% set rnav = namespace(links=[]) %}
+            {% for row in report_links %}{% if can('reports', row[0]) %}{% set rnav.links = rnav.links + [row] %}{% endif %}{% endfor %}
+            {% set can_reports = rnav.links | length > 0 %}
+            {% set can_analytics = can('analytics', 'pivot') or can('analytics', 'import') %}
+            {% if can_reports or can_analytics or can('stickers', 'list') or can('chatbot', 'view') %}
+            <li class="sidebar-group-label">{{ 'التحليل' if current_locale == 'ar' else 'Analysis' }}</li>
+            {% endif %}
+            {% if can_reports or can_analytics %}
+            <li class="nav-item">
+                <a class="nav-link collapsed {{ 'group-active' if nav.reports }}" data-bs-toggle="collapse" href="#reports-collapse" role="button" aria-expanded="{{ 'true' if nav.reports else 'false' }}">
+                    <i class="bi bi-file-earmark-bar-graph"></i>
+                    <span>{{ 'التقارير' if current_locale == 'ar' else 'Reports' }}</span>
+                    <i class="bi bi-chevron-down ms-auto" style="font-size:0.8em;"></i>
+                </a>
+                <div class="collapse {{ 'show' if nav.reports }}" id="reports-collapse">
+                    <ul class="nav flex-column">
+                        {% set rsec = namespace(current='') %}
+                        {% for screen, endpoint, icon, label_ar, label_en, section in rnav.links %}
+                          {% if section and section != rsec.current %}
+                        <li class="sidebar-section-label">{{ section_labels.get(section, section) if current_locale == 'ar' else section }}</li>
+                          {% set rsec.current = section %}
+                          {% endif %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == endpoint }}" href="{{ url_for(endpoint) }}">{% if icon %}<i class="bi {{ icon }}"></i> {% endif %}{{ label_ar if current_locale == 'ar' else label_en }}</a></li>
+                        {% endfor %}
 
-                    <!-- Admin (only for admin users) -->
-                    {% if current_user.is_admin %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-shield-lock"></i>
-                            {{ 'الإدارة' if current_locale == 'ar' else 'Admin' }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('admin.users') }}">
-                                {{ 'المستخدمين' if current_locale == 'ar' else 'Users' }}
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('admin.settings') }}">
-                                {{ 'الإعدادات' if current_locale == 'ar' else 'Settings' }}
-                            </a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                </ul>
+                        {% if can_analytics %}
+                        <li class="sidebar-section-label">{{ 'أدوات التحليل' if current_locale == 'ar' else 'Analytics Suite' }}</li>
+                        {% if can('analytics', 'pivot') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'analytics.pivot' }}" href="{{ url_for('analytics.pivot') }}"><i class="bi bi-table"></i> Pivot Designer</a></li>
+                        {% endif %}
+                        {% if can('analytics', 'import') %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == 'analytics.import_data' }}" href="{{ url_for('analytics.import_data') }}"><i class="bi bi-upload"></i> Import Data</a></li>
+                        {% endif %}
+                        {% endif %}
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
 
-                <!-- Right side -->
-                <ul class="navbar-nav">
-                    <!-- Language Switcher -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-globe"></i>
-                            {{ 'العربية' if current_locale == 'ar' else 'English' }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ url_for('auth.set_language', lang='en') }}">
-                                🇬🇧 English
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('auth.set_language', lang='ar') }}">
-                                🇸🇦 العربية
-                            </a></li>
-                        </ul>
-                    </li>
+            <!-- Stickers -->
+            {% if can('stickers', 'list') %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if nav.stickers }}" href="{{ url_for('stickers.index') }}">
+                    <i class="bi bi-qr-code"></i>
+                    <span>{{ 'الملصقات' if current_locale == 'ar' else 'Stickers' }}</span>
+                </a>
+            </li>
+            {% endif %}
 
-                    <!-- User Menu -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i>
-                            {{ current_user.full_name or current_user.username }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><span class="dropdown-item-text text-muted">
-                                <small>{{ current_user.role }}</small>
-                            </span></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
-                                <i class="bi bi-box-arrow-right"></i>
-                                {{ 'تسجيل الخروج' if current_locale == 'ar' else 'Logout' }}
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
-                {% endif %}
+            <!-- AI Chatbot -->
+            {% if can('chatbot', 'view') %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if nav.chatbot }}" href="{{ url_for('chatbot.index') }}">
+                    <i class="bi bi-robot"></i>
+                    <span>{{ 'المساعد الذكي' if current_locale == 'ar' else 'AI Assistant' }}</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <!-- Admin -->
+            {% set admin_screens = [
+                ('users_list',              'admin.users',              'المستخدمين',    'Users'),
+                ('settings_list',           'admin.settings',           'الإعدادات',      'Settings'),
+                ('backups_list',            'admin.backups',            'النسخ الاحتياطي', 'Backups'),
+                ('production_stages_list',  'admin.stages',             'إدارة المراحل',  'Stage Management'),
+                ('product_parameters_list', 'admin.product_parameters', 'معلمات المنتج',  'Product Parameters'),
+                ('products_list',           'admin.products',           'المنتجات',      'Products'),
+                ('customers_list',          'admin.customers',          'العملاء',        'Customers'),
+                ('molds_list',              'admin.molds',              'القوالب',        'Molds'),
+                ('furnaces_list',           'admin.furnaces',           'الأفران',        'Furnaces'),
+                ('machines_list',           'admin.machines',           'الماكينات',      'Machines'),
+                ('decision_types_list',     'admin.decision_types',     'أنواع القرارات', 'Decision Types'),
+                ('defect_types_list',       'admin.defect_types',       'أنواع العيوب',   'Defect Types'),
+                ('reason_types_list',       'admin.reason_types',       'أسباب القرارات', 'Reason Types'),
+                ('defect_reasons_list',     'admin.defect_reasons',     'أسباب العيوب',   'Defect Reasons'),
+                ('ai_settings_list',        'admin.ai_settings',        'إعدادات الذكاء الاصطناعي', 'AI Settings'),
+                ('sticker_settings_list',   'admin.sticker_settings',   'إعدادات الملصقات', 'Sticker Settings'),
+                ('audit_list',              'admin.audit_log',          'سجل المراجعة',   'Audit Log'),
+            ] %}
+            {% set show_admin = current_user.is_super_admin
+                                or can('admin', 'users_list') or can('admin', 'settings_list')
+                                or can('admin', 'production_stages_list')
+                                or can('admin', 'product_parameters_list') or can('admin', 'products_list')
+                                or can('admin', 'customers_list') or can('admin', 'molds_list')
+                                or can('admin', 'furnaces_list') or can('admin', 'machines_list')
+                                or can('admin', 'decision_types_list') or can('admin', 'defect_types_list')
+                                or can('admin', 'reason_types_list') or can('admin', 'defect_reasons_list')
+                                or can('admin', 'ai_settings_list') or can('admin', 'sticker_settings_list')
+                                or can('admin', 'audit_list') %}
+            {% if show_admin %}
+            <li class="sidebar-group-label">{{ 'النظام' if current_locale == 'ar' else 'System' }}</li>
+            <li class="nav-item">
+                <a class="nav-link collapsed {{ 'group-active' if nav.admin }}" data-bs-toggle="collapse" href="#admin-collapse" role="button" aria-expanded="{{ 'true' if nav.admin else 'false' }}">
+                    <i class="bi bi-shield-lock"></i>
+                    <span>{{ 'الإدارة' if current_locale == 'ar' else 'Admin' }}</span>
+                    <i class="bi bi-chevron-down ms-auto" style="font-size:0.8em;"></i>
+                </a>
+                <div class="collapse {{ 'show' if nav.admin }}" id="admin-collapse">
+                    <ul class="nav flex-column">
+                        {% for screen, endpoint, label_ar, label_en in admin_screens %}
+                        {% if can('admin', screen) %}
+                        <li class="nav-item"><a class="nav-link {{ 'active' if ep == endpoint }}" href="{{ url_for(endpoint) }}">{{ label_ar if current_locale == 'ar' else label_en }}</a></li>
+                        {% endif %}
+                        {% endfor %}
+                        {% if current_user.is_super_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link {{ 'active' if ep == 'admin.permissions' }}" href="{{ url_for('admin.permissions') }}">
+                                {{ 'الصلاحيات' if current_locale == 'ar' else 'Permissions' }}
+                                <i class="bi bi-shield-lock-fill ms-1 small text-purple"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+        </ul>
+
+        {# Who is signed in belongs on the rail, not only behind a topbar
+           dropdown. Initials rather than an avatar: there are no user photos. #}
+        {% set _u = current_user.full_name or current_user.username %}
+        <div class="sidebar-user">
+            <div class="sidebar-user-inner">
+                <span class="sidebar-user-avatar" aria-hidden="true">{{ _u[:2] | upper }}</span>
+                <div class="sidebar-user-meta">
+                    <div class="sidebar-user-name" title="{{ _u }}">{{ _u }}</div>
+                    <div class="sidebar-user-role">{{ current_user.role }}</div>
+                </div>
+                <a class="sidebar-user-logout" href="{{ url_for('auth.logout') }}"
+                   title="{{ 'تسجيل الخروج' if current_locale == 'ar' else 'Logout' }}">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
             </div>
         </div>
-    </nav>
+        {% endif %}
+    </aside>
 
-    <!-- Flash Messages -->
-    <div class="container mt-3">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-    </div>
+    <!-- Dims the page behind the mobile drawer and closes it on tap -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
     <!-- Main Content -->
-    <main class="container-fluid py-3">
-        {% block content %}{% endblock %}
-    </main>
+    <div class="main-content flex-grow-1">
+        <!-- Topbar -->
+        <div class="topbar">
+            <button class="btn btn-light sidebar-toggler border" id="sidebarToggle">
+                <i class="bi bi-list fs-4"></i>
+            </button>
 
-    <!-- Footer -->
-    <footer class="footer mt-auto py-3 bg-light">
-        <div class="container text-center">
-            <span class="text-muted">
-                {{ 'مختبر التحليل الكيميائي' if current_locale == 'ar' else 'Lab Chemical Analysis App' }}
-                &copy; 2025
-            </span>
+            {% set _raw_title = self.title() | trim %}
+            {% set _page_title = _raw_title
+                | replace(' - GCP QC Pipes Traceability', '')
+                | replace('GCP QC Pipes Traceability', '')
+                | trim %}
+            <div class="topbar-heading">
+                <h1 class="topbar-title">{{ _page_title or ('الرئيسية' if current_locale == 'ar' else 'Dashboard') }}</h1>
+                <p class="topbar-breadcrumb">
+                    <a href="{{ url_for('main.index') }}">GCP QC Trace</a>
+                    {% if _page_title %}<span class="mx-1">/</span>{{ _page_title }}{% endif %}
+                </p>
+            </div>
+
+            {% if current_user.is_authenticated %}
+            {% set _who = (current_user.full_name_ar if current_locale == 'ar' else current_user.full_name)
+                          or current_user.full_name or current_user.username %}
+            {% set _initials = (_who.split() | map('first') | join)[:2] | upper %}
+            <div class="topbar-actions ms-auto">
+                {% if can('stages', 'list') %}
+                <form class="topbar-search" method="get" action="{{ url_for('stages.go') }}" role="search">
+                    <i class="bi bi-search"></i>
+                    <input type="search" name="q" id="topbar-pipe-search"
+                           value="{{ request.args.get('pipe_code', request.args.get('q', '')) }}"
+                           placeholder="{{ 'بحث برقم الأنبوب…' if current_locale == 'ar' else 'Search pipe code…' }}"
+                           aria-label="{{ 'بحث' if current_locale == 'ar' else 'Search' }}"
+                           autocomplete="off">
+                    <kbd aria-hidden="true">/</kbd>
+                    <div class="topbar-search-results" id="topbar-search-results" hidden></div>
+                </form>
+                <div class="topbar-divider"></div>
+                {% endif %}
+
+                {# KPI alerts. Polls rather than being pushed: the app has no
+                   background worker, so whoever is looking is what makes the
+                   day's readings recalculate. #}
+                {% if can('analytics', 'kpis') %}
+                <div class="dropdown">
+                    <a class="topbar-icon-btn" href="#" role="button" data-bs-toggle="dropdown"
+                       id="kpiAlertBell"
+                       aria-label="{{ 'تنبيهات المؤشرات' if current_locale == 'ar' else 'KPI alerts' }}"
+                       title="{{ 'تنبيهات المؤشرات' if current_locale == 'ar' else 'KPI alerts' }}">
+                        <i class="bi bi-bell"></i>
+                        <span class="topbar-badge" id="kpiAlertCount" hidden>0</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end"
+                        style="min-width: 340px;" id="kpiAlertMenu">
+                        <li><h6 class="dropdown-header">
+                            {{ 'تنبيهات اليوم' if current_locale == 'ar' else "Today's alerts" }}
+                        </h6></li>
+                        <li><div class="dropdown-item-text text-muted small" id="kpiAlertEmpty">
+                            {{ 'جارٍ التحميل…' if current_locale == 'ar' else 'Loading…' }}
+                        </div></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('alerts.index') }}">
+                            <i class="bi bi-list-ul"></i>
+                            {{ 'كل التنبيهات' if current_locale == 'ar' else 'All alerts' }}
+                        </a></li>
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Language Switcher -->
+                <div class="dropdown">
+                    <a class="topbar-lang" href="#" role="button" data-bs-toggle="dropdown"
+                       aria-label="{{ 'اللغة' if current_locale == 'ar' else 'Language' }}">
+                        <i class="bi bi-globe2"></i>
+                        <span>{{ 'ع' if current_locale == 'ar' else 'EN' }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item {{ 'active' if current_locale != 'ar' }}" href="{{ url_for('auth.set_language', lang='en') }}">🇬🇧 English</a></li>
+                        <li><a class="dropdown-item {{ 'active' if current_locale == 'ar' }}" href="{{ url_for('auth.set_language', lang='ar') }}">🇸🇦 العربية</a></li>
+                    </ul>
+                </div>
+
+                <div class="topbar-divider"></div>
+
+                <!-- User Menu -->
+                <div class="dropdown">
+                    <a class="topbar-user" href="#" role="button" data-bs-toggle="dropdown">
+                        <span class="topbar-avatar">{{ _initials }}</span>
+                        <span class="topbar-user-meta">
+                            <span class="topbar-user-name">{{ _who }}</span>
+                            <span class="topbar-user-role">{{ current_user.role | replace('_', ' ') }}</span>
+                        </span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 220px;">
+                        <li><h6 class="dropdown-header">{{ _who }}</h6></li>
+                        <li><span class="dropdown-item-text text-muted small pt-0">{{ current_user.role | replace('_', ' ') }}</span></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> {{ 'تسجيل الخروج' if current_locale == 'ar' else 'Logout' }}</a></li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
         </div>
-    </footer>
 
-    <!-- Floating Chat Button -->
-    {% if current_user.is_authenticated %}
-    <a href="{{ url_for('chatbot.index') }}" class="floating-chat-btn" title="{{ 'المساعد الذكي' if current_locale == 'ar' else 'AI Assistant' }}">
-        <i class="bi bi-robot"></i>
-    </a>
-    <style>
-    .floating-chat-btn {
-        position: fixed;
-        bottom: 30px;
-        {{ 'left' if current_locale == 'ar' else 'right' }}: 30px;
-        width: 60px;
-        height: 60px;
-        background: linear-gradient(135deg, #0d6efd, #6f42c1);
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        text-decoration: none;
-        box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4);
-        transition: all 0.3s ease;
-        z-index: 1000;
+        <!-- Flash Messages -->
+        <div class="container-fluid mt-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Page Content -->
+        <div class="container-fluid py-3">
+            {% block content %}{% endblock %}
+        </div>
+
+        <!-- Spacer for footer -->
+        <div class="flex-grow-1"></div>
+
+        <!-- Footer -->
+        <footer class="footer mt-auto py-3 bg-white border-top">
+            <div class="container-fluid text-center">
+                <span class="text-muted">
+                    {{ 'نظام تتبع جودة الأنابيب GCP' if current_locale == 'ar' else 'GCP QC Pipes Traceability' }}
+                    &copy; 2025
+                </span>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<!-- Floating Chat Button — hidden on chatbot page itself -->
+{% if current_user.is_authenticated and request.endpoint != 'chatbot.index' %}
+<a href="{{ url_for('chatbot.index') }}" class="floating-chat-btn" title="{{ 'المساعد الذكي' if current_locale == 'ar' else 'AI Assistant' }}">
+    <i class="bi bi-robot"></i>
+</a>
+{% endif %}
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Sidebar Toggle Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var sidebar = document.getElementById('sidebar');
+        var hamburger = document.getElementById('sidebarToggle');
+        var collapseBtn = document.getElementById('sidebarCollapseBtn');
+
+        var backdrop = document.getElementById('sidebarBackdrop');
+
+        /* Mobile drawer. It used to open with no way to close it: the backdrop
+           did not exist, and the hamburger it was covering was the only handle. */
+        function closeDrawer() {
+            if (!sidebar) return;
+            sidebar.classList.remove('show');
+            if (backdrop) backdrop.classList.remove('show');
+        }
+
+        if (hamburger && sidebar) {
+            hamburger.addEventListener('click', function() {
+                var open = sidebar.classList.toggle('show');
+                if (backdrop) backdrop.classList.toggle('show', open);
+            });
+        }
+        if (backdrop) backdrop.addEventListener('click', closeDrawer);
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeDrawer();
+        });
+        /* Navigating away from the drawer closes it; a group toggle does not. */
+        if (sidebar) {
+            sidebar.addEventListener('click', function(e) {
+                var link = e.target.closest('a.nav-link');
+                if (link && !link.hasAttribute('data-bs-toggle')) closeDrawer();
+            });
+        }
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 992) closeDrawer();
+        });
+
+        /* Collapse (desktop). The state is persisted in a cookie so the server
+           renders it on the element — see the aside's class above. */
+        if (collapseBtn && sidebar) {
+            collapseBtn.addEventListener('click', function() {
+                var collapsed = sidebar.classList.toggle('collapsed');
+                document.cookie = 'sidebar_collapsed=' + (collapsed ? '1' : '0') +
+                                  ';path=/;max-age=31536000;samesite=Lax';
+                if (collapsed) hideFlyout();
+            });
+        }
+
+        /* While collapsed the sub-menus are display:none, so letting Bootstrap
+           run its collapse on a group click only toggled aria-expanded — the
+           row lit up and stayed lit with nothing to show for it. The flyout is
+           the collapsed-mode affordance instead.
+
+           This cancels the collapse rather than the click: Bootstrap registers
+           its delegated data-api handlers on document in the CAPTURE phase, so
+           stopping the click anywhere inside the sidebar is already too late. */
+        document.addEventListener('show.bs.collapse', function(e) {
+            if (!sidebar || !sidebar.contains(e.target)) return;
+            if (!sidebar.classList.contains('collapsed')) return;
+            if (window.innerWidth < 992) return;   /* drawer is full width */
+            e.preventDefault();
+            showFlyoutFor(e.target.closest('.nav-item'));
+        });
+
+        /* Collapsed mode: hovering a group shows its sub-menu as a fixed flyout
+           (the sidebar's own overflow clips absolute-positioned children). */
+        var flyout = document.createElement('div');
+        flyout.className = 'sidebar-flyout';
+        document.body.appendChild(flyout);
+        var flyoutOwner = null;
+
+        function hideFlyout() {
+            flyout.classList.remove('show');
+            flyoutOwner = null;
+        }
+
+        function showFlyoutFor(item) {
+            if (!item || !sidebar || !sidebar.classList.contains('collapsed')) { hideFlyout(); return; }
+            var submenu = item.querySelector(':scope > .collapse');
+            var link = item.querySelector(':scope > .nav-link');
+            if (!submenu || !link) { hideFlyout(); return; }
+
+            var children = submenu.querySelectorAll('a.nav-link');
+            if (!children.length) { hideFlyout(); return; }
+
+            var title = link.querySelector('span');
+            var html = (title ? '<div class="flyout-title">' + title.textContent + '</div>' : '');
+            children.forEach(function(a) {
+                html += '<a href="' + a.getAttribute('href') + '">' + a.textContent.trim() + '</a>';
+            });
+            flyout.innerHTML = html;
+            flyout.classList.add('show');
+
+            var rect = link.getBoundingClientRect();
+            var rtl = document.documentElement.dir === 'rtl';
+            flyout.style.top = Math.max(8, Math.min(rect.top, window.innerHeight - flyout.offsetHeight - 16)) + 'px';
+            if (rtl) {
+                flyout.style.right = (window.innerWidth - rect.left + 6) + 'px';
+                flyout.style.left = 'auto';
+            } else {
+                flyout.style.left = (rect.right + 6) + 'px';
+                flyout.style.right = 'auto';
+            }
+            flyoutOwner = item;
+        }
+
+        if (sidebar) {
+            sidebar.querySelectorAll('.nav-item').forEach(function(item) {
+                if (!item.querySelector(':scope > .collapse')) return;
+
+                item.addEventListener('mouseenter', function() { showFlyoutFor(item); });
+                item.addEventListener('mouseleave', function() {
+                    setTimeout(function() {
+                        if (!flyout.matches(':hover')) hideFlyout();
+                    }, 120);
+                });
+            });
+
+            flyout.addEventListener('mouseleave', hideFlyout);
+            window.addEventListener('scroll', hideFlyout, true);
+        }
+    });
+</script>
+
+<!-- Custom JS -->
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+<!-- Reason quick-pick: insert a managed reason into its target field (additive) -->
+<script>
+    document.addEventListener('change', function (e) {
+        var sel = e.target;
+        if (!sel.classList || !sel.classList.contains('reason-picker')) return;
+        var val = sel.value;
+        if (!val) return;
+        var field = document.getElementById(sel.dataset.target);
+        if (field) {
+            var cur = (field.value || '').trim();
+            // Additive: fill if empty, otherwise append with a separator so an
+            // auto-decision summary already in the field is preserved.
+            field.value = cur ? (cur + ' — ' + val) : val;
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.focus();
+        }
+        sel.value = '';  // reset so the same reason can be picked again
+    });
+</script>
+
+{% if can('analytics', 'kpis') %}
+<!-- KPI alert bell. One fetch on load and one every few minutes: the endpoint
+     itself is throttled in the database, so polling costs a row read, not a
+     re-aggregation of the day. -->
+<script>
+(function () {
+    var bell = document.getElementById('kpiAlertBell');
+    if (!bell) return;
+
+    var feedUrl = {{ url_for('alerts.feed') | tojson }};
+    var readUrl = {{ url_for('alerts.mark_read') | tojson }};
+    var listUrl = {{ url_for('alerts.index') | tojson }};
+    var csrf = {{ csrf_token() | tojson }};
+    var noneText = {{ ('لا توجد تنبيهات اليوم' if current_locale == 'ar' else 'No alerts today') | tojson }};
+    var noTargets = {{ ('لم يتم ضبط أهداف للمؤشرات بعد' if current_locale == 'ar' else 'No KPI targets set yet') | tojson }};
+    var badge = document.getElementById('kpiAlertCount');
+    var menu = document.getElementById('kpiAlertMenu');
+    var empty = document.getElementById('kpiAlertEmpty');
+
+    function esc(s) {
+        var d = document.createElement('div');
+        d.textContent = s == null ? '' : String(s);
+        return d.innerHTML;
     }
-    .floating-chat-btn:hover {
-        transform: scale(1.1);
-        color: white;
-        box-shadow: 0 6px 20px rgba(13, 110, 253, 0.6);
+
+    function render(data) {
+        badge.hidden = !data.unread;
+        badge.textContent = data.unread;
+        // The rows are rebuilt each poll, so drop the previous ones first.
+        menu.querySelectorAll('.kpi-alert-row').forEach(function (el) { el.remove(); });
+        if (!data.alerts.length) {
+            empty.hidden = false;
+            empty.textContent = data.has_targets ? noneText : noTargets;
+            return;
+        }
+        empty.hidden = true;
+        var anchor = empty.parentNode;
+        data.alerts.forEach(function (a) {
+            var li = document.createElement('li');
+            li.className = 'kpi-alert-row';
+            li.innerHTML = '<a class="dropdown-item small text-wrap" href="' + listUrl + '">' +
+                '<i class="bi bi-' +
+                (a.severity === 'critical' ? 'exclamation-octagon-fill text-danger'
+                                           : 'exclamation-triangle-fill text-warning') +
+                '"></i> ' + esc(a.message) + '</a>';
+            anchor.parentNode.insertBefore(li, anchor.nextSibling);
+        });
     }
-    .floating-chat-btn:active {
-        transform: scale(0.95);
+
+    function poll() {
+        fetch(feedUrl, { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) { if (d) render(d); })
+            .catch(function () { /* a failed poll is not worth a broken page */ });
     }
-    </style>
-    {% endif %}
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    // Opening the bell is reading them.
+    bell.addEventListener('click', function () {
+        if (!badge.hidden) {
+            fetch(readUrl, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrf,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: ''
+            }).then(function () { badge.hidden = true; });
+        }
+    });
 
-    <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    poll();
+    setInterval(poll, 5 * 60 * 1000);
+})();
+</script>
+{% endif %}
 
-    {% block extra_js %}{% endblock %}
+<!-- Topbar chrome: a shadow only once the page has scrolled under it, and "/"
+     to reach the pipe search from anywhere without touching the mouse. -->
+<script>
+(function () {
+    var bar = document.querySelector('.topbar');
+    if (bar) {
+        var onScroll = function () { bar.classList.toggle('is-stuck', window.scrollY > 4); };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+    }
+    var search = document.getElementById('topbar-pipe-search');
+    if (!search) return;
+    var wrap = search.closest('.topbar-search');
+    var mark = function () { if (wrap) wrap.classList.toggle('is-typing', search.value.length > 0); };
+    search.addEventListener('input', mark);
+    mark();
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+        var el = document.activeElement;
+        var tag = el ? el.tagName : '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (el && el.isContentEditable)) return;
+        e.preventDefault();
+        search.focus();
+        search.select();
+    });
+})();
+</script>
+
+{% if can('stages', 'list') %}
+<!-- Topbar pipe-code search: live suggestions after 1-2 chars; a complete code
+     jumps straight to the pipe detail page (handled server-side by stages.go). -->
+<script>
+(function () {
+    var input = document.getElementById('topbar-pipe-search');
+    var box = document.getElementById('topbar-search-results');
+    if (!input || !box) return;
+
+    var searchUrl = {{ url_for('stages.api_search_pipes') | tojson }};
+    var detailTpl = {{ url_for('stages.view', id=0) | tojson }};
+    var emptyText = {{ ('لا توجد نتائج' if current_locale == 'ar' else 'No matches') | tojson }};
+    var items = [];
+    var active = -1;
+    var timer = null;
+
+    function detailUrl(id) { return detailTpl.replace(/0$/, String(id)); }
+    function esc(s) {
+        var d = document.createElement('div');
+        d.textContent = s == null ? '' : String(s);
+        return d.innerHTML;
+    }
+    function hide() { box.hidden = true; items = []; active = -1; }
+
+    function render(list) {
+        items = list;
+        active = -1;
+        if (!list.length) {
+            box.innerHTML = '<div class="tsr-empty">' + esc(emptyText) + '</div>';
+        } else {
+            box.innerHTML = list.map(function (p, i) {
+                var meta = [];
+                if (p.ladle_id) meta.push(p.ladle_id);
+                if (p.diameter) meta.push('DN' + p.diameter);
+                return '<a class="tsr-item" data-i="' + i + '" href="' + detailUrl(p.id) + '">' +
+                    '<span class="tsr-code">' + esc(p.pipe_code) + '</span>' +
+                    '<span class="tsr-meta">' + esc(meta.join(' · ')) + '</span></a>';
+            }).join('');
+        }
+        box.hidden = false;
+    }
+
+    function fetchSuggestions(q) {
+        fetch(searchUrl + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (list) {
+                if (document.activeElement === input && input.value.trim()) render(list);
+            })
+            .catch(function () { /* keep the box as-is on network errors */ });
+    }
+
+    input.addEventListener('input', function () {
+        var q = input.value.trim();
+        clearTimeout(timer);
+        if (!q) { hide(); return; }
+        timer = setTimeout(function () { fetchSuggestions(q); }, 180);
+    });
+
+    input.addEventListener('keydown', function (e) {
+        if (box.hidden) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (!items.length) return;
+            active = e.key === 'ArrowDown'
+                ? (active + 1) % items.length
+                : (active - 1 + items.length) % items.length;
+            box.querySelectorAll('.tsr-item').forEach(function (el, i) {
+                el.classList.toggle('active', i === active);
+            });
+        } else if (e.key === 'Enter' && active >= 0 && items[active]) {
+            e.preventDefault();
+            window.location.href = detailUrl(items[active].id);
+        } else if (e.key === 'Escape') {
+            hide();
+        }
+    });
+
+    // Click navigates via the anchor href; blur just closes the dropdown after
+    // the click has had a chance to fire.
+    input.addEventListener('blur', function () { setTimeout(hide, 150); });
+    input.addEventListener('focus', function () {
+        if (input.value.trim()) fetchSuggestions(input.value.trim());
+    });
+})();
+</script>
+{% endif %}
+
+{# Per-meter reading vs its standard (CCM wall thickness, cement, coating).
+   Delegated on document so it covers the console panes too. Runs once on load
+   so a saved reading shows its deviation before the operator touches anything. #}
+<script>
+(function () {
+  function refresh(input) {
+    var key = input.getAttribute('data-cmp');
+    var col = input.getAttribute('data-col');
+    var table = input.closest('table');
+    if (!table || key === null || col === null) { return; }
+    var cell = table.querySelector(
+      '.std-cmp-diff[data-cmp="' + key + '"][data-col="' + col + '"]');
+    if (!cell) { return; }
+
+    var actual = parseFloat(input.value);
+    var nominal = parseFloat(input.getAttribute('data-nominal'));
+    if (isNaN(actual) || isNaN(nominal)) {
+      cell.textContent = '';
+      cell.classList.remove('text-danger', 'text-success');
+      input.style.backgroundColor = '';
+      return;
+    }
+    var diff = Math.round((actual - nominal) * 100) / 100;
+    cell.textContent = diff > 0 ? '+' + diff : diff;
+
+    var lslRaw = input.getAttribute('data-lsl');
+    var uslRaw = input.getAttribute('data-usl');
+    var lsl = lslRaw === '' ? null : parseFloat(lslRaw);
+    var usl = uslRaw === '' ? null : parseFloat(uslRaw);
+    // With no tolerance on file there is no verdict to give — every reading
+    // would be red under exact equality, which tells the operator nothing.
+    if (lsl === null && usl === null) {
+      cell.classList.remove('text-danger', 'text-success');
+      input.style.backgroundColor = '';
+      return;
+    }
+    var out = (lsl !== null && actual < lsl) || (usl !== null && actual > usl);
+    cell.classList.toggle('text-danger', out);
+    cell.classList.toggle('text-success', !out);
+    input.style.backgroundColor = out ? '#f8d7da' : '#d1e7dd';
+  }
+
+  document.addEventListener('input', function (e) {
+    var input = e.target.closest ? e.target.closest('.std-cmp-input') : null;
+    if (input) { refresh(input); }
+  });
+
+  // The note under each grid saying the band is empty, or has a nominal but no
+  // Min/Max to judge against. Rendered server-side in its correct state; this
+  // keeps it honest once the operator starts typing, or once picking an order
+  // fills the band in from the product.
+  function refreshNote(row) {
+    var prefix = row.getAttribute('data-spec-for');
+    if (!prefix) { return; }
+    function val(suffix) {
+      var el = document.querySelector('[name="' + prefix + suffix + '"]');
+      return el && el.value !== '' ? el.value : null;
+    }
+    var nominal = val('_std'), lo = val('_std_min'), hi = val('_std_max');
+    var hasBand = nominal !== null || lo !== null || hi !== null;
+    var hasTol = lo !== null || hi !== null;
+    var show = row.classList.contains('spec-note-missing')
+      ? !hasBand
+      : (hasBand && !hasTol);
+    row.classList.toggle('d-none', !show);
+  }
+
+  function refreshAll(root) {
+    (root || document).querySelectorAll('.std-cmp-input').forEach(refresh);
+    (root || document).querySelectorAll('.spec-note').forEach(refreshNote);
+  }
+  document.addEventListener('input', function (e) {
+    if (!e.target.name || !/_std(_min|_max)?$/.test(e.target.name)) { return; }
+    document.querySelectorAll('.spec-note').forEach(refreshNote);
+  });
+  document.addEventListener('DOMContentLoaded', function () { refreshAll(); });
+  // Console panes are injected after load; re-run when one appears.
+  document.addEventListener('shown.bs.modal', function (e) { refreshAll(e.target); });
+  window.refreshStandardComparisons = refreshAll;
+})();
+</script>
+
+{% block extra_js %}{% endblock %}
 </body>
 </html>

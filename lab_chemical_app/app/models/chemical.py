@@ -144,6 +144,15 @@ class ChemicalAnalysis(db.Model):
     year = db.Column(db.Integer)
     ladle_id = db.Column(db.String(20), unique=True, index=True)
 
+    # Ladle melt weight (kg of the pour) — recorded at analysis time,
+    # independent of product/pipe weights (DrAlaa 2026-08-17).
+    weight = db.Column(db.Float)
+
+    # The batch number the lab keeps per ladle on its own sheet. Distinct from
+    # the ladle id (the heat number) and from the annealing batch a pipe later
+    # passes through; the MTC prints it beside each heat.
+    batch_no = db.Column(db.String(50), index=True)
+
     # Chemical Elements (%)
     carbon = db.Column(db.Float)
     silicon = db.Column(db.Float)
@@ -174,12 +183,16 @@ class ChemicalAnalysis(db.Model):
 
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    modified_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
     # Relationships
     furnace = db.relationship('Furnace', back_populates='chemical_analyses')
     pipes = db.relationship('Pipe', backref='chemical_analysis', lazy='dynamic')
     mechanical_tests = db.relationship('MechanicalTest', backref='chemical_analysis', lazy='dynamic')
+    created_by = db.relationship('User', foreign_keys=[created_by_id], backref='created_chemical_analyses')
+    modified_by = db.relationship('User', foreign_keys=[modified_by_id], backref='modified_chemical_analyses')
     # production_order relationship defined via backref in ProductionOrder
 
     def calculate_equivalents(self):
