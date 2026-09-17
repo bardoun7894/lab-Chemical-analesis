@@ -65,3 +65,7 @@ predeploy/
 pg-bak-*
 app-data-bak-*
 .bak-app-*/
+
+# macOS resource forks from Mac copies — never commit
+._*
+.DS_Store
